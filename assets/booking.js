@@ -10,8 +10,8 @@ ready(function(){
  function money(v){if(v===null||v===undefined||v==='')return 'Price on request';var s=String(v);return /^[£$€]/.test(s)?s:'£'+s;}
  function time(v){if(!v)return '';var p=String(v).split(':'),h=parseInt(p[0],10);if(isNaN(h))return v;var m=p[1]||'00';return (h%12||12)+':'+m+(h>=12?'pm':'am');}
  function formatDate(v){var d=new Date(v+'T12:00:00');return isNaN(d.getTime())?v:d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
- function post(data){var body=new URLSearchParams();Object.keys(data).forEach(function(k){body.append(k,data[k]);});return fetch(BubbaHubBookingUI.ajaxUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:body.toString()}).then(function(r){return r.json();});}
- function openModal(){lastFocused=document.activeElement;modal.hidden=false;modal.setAttribute('aria-hidden','false');document.body.classList.add('bh-booking-modal-open');var c=modal.querySelector('.bh-booking-modal-close');if(c)c.focus();}
+ function post(data){var body=new URLSearchParams();Object.keys(data).forEach(function(k){body.append(k,data[k]);});return fetch(BubbaHubBookingUI.ajaxUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:body.toString(),credentials:'same-origin'}).then(function(r){return r.json();});}
+ function openModal(){lastFocused=document.activeElement;modal.hidden=false;modal.setAttribute('aria-hidden','false');document.body.classList.add('bh-booking-modal-open');var c=modal.querySelector('.bh-booking-modal-close');if(c)c.focus();if(dateSelect&&!dateSelect.value&&dateSelect.options.length>1){dateSelect.value=dateSelect.options[1].value;load(dateSelect.value);}}
  function closeModal(){modal.hidden=true;modal.setAttribute('aria-hidden','true');document.body.classList.remove('bh-booking-modal-open');if(reservePanel)reservePanel.hidden=true;if(lastFocused&&lastFocused.focus)lastFocused.focus();}
  document.querySelectorAll('[data-booking-open]').forEach(function(t){t.addEventListener('click',function(e){e.preventDefault();openModal();});});
  modal.querySelectorAll('[data-booking-close]').forEach(function(e){e.addEventListener('click',closeModal);});
@@ -34,7 +34,7 @@ ready(function(){
      if(list.length){status.textContent=list.length+' session'+(list.length===1?'':'s')+' available';showSessions(list);}
      else if(!fallback.length){status.textContent='No sessions available';showSessions([]);}
    }).catch(function(err){
-     if(fallback.length){status.textContent=fallback.length+' session'+(fallback.length===1?'':'s')+' available';}
+     if(fallback.length){status.textContent=fallback.length+' session'+(fallback.length===1?'':'s')+' available';showSessions(fallback);}
      else{status.textContent='';sessionsBox.innerHTML='<div class="bh-booking-empty">'+esc(err.message||BubbaHubBookingUI.error)+'</div>';}
    });
  }

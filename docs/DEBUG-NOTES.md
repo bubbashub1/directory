@@ -1,0 +1,1 @@
+Inspecting the booking availability path for date 2026-09-21.

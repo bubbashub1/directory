@@ -30,7 +30,7 @@
         setTimeout(function(){ var button = modal.querySelector('.bh-booking-confirmation-done'); if(button) button.focus(); }, 0);
     }
 
-    function showGetPaidModal(url){
+    function showPaymentModal(url){
         var modal = document.querySelector('#bh-booking-confirmation');
         if(!modal){
             modal = document.createElement('div');
@@ -64,7 +64,7 @@
 
     function showPaymentError(detail){
         var modal = document.querySelector('#bh-booking-confirmation');
-        if(!modal){ showGetPaidModal(null); modal = document.querySelector('#bh-booking-confirmation'); }
+        if(!modal){ showPaymentModal(null); modal = document.querySelector('#bh-booking-confirmation'); }
         if(!modal) return;
         var message = modal.querySelector('.bh-booking-payment-message');
         var button = modal.querySelector('.bh-booking-payment-continue');
@@ -74,7 +74,7 @@
         if(safeDetail.length > 180) safeDetail = safeDetail.substring(0, 177) + '…';
         if(message){
             message.textContent = safeDetail
-                ? 'We received your booking, but GetPaid could not create the payment page. ' + safeDetail
+                ? 'We received your booking, but the secure Stripe payment page could not be created. ' + safeDetail
                 : 'We received your booking, but the secure payment page could not be opened. Please try again from MyHub or contact the organiser.';
         }
         if(button){ button.disabled = false; button.textContent = 'Go to MyHub'; button.onclick = goToMyHub; }
@@ -144,7 +144,7 @@
         return '';
     }
 
-    function fetchGetPaidCheckout(response, attempt){
+    function fetchPaymentCheckout(response, attempt){
         attempt = attempt || 0;
         var form = document.querySelector('.nf-form-cont');
         rememberBookingContext(form);
@@ -160,18 +160,18 @@
         fetch(endpoint.toString(), {credentials:'same-origin', headers:{'Accept':'application/json'}})
             .then(function(res){ return res.json().then(function(data){ return {ok:res.ok, status:res.status, data:data}; }); })
             .then(function(result){
-                if(result.ok && result.data && result.data.url){ showGetPaidModal(result.data.url); return; }
+                if(result.ok && result.data && result.data.url){ showPaymentModal(result.data.url); return; }
                 if(result.status === 409 || (result.data && result.data.code === 'payment_not_required')){
                     closeConfirmationModal();
                     showBookingConfirmation('book_now');
                     return;
                 }
-                if(attempt < 5){ window.setTimeout(function(){ fetchGetPaidCheckout(response, attempt + 1); }, 700); return; }
+                if(attempt < 5){ window.setTimeout(function(){ fetchPaymentCheckout(response, attempt + 1); }, 700); return; }
                 showPaymentError(getCheckoutError(result));
             })
             .catch(function(){
-                if(attempt < 5){ window.setTimeout(function(){ fetchGetPaidCheckout(response, attempt + 1); }, 700); return; }
-                showPaymentError('The website could not reach the GetPaid checkout service.');
+                if(attempt < 5){ window.setTimeout(function(){ fetchPaymentCheckout(response, attempt + 1); }, 700); return; }
+                showPaymentError('The website could not reach the secure payment service.');
             });
     }
 
@@ -180,8 +180,8 @@
         bookNowHandled = true;
         var form = document.querySelector('.nf-form-cont');
         initialiseBookingContext(form);
-        showGetPaidModal(null);
-        fetchGetPaidCheckout(response || {}, 0);
+        showPaymentModal(null);
+        fetchPaymentCheckout(response || {}, 0);
     }
 
     function watchNinjaSuccess(){

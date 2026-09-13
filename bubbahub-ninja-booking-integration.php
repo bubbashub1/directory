@@ -14,8 +14,9 @@ if ( file_exists( $getpaid_file ) ) require_once $getpaid_file;
 
 /**
  * GetPaid can operate BubbaHub as the platform/seller, so a separate seller
- * ID does not need to be entered manually when the connected GetPaid account
- * exposes exactly one account. We discover that account for the current request.
+ * ID does not need to be entered manually. The authenticated OAuth token is
+ * the best source for the connected platform account; the accounts query is
+ * retained as a fallback for credentials that expose exactly one account.
  */
 function bubbahub_getpaid_auto_seller_id( $value ) {
     $value = trim( (string) $value );
@@ -63,6 +64,18 @@ function bubbahub_getpaid_auto_seller_id( $value ) {
         return '';
     }
 
+    // GetPaid's authenticated platform identity is represented by the OAuth
+    // token subject. Only accept it when it is explicitly an account ID.
+    $parts = explode( '.', $token );
+    if ( count( $parts ) >= 2 ) {
+        $payload = json_decode( base64_decode( strtr( $parts[1], '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( $parts[1] ) % 4 ) % 4 ) ), true );
+        if ( is_array( $payload ) && ! empty( $payload['sub'] ) && 0 === strpos( (string) $payload['sub'], 'acc_' ) ) {
+            $resolved = sanitize_text_field( $payload['sub'] );
+            return $resolved;
+        }
+    }
+
+    // Fallback: if the credentials expose exactly one GetPaid account, use it.
     $accounts_response = wp_remote_post( trailingslashit( $api_base ) . 'accounts/query', array(
         'timeout' => 20,
         'headers' => array(

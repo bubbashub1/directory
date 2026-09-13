@@ -94,49 +94,55 @@ function bubbahub_booking_render_group_widget( $group_id ) {
     }
     ksort( $dates );
     ?>
-    <section id="bh-booking" class="bh-booking-widget" data-group-id="<?php echo esc_attr( $group_id ); ?>">
-        <div class="bh-booking-heading">
-            <div>
-                <span class="bh-booking-eyebrow">BOOKING &amp; AVAILABILITY</span>
-                <h2>Choose your session</h2>
-                <p>Select a date to see the available sessions and spaces.</p>
-            </div>
+    <div id="bh-booking-modal" class="bh-booking-modal" hidden aria-hidden="true">
+        <div class="bh-booking-modal-backdrop" data-booking-close></div>
+        <div class="bh-booking-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bh-booking-title">
+            <button type="button" class="bh-booking-modal-close" data-booking-close aria-label="Close booking">×</button>
+            <section id="bh-booking" class="bh-booking-widget" data-group-id="<?php echo esc_attr( $group_id ); ?>">
+                <div class="bh-booking-heading">
+                    <div>
+                        <span class="bh-booking-eyebrow">BOOKING &amp; AVAILABILITY</span>
+                        <h2 id="bh-booking-title">Book this group</h2>
+                        <p>Select a date to see the available sessions and spaces.</p>
+                    </div>
+                </div>
+                <div class="bh-booking-step">
+                    <label for="bh-booking-date">1. Select a date</label>
+                    <select id="bh-booking-date" class="bh-booking-select">
+                        <option value="">Choose a date</option>
+                        <?php foreach ( $dates as $date ) : ?>
+                            <option value="<?php echo esc_attr( $date ); ?>"><?php echo esc_html( wp_date( get_option( 'date_format' ), strtotime( $date ) ) ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="bh-booking-step">
+                    <div class="bh-booking-label-row">
+                        <label>2. Select a session</label>
+                        <span class="bh-booking-status" aria-live="polite"></span>
+                    </div>
+                    <div class="bh-booking-sessions" data-sessions>
+                        <div class="bh-booking-empty">Choose a date to see available sessions.</div>
+                    </div>
+                </div>
+                <div class="bh-booking-actions" data-booking-actions hidden>
+                    <div class="bh-booking-selected" data-selected-session>Choose a session above.</div>
+                    <div class="bh-booking-action-buttons" data-action-buttons></div>
+                </div>
+                <div class="bh-booking-reserve" data-reserve-panel hidden>
+                    <div class="bh-booking-reserve-head">
+                        <div><strong>Reserve your spot</strong><span>No payment is taken for a reservation.</span></div>
+                        <button type="button" class="bh-booking-close" data-reserve-close aria-label="Close reservation form">×</button>
+                    </div>
+                    <div class="bh-booking-form-grid">
+                        <label>Name<input type="text" data-reserve-name autocomplete="name"></label>
+                        <label>Email<input type="email" data-reserve-email autocomplete="email"></label>
+                        <label>Places<input type="number" data-reserve-places min="1" value="1" inputmode="numeric"></label>
+                    </div>
+                    <button type="button" class="bh-booking-primary" data-reserve-submit>Reserve Spot</button>
+                    <div class="bh-booking-message" data-reserve-message aria-live="polite"></div>
+                </div>
+            </section>
         </div>
-        <div class="bh-booking-step">
-            <label for="bh-booking-date">1. Select a date</label>
-            <select id="bh-booking-date" class="bh-booking-select">
-                <option value="">Choose a date</option>
-                <?php foreach ( $dates as $date ) : ?>
-                    <option value="<?php echo esc_attr( $date ); ?>"><?php echo esc_html( wp_date( get_option( 'date_format' ), strtotime( $date ) ) ); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="bh-booking-step">
-            <div class="bh-booking-label-row">
-                <label>2. Select a session</label>
-                <span class="bh-booking-status" aria-live="polite"></span>
-            </div>
-            <div class="bh-booking-sessions" data-sessions>
-                <div class="bh-booking-empty">Choose a date to see available sessions.</div>
-            </div>
-        </div>
-        <div class="bh-booking-actions" data-booking-actions hidden>
-            <div class="bh-booking-selected" data-selected-session>Choose a session above.</div>
-            <div class="bh-booking-action-buttons" data-action-buttons></div>
-        </div>
-        <div class="bh-booking-reserve" data-reserve-panel hidden>
-            <div class="bh-booking-reserve-head">
-                <div><strong>Reserve your spot</strong><span>No payment is taken for a reservation.</span></div>
-                <button type="button" class="bh-booking-close" data-reserve-close aria-label="Close reservation form">×</button>
-            </div>
-            <div class="bh-booking-form-grid">
-                <label>Name<input type="text" data-reserve-name autocomplete="name"></label>
-                <label>Email<input type="email" data-reserve-email autocomplete="email"></label>
-                <label>Places<input type="number" data-reserve-places min="1" value="1" inputmode="numeric"></label>
-            </div>
-            <button type="button" class="bh-booking-primary" data-reserve-submit>Reserve Spot</button>
-            <div class="bh-booking-message" data-reserve-message aria-live="polite"></div>
-        </div>
-    </section>
+    </div>
     <?php
 }

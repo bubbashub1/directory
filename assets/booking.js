@@ -6,9 +6,56 @@
         else fn();
     }
 
+    function showBookingConfirmation(){
+        if(document.querySelector('#bh-booking-confirmation')) return;
+
+        var modal = document.createElement('div');
+        modal.id = 'bh-booking-confirmation';
+        modal.className = 'bh-booking-confirmation-modal';
+        modal.setAttribute('role','dialog');
+        modal.setAttribute('aria-modal','true');
+        modal.setAttribute('aria-labelledby','bh-booking-confirmation-title');
+        modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div>' +
+            '<div class="bh-booking-confirmation-dialog">' +
+                '<button type="button" class="bh-booking-confirmation-close" aria-label="Close confirmation">×</button>' +
+                '<div class="bh-booking-confirmation-icon" aria-hidden="true">✓</div>' +
+                '<h2 id="bh-booking-confirmation-title">Thank you for your booking.</h2>' +
+                '<p>The organiser will be in touch to confirm booking</p>' +
+                '<button type="button" class="bh-booking-primary bh-booking-confirmation-done">Done</button>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+        document.body.classList.add('bh-booking-confirmation-open');
+
+        function close(){
+            modal.remove();
+            document.body.classList.remove('bh-booking-confirmation-open');
+        }
+
+        modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', close);
+        modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', close);
+        modal.querySelector('.bh-booking-confirmation-done').addEventListener('click', close);
+        document.addEventListener('keydown', function escapeHandler(e){
+            if(e.key === 'Escape'){
+                close();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        });
+
+        setTimeout(function(){
+            var done = modal.querySelector('.bh-booking-confirmation-done');
+            if(done) done.focus();
+        }, 0);
+    }
+
     ready(function(){
         var root = document.querySelector('.bh-booking-widget');
         var modal = document.querySelector('#bh-booking-modal');
+
+        // The confirmation modal is used after a successful Reserve Spot submission.
+        var successMessage = document.querySelector('.bh-booking-message.is-success');
+        if(successMessage) showBookingConfirmation();
+
         if(!root || !modal) return;
 
         var dateSelect = root.querySelector('[data-booking-date]') || root.querySelector('#bh-booking-date');

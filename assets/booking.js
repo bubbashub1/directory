@@ -66,7 +66,7 @@
         }
     }
 
-    function showPaymentError(){
+    function showPaymentError(detail){
         var modal = document.querySelector('#bh-booking-confirmation');
         if(!modal){ showGetPaidModal(null); modal = document.querySelector('#bh-booking-confirmation'); }
         if(!modal) return;
@@ -74,7 +74,14 @@
         var button = modal.querySelector('.bh-booking-payment-continue');
         var title = modal.querySelector('#bh-booking-confirmation-title');
         if(title) title.textContent = 'Booking received';
-        if(message) message.textContent = 'We received your booking, but the secure payment page could not be opened. Please try again from MyHub or contact the organiser.';
+
+        var safeDetail = detail ? String(detail).replace(/\s+/g, ' ').trim() : '';
+        if(safeDetail.length > 180) safeDetail = safeDetail.substring(0, 177) + '…';
+        if(message){
+            message.textContent = safeDetail
+                ? 'We received your booking, but GetPaid could not create the payment page. ' + safeDetail
+                : 'We received your booking, but the secure payment page could not be opened. Please try again from MyHub or contact the organiser.';
+        }
         if(button){ button.disabled = false; button.textContent = 'Go to MyHub'; button.onclick = goToMyHub; }
         setTimeout(function(){ if(button) button.focus(); }, 0);
     }
@@ -87,6 +94,14 @@
     function extractSubmissionId(response){
         var data = response && response.data ? response.data : {};
         return parseInt(data.id || data.sub_id || data.submission_id || data.submissionId || '', 10) || 0;
+    }
+    function getCheckoutError(result){
+        if(!result || !result.data) return '';
+        var data = result.data;
+        if(typeof data.message === 'string' && data.message) return data.message;
+        if(typeof data.error === 'string' && data.error) return data.error;
+        if(typeof data.code === 'string' && data.code) return data.code.replace(/_/g, ' ');
+        return '';
     }
     function fetchGetPaidCheckout(response, attempt){
         attempt = attempt || 0;
@@ -108,11 +123,11 @@
                     return;
                 }
                 if(attempt < 5){ window.setTimeout(function(){ fetchGetPaidCheckout(response, attempt + 1); }, 700); return; }
-                showPaymentError();
+                showPaymentError(getCheckoutError(result));
             })
             .catch(function(){
                 if(attempt < 5){ window.setTimeout(function(){ fetchGetPaidCheckout(response, attempt + 1); }, 700); return; }
-                showPaymentError();
+                showPaymentError('The website could not reach the GetPaid checkout service.');
             });
     }
     function handleBookNowSuccess(response){

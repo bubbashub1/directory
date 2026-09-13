@@ -12,6 +12,102 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $getpaid_file = plugin_dir_path( __FILE__ ) . 'bubbahub-getpaid-integration.php';
 if ( file_exists( $getpaid_file ) ) require_once $getpaid_file;
 
+/**
+ * GetPaid can operate BubbaHub as the platform/seller, so a separate seller
+ * ID does not need to be entered manually when the connected GetPaid account
+ * exposes exactly one account. We discover that account once and save its ID.
+ */
+function bubbahub_getpaid_auto_seller_id( $value ) {
+    $value = trim( (string) $value );
+    if ( $value ) return $value;
+
+    static $resolved = null;
+    if ( null !== $resolved ) return $resolved;
+
+    $client_id = trim( (string) get_option( 'bubbahub_getpaid_client_id', '' ) );
+    $client_secret = trim( (string) get_option( 'bubbahub_getpaid_client_secret', '' ) );
+    $environment = get_option( 'bubbahub_getpaid_environment', 'sandbox' );
+
+    if ( ! $client_id || ! $client_secret ) {
+        $resolved = '';
+        return '';
+    }
+
+    $audience = 'live' === $environment ? 'https://api.getpaid.io' : 'https://api.sandbox.getpaid.io';
+    $api_base = 'live' === $environment ? 'https://api.getpaid.io/v2' : 'https://api.sandbox.getpaid.io/v2';
+
+    $token_response = wp_remote_post( 'https://auth.getpaid.io/oauth/token', array(
+        'timeout' => 20,
+        'headers' => array( 'Content-Type' => 'application/json', 'Accept' => 'application/json' ),
+        'body' => wp_json_encode( array(
+            'client_id' => $client_id,
+            'client_secret' => $client_secret,
+            'audience' => $audience,
+            'grant_type' => 'client_credentials',
+        ) ),
+    ) );
+
+    if ( is_wp_error( $token_response ) ) {
+        $resolved = '';
+        return '';
+    }
+
+    $token_code = wp_remote_retrieve_response_code( $token_response );
+    $token_body = json_decode( wp_remote_retrieve_body( $token_response ), true );
+    $token = ( $token_code >= 200 && $token_code < 300 && ! empty( $token_body['access_token'] ) )
+        ? sanitize_text_field( $token_body['access_token'] )
+        : '';
+
+    if ( ! $token ) {
+        $resolved = '';
+        return '';
+    }
+
+    $accounts_response = wp_remote_post( trailingslashit( $api_base ) . 'accounts/query', array(
+        'timeout' => 20,
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Getpaid-Idempotency-Key' => 'bh_accounts_lookup_' . md5( $environment . '|' . $client_id ),
+        ),
+        'body' => wp_json_encode( array(
+            'type' => 'accounts',
+            'first' => 20,
+            'sorts' => array(
+                array( 'field' => 'created_at', 'direction' => 'descending' ),
+            ),
+        ) ),
+    ) );
+
+    if ( is_wp_error( $accounts_response ) ) {
+        $resolved = '';
+        return '';
+    }
+
+    $accounts_code = wp_remote_retrieve_response_code( $accounts_response );
+    $accounts_body = json_decode( wp_remote_retrieve_body( $accounts_response ), true );
+    if ( $accounts_code < 200 || $accounts_code >= 300 || empty( $accounts_body['data'] ) || ! is_array( $accounts_body['data'] ) ) {
+        $resolved = '';
+        return '';
+    }
+
+    $accounts = array_values( array_filter( $accounts_body['data'], function( $account ) {
+        return is_array( $account ) && ! empty( $account['id'] ) && 0 === strpos( (string) $account['id'], 'acc_' );
+    } ) );
+
+    // Never guess if the credentials expose multiple seller accounts.
+    if ( 1 !== count( $accounts ) ) {
+        $resolved = '';
+        return '';
+    }
+
+    $resolved = sanitize_text_field( $accounts[0]['id'] );
+    update_option( 'bubbahub_getpaid_seller_id', $resolved, false );
+    return $resolved;
+}
+add_filter( 'option_bubbahub_getpaid_seller_id', 'bubbahub_getpaid_auto_seller_id', 10, 1 );
+
 function bubbahub_ninja_booking_field_value( $form_data, $key ) {
     if ( empty( $form_data['fields'] ) || ! is_array( $form_data['fields'] ) ) return '';
     foreach ( $form_data['fields'] as $field ) {

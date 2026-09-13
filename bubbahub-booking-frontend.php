@@ -57,7 +57,7 @@ function bubbahub_booking_render_group_widget( $group_id ) {
         <div class="bh-booking-modal-backdrop" data-booking-close></div>
         <div class="bh-booking-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bh-booking-title">
             <button type="button" class="bh-booking-modal-close" data-booking-close aria-label="Close booking">×</button>
-            <section id="bh-booking" class="bh-booking-widget" data-group-id="<?php echo esc_attr( $group_id ); ?>">
+            <section id="bh-booking" class="bh-booking-widget" data-group-id="<?php echo esc_attr( $group_id ); ?>" data-initial-sessions="<?php echo esc_attr( wp_json_encode( $sessions ) ); ?>">
                 <div class="bh-booking-heading"><div><span class="bh-booking-eyebrow">BOOKING &amp; AVAILABILITY</span><h2 id="bh-booking-title">Book this group</h2><p>Select a date to see the available sessions and spaces.</p></div></div>
                 <div class="bh-booking-step">
                     <label for="bh-booking-date">1. Select a date</label>

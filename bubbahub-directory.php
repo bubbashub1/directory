@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 define( 'BUBBAHUB_DIRECTORY_VERSION', '1.1.0' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
-a dd_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
+add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_shortcode( 'bubbahub_directory', 'bubbahub_directory_shortcode' );

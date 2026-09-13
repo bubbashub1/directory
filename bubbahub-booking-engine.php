@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BubbaHub Booking Engine
  * Description: Stable booking data layer for BubbaHub Groups. Provides booking sessions, capacity tracking and booking records for later Ninja Forms + GetPaid integration.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
@@ -11,20 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BUBBAHUB_BOOKING_VERSION', '1.0.0' );
+define( 'BUBBAHUB_BOOKING_VERSION', '1.0.1' );
 
-action_add_action( 'init', 'bubbahub_booking_register_post_types' );
+add_action( 'init', 'bubbahub_booking_register_post_types' );
 
-function action_add_action( $hook, $callback ) {
-    add_action( $hook, $callback );
-}
-
-/**
- * Register the two private data types used by the booking engine.
- *
- * bh_session = a bookable occurrence of a Group.
- * bh_booking = a customer's reservation/booking against a session.
- */
 function bubbahub_booking_register_post_types() {
     register_post_type( 'bh_session', array(
         'labels' => array(
@@ -61,17 +51,14 @@ function bubbahub_booking_register_post_types() {
     ) );
 }
 
-/**
- * Safe meta getter.
- */
 function bubbahub_booking_meta( $post_id, $key, $default = '' ) {
     $value = get_post_meta( $post_id, $key, true );
     return ( $value !== '' && $value !== false && $value !== null ) ? $value : $default;
 }
 
 /**
- * Return a session's capacity and current confirmed/reserved places.
- * Pending/failed/cancelled bookings are not counted.
+ * Return a session's capacity and current occupied places.
+ * A booking may reserve more than one place, so _bh_places is summed.
  */
 function bubbahub_booking_session_stats( $session_id ) {
     $capacity = max( 0, (int) bubbahub_booking_meta( $session_id, '_bh_capacity', 0 ) );
@@ -96,7 +83,11 @@ function bubbahub_booking_session_stats( $session_id ) {
         ),
     ) );
 
-    $used = count( $query->posts );
+    $used = 0;
+    foreach ( $query->posts as $booking_id ) {
+        $used += max( 0, (int) bubbahub_booking_meta( $booking_id, '_bh_places', 1 ) );
+    }
+
     $remaining = $capacity > 0 ? max( 0, $capacity - $used ) : null;
 
     return array(
@@ -107,10 +98,6 @@ function bubbahub_booking_session_stats( $session_id ) {
     );
 }
 
-/**
- * Find available sessions for a Group.
- * Optional date filter uses Y-m-d.
- */
 function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
     $meta_query = array(
         array(
@@ -153,20 +140,20 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
         }
 
         $sessions[] = array(
-            'id'             => $session->ID,
-            'title'          => get_the_title( $session->ID ),
-            'group_id'       => (int) bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ),
-            'venue_id'       => (int) bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ),
-            'date'           => bubbahub_booking_meta( $session->ID, '_bh_date', '' ),
-            'start_time'     => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ),
-            'end_time'       => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
-            'price'          => bubbahub_booking_meta( $session->ID, '_bh_price', '' ),
-            'booking_method' => bubbahub_booking_meta( $session->ID, '_bh_booking_method', 'form' ),
-            'external_url'   => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ),
-            'reserve_enabled'=> (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
-            'capacity'       => $stats['capacity'],
-            'used'           => $stats['used'],
-            'remaining'      => $stats['remaining'],
+            'id'              => $session->ID,
+            'title'           => get_the_title( $session->ID ),
+            'group_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ),
+            'venue_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ),
+            'date'            => bubbahub_booking_meta( $session->ID, '_bh_date', '' ),
+            'start_time'      => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ),
+            'end_time'        => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
+            'price'           => bubbahub_booking_meta( $session->ID, '_bh_price', '' ),
+            'booking_method'  => bubbahub_booking_meta( $session->ID, '_bh_booking_method', 'form' ),
+            'external_url'    => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ),
+            'reserve_enabled' => (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
+            'capacity'        => $stats['capacity'],
+            'used'            => $stats['used'],
+            'remaining'       => $stats['remaining'],
         );
     }
 
@@ -174,8 +161,7 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
 }
 
 /**
- * Create a booking record. Payment/invoice creation is intentionally NOT done here.
- * Stage 2 will connect this record to Ninja Forms and Stage 3 to GetPaid.
+ * Create a booking record. Payment/invoice creation is deliberately separate.
  */
 function bubbahub_booking_create( $args = array() ) {
     $defaults = array(
@@ -254,9 +240,6 @@ function bubbahub_booking_create( $args = array() ) {
     return $booking_id;
 }
 
-/**
- * Lightweight availability endpoint for the future Ninja Forms date selector.
- */
 add_action( 'wp_ajax_bubbahub_booking_sessions', 'bubbahub_booking_sessions_ajax' );
 add_action( 'wp_ajax_nopriv_bubbahub_booking_sessions', 'bubbahub_booking_sessions_ajax' );
 

@@ -1,278 +1,110 @@
 <?php
 /**
  * Plugin Name: BubbaHub Booking Engine
- * Description: Booking data layer for BubbaHub Groups with session availability, capacity tracking and frontend booking integration.
+ * Description: Session, availability and booking engine for BubbaHub groups.
  * Version: 1.1.0
- * Author: BubbaHub
  * Requires PHP: 7.4
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'BUBBAHUB_BOOKING_VERSION', '1.1.0' );
 
-add_action( 'init', 'bubbahub_booking_register_post_types' );
-
-function bubbahub_booking_register_post_types() {
-    register_post_type( 'bh_session', array(
-        'labels' => array(
-            'name'          => 'Booking Sessions',
-            'singular_name' => 'Booking Session',
-            'menu_name'     => 'Booking Sessions',
-        ),
-        'public'              => false,
-        'show_ui'             => true,
-        'show_in_menu'        => true,
-        'show_in_rest'        => false,
-        'supports'            => array( 'title' ),
-        'capability_type'     => 'post',
-        'map_meta_cap'        => true,
-        'exclude_from_search' => true,
-        'rewrite'             => false,
-    ) );
-
-    register_post_type( 'bh_booking', array(
-        'labels' => array(
-            'name'          => 'Bookings',
-            'singular_name' => 'Booking',
-            'menu_name'     => 'Bookings',
-        ),
-        'public'              => false,
-        'show_ui'             => true,
-        'show_in_menu'        => true,
-        'show_in_rest'        => false,
-        'supports'            => array( 'title' ),
-        'capability_type'     => 'post',
-        'map_meta_cap'        => true,
-        'exclude_from_search' => true,
-        'rewrite'             => false,
-    ) );
-}
-
 function bubbahub_booking_meta( $post_id, $key, $default = '' ) {
     $value = get_post_meta( $post_id, $key, true );
-    return ( $value !== '' && $value !== false && $value !== null ) ? $value : $default;
+    return ( '' === $value || null === $value ) ? $default : $value;
 }
+
+add_action( 'init', function() {
+    register_post_type( 'bh_session', array(
+        'labels' => array( 'name' => 'Booking Sessions', 'singular_name' => 'Booking Session' ),
+        'public' => false, 'show_ui' => true, 'show_in_menu' => true,
+        'supports' => array( 'title' ), 'menu_icon' => 'dashicons-calendar-alt'
+    ) );
+    register_post_type( 'bh_booking', array(
+        'labels' => array( 'name' => 'Bookings', 'singular_name' => 'Booking' ),
+        'public' => false, 'show_ui' => true, 'show_in_menu' => true,
+        'supports' => array( 'title' ), 'menu_icon' => 'dashicons-tickets-alt'
+    ) );
+} );
 
 function bubbahub_booking_session_stats( $session_id ) {
-    $capacity = max( 0, (int) bubbahub_booking_meta( $session_id, '_bh_capacity', 0 ) );
-
-    $query = new WP_Query( array(
-        'post_type'      => 'bh_booking',
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'no_found_rows'  => true,
-        'meta_query'     => array(
-            array(
-                'key'     => '_bh_session_id',
-                'value'   => $session_id,
-                'compare' => '=',
-            ),
-            array(
-                'key'     => '_bh_status',
-                'value'   => array( 'confirmed', 'reserved' ),
-                'compare' => 'IN',
-            ),
-        ),
+    $capacity = absint( bubbahub_booking_meta( $session_id, '_bh_capacity', 0 ) );
+    $bookings = get_posts( array(
+        'post_type' => 'bh_booking', 'post_status' => 'publish', 'posts_per_page' => -1,
+        'fields' => 'ids', 'meta_query' => array( array( 'key' => '_bh_session_id', 'value' => absint( $session_id ) ) )
     ) );
-
     $used = 0;
-    foreach ( $query->posts as $booking_id ) {
-        $used += max( 0, (int) bubbahub_booking_meta( $booking_id, '_bh_places', 1 ) );
+    foreach ( $bookings as $booking_id ) {
+        $status = bubbahub_booking_meta( $booking_id, '_bh_status', '' );
+        if ( in_array( $status, array( 'confirmed', 'reserved' ), true ) ) $used += max( 1, absint( bubbahub_booking_meta( $booking_id, '_bh_places', 1 ) ) );
     }
-
     $remaining = $capacity > 0 ? max( 0, $capacity - $used ) : null;
-
-    return array(
-        'capacity'  => $capacity,
-        'used'      => $used,
-        'remaining' => $remaining,
-        'full'      => ( $capacity > 0 && $remaining <= 0 ),
-    );
+    return array( 'capacity' => $capacity, 'used' => $used, 'remaining' => $remaining, 'full' => $capacity > 0 && $remaining <= 0 );
 }
 
-/**
- * Normalise a stored booking-session date to ISO YYYY-MM-DD.
- * Older/manual sessions may contain UK DD/MM/YYYY values, while the
- * frontend date selector uses the ISO value as its option value.
- */
 function bubbahub_booking_normalize_session_date( $value ) {
     $value = trim( (string) $value );
-    if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m ) ) {
-        return $value;
-    }
-    if ( preg_match( '/^(\d{2})\/(\d{2})\/(\d{4})$/', $value, $m ) ) {
-        return $m[3] . '-' . $m[2] . '-' . $m[1];
-    }
-    if ( preg_match( '/^(\d{2})-(\d{2})-(\d{4})$/', $value, $m ) ) {
-        return $m[3] . '-' . $m[2] . '-' . $m[1];
-    }
+    if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $value ) ) return $value;
+    if ( preg_match( '/^(\d{2})\/(\d{2})\/(\d{4})$/', $value, $m ) ) return $m[3] . '-' . $m[2] . '-' . $m[1];
+    if ( preg_match( '/^(\d{2})-(\d{2})-(\d{4})$/', $value, $m ) ) return $m[3] . '-' . $m[2] . '-' . $m[1];
     return '';
 }
 
 function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
-    $meta_query = array(
-        array(
-            'key'     => '_bh_group_id',
-            'value'   => absint( $group_id ),
-            'compare' => '=',
-        ),
-        array(
-            'key'     => '_bh_session_status',
-            'value'   => 'open',
-            'compare' => '=',
-        ),
-    );
-
-    /*
-     * Do not use an exact meta query for the date. Sessions created before
-     * the UK date-format change may contain DD/MM/YYYY. Fetch the group's
-     * open sessions and compare normalised dates instead.
-     */
     $query = new WP_Query( array(
-        'post_type'      => 'bh_session',
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'orderby'        => 'meta_value',
-        'meta_key'       => '_bh_datetime_sort',
-        'order'          => 'ASC',
-        'no_found_rows'  => true,
-        'meta_query'     => $meta_query,
+        'post_type' => 'bh_session', 'post_status' => 'publish', 'posts_per_page' => -1,
+        'orderby' => 'meta_value', 'meta_key' => '_bh_datetime_sort', 'order' => 'ASC', 'no_found_rows' => true,
+        'meta_query' => array(
+            array( 'key' => '_bh_group_id', 'value' => absint( $group_id ), 'compare' => '=' ),
+            array( 'key' => '_bh_session_status', 'value' => 'open', 'compare' => '=' ),
+        )
     ) );
-
     $requested_date = bubbahub_booking_normalize_session_date( $date );
     $sessions = array();
-
     foreach ( $query->posts as $session ) {
-        $stored_date = bubbahub_booking_meta( $session->ID, '_bh_date', '' );
-        $session_date = bubbahub_booking_normalize_session_date( $stored_date );
-
-        if ( $requested_date && $session_date !== $requested_date ) {
-            continue;
-        }
-
+        $session_date = bubbahub_booking_normalize_session_date( bubbahub_booking_meta( $session->ID, '_bh_date', '' ) );
+        if ( $requested_date && $session_date !== $requested_date ) continue;
         $stats = bubbahub_booking_session_stats( $session->ID );
-        if ( $stats['full'] ) {
-            continue;
+        if ( $stats['full'] ) continue;
+        $booking_action = bubbahub_booking_meta( $session->ID, '_bh_booking_action', '' );
+        $booking_method = bubbahub_booking_meta( $session->ID, '_bh_booking_method', 'form' );
+        if ( ! in_array( $booking_action, array( 'book_now', 'reserve_spot', 'external', 'none' ), true ) ) {
+            $booking_action = 'external' === $booking_method ? 'external' : ( 'none' === $booking_method ? 'none' : ( (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ) ? 'reserve_spot' : 'book_now' ) );
         }
-
         $sessions[] = array(
-            'id'              => $session->ID,
-            'title'           => get_the_title( $session->ID ),
-            'group_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ),
-            'venue_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ),
-            'date'            => $session_date,
-            'start_time'      => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ),
-            'end_time'        => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
-            'price'           => bubbahub_booking_meta( $session->ID, '_bh_price', '' ),
-            'booking_method'  => bubbahub_booking_meta( $session->ID, '_bh_booking_method', 'form' ),
-            'external_url'    => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ),
-            'reserve_enabled' => (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
-            'capacity'        => $stats['capacity'],
-            'used'            => $stats['used'],
-            'remaining'       => $stats['remaining'],
+            'id' => $session->ID, 'title' => get_the_title( $session->ID ), 'group_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ) ),
+            'venue_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ) ), 'date' => $session_date,
+            'start_time' => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ), 'end_time' => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
+            'price' => bubbahub_booking_meta( $session->ID, '_bh_price', '' ), 'booking_action' => $booking_action,
+            'booking_method' => $booking_method, 'ninja_form_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_ninja_form_id', 0 ) ),
+            'external_url' => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ), 'reserve_enabled' => (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
+            'capacity' => $stats['capacity'], 'used' => $stats['used'], 'remaining' => $stats['remaining'],
         );
     }
-
     return $sessions;
-}
-
-function bubbahub_booking_create( $args = array() ) {
-    $defaults = array(
-        'session_id'      => 0,
-        'group_id'        => 0,
-        'venue_id'        => 0,
-        'user_id'         => get_current_user_id(),
-        'customer_name'   => '',
-        'customer_email'  => '',
-        'places'          => 1,
-        'status'          => 'reserved',
-        'payment_status'  => 'not_required',
-        'payment_method'  => '',
-        'invoice_id'      => 0,
-        'notes'           => '',
-    );
-
-    $args = wp_parse_args( $args, $defaults );
-    $session_id = absint( $args['session_id'] );
-
-    if ( ! $session_id || get_post_type( $session_id ) !== 'bh_session' ) {
-        return new WP_Error( 'invalid_session', 'The selected booking session is invalid.' );
-    }
-
-    $group_id = absint( $args['group_id'] );
-    if ( ! $group_id ) {
-        $group_id = absint( bubbahub_booking_meta( $session_id, '_bh_group_id', 0 ) );
-    }
-
-    $venue_id = absint( $args['venue_id'] );
-    if ( ! $venue_id ) {
-        $venue_id = absint( bubbahub_booking_meta( $session_id, '_bh_venue_id', 0 ) );
-    }
-
-    $places = max( 1, (int) $args['places'] );
-    $stats = bubbahub_booking_session_stats( $session_id );
-    if ( $stats['capacity'] > 0 && ( $stats['remaining'] === null || $places > $stats['remaining'] ) ) {
-        return new WP_Error( 'session_full', 'There are not enough spaces remaining for this session.' );
-    }
-
-    $title = sprintf(
-        'Booking - %s - %s',
-        get_the_title( $group_id ) ?: 'Group',
-        sanitize_text_field( $args['customer_name'] ) ?: sanitize_email( $args['customer_email'] )
-    );
-
-    $booking_id = wp_insert_post( array(
-        'post_type'   => 'bh_booking',
-        'post_status' => 'publish',
-        'post_title'  => $title,
-    ), true );
-
-    if ( is_wp_error( $booking_id ) ) {
-        return $booking_id;
-    }
-
-    $meta = array(
-        '_bh_session_id'     => $session_id,
-        '_bh_group_id'       => $group_id,
-        '_bh_venue_id'       => $venue_id,
-        '_bh_user_id'        => absint( $args['user_id'] ),
-        '_bh_customer_name'  => sanitize_text_field( $args['customer_name'] ),
-        '_bh_customer_email' => sanitize_email( $args['customer_email'] ),
-        '_bh_places'         => $places,
-        '_bh_status'         => sanitize_key( $args['status'] ),
-        '_bh_payment_status' => sanitize_key( $args['payment_status'] ),
-        '_bh_payment_method' => sanitize_key( $args['payment_method'] ),
-        '_bh_invoice_id'     => absint( $args['invoice_id'] ),
-        '_bh_notes'          => sanitize_textarea_field( $args['notes'] ),
-    );
-
-    foreach ( $meta as $key => $value ) {
-        update_post_meta( $booking_id, $key, $value );
-    }
-
-    return $booking_id;
 }
 
 add_action( 'wp_ajax_bubbahub_booking_sessions', 'bubbahub_booking_sessions_ajax' );
 add_action( 'wp_ajax_nopriv_bubbahub_booking_sessions', 'bubbahub_booking_sessions_ajax' );
-
 function bubbahub_booking_sessions_ajax() {
     check_ajax_referer( 'bubbahub_booking', 'nonce' );
-
     $group_id = isset( $_POST['group_id'] ) ? absint( $_POST['group_id'] ) : 0;
-    $date     = isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '';
+    $date = isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '';
+    if ( ! $group_id || get_post_type( $group_id ) !== 'group' ) wp_send_json_error( array( 'message' => 'Invalid group.' ), 400 );
+    wp_send_json_success( array( 'sessions' => bubbahub_booking_get_available_sessions( $group_id, $date ) ) );
+}
 
-    if ( ! $group_id || get_post_type( $group_id ) !== 'group' ) {
-        wp_send_json_error( array( 'message' => 'Invalid group.' ), 400 );
-    }
-
-    wp_send_json_success( array(
-        'sessions' => bubbahub_booking_get_available_sessions( $group_id, $date ),
-    ) );
+function bubbahub_booking_create( $args = array() ) {
+    $args = wp_parse_args( $args, array( 'session_id'=>0,'group_id'=>0,'venue_id'=>0,'user_id'=>get_current_user_id(),'customer_name'=>'','customer_email'=>'','places'=>1,'status'=>'reserved','payment_status'=>'not_required','payment_method'=>'','invoice_id'=>0,'notes'=>'' ) );
+    $session_id = absint( $args['session_id'] );
+    if ( ! $session_id || get_post_type( $session_id ) !== 'bh_session' ) return new WP_Error( 'invalid_session', 'The selected booking session is invalid.' );
+    $stats = bubbahub_booking_session_stats( $session_id ); $places = max( 1, (int) $args['places'] );
+    if ( $stats['capacity'] > 0 && ( $stats['remaining'] === null || $places > $stats['remaining'] ) ) return new WP_Error( 'session_full', 'There are not enough spaces remaining for this session.' );
+    $booking_id = wp_insert_post( array( 'post_type'=>'bh_booking','post_status'=>'publish','post_title'=>sprintf( 'Booking - %s - %s', get_the_title( $args['group_id'] ) ?: 'Group', sanitize_text_field( $args['customer_name'] ) ?: sanitize_email( $args['customer_email'] ) ) ), true );
+    if ( is_wp_error( $booking_id ) ) return $booking_id;
+    foreach ( array( '_bh_session_id'=> $session_id, '_bh_group_id'=>absint($args['group_id']), '_bh_venue_id'=>absint($args['venue_id']), '_bh_user_id'=>absint($args['user_id']), '_bh_customer_name'=>sanitize_text_field($args['customer_name']), '_bh_customer_email'=>sanitize_email($args['customer_email']), '_bh_places'=>$places, '_bh_status'=>sanitize_key($args['status']), '_bh_payment_status'=>sanitize_key($args['payment_status']), '_bh_payment_method'=>sanitize_key($args['payment_method']), '_bh_invoice_id'=>absint($args['invoice_id']), '_bh_notes'=>sanitize_textarea_field($args['notes']) ) as $key=>$value ) update_post_meta($booking_id,$key,$value);
+    return $booking_id;
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-booking-frontend.php';

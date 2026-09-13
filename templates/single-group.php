@@ -63,6 +63,10 @@ while ( have_posts() ) : the_post();
 
                     <section class="bhg-section bhg-description"><h2>About this group</h2><div class="bhg-richtext"><?php the_content(); ?></div></section>
 
+                    <?php if ( function_exists( 'bubbahub_booking_render_group_widget' ) ) : ?>
+                        <?php bubbahub_booking_render_group_widget( $group_id ); ?>
+                    <?php endif; ?>
+
                     <section class="bhg-section bhg-map-section">
                         <div class="bhg-section-heading"><div><h2>Location</h2><p>Find this class and explore other venues from the same organiser.</p></div></div>
                         <?php if ( count( $venues ) > 1 ) : ?>
@@ -82,7 +86,7 @@ while ( have_posts() ) : the_post();
                     <section class="bhg-sidebar-card"><h2>Tags</h2><?php if ( $tags ) : ?><div class="bhg-tags"><?php foreach ( $tags as $tag ) : ?><a href="<?php echo esc_url( get_term_link( $tag ) ); ?>"><?php echo esc_html( $tag->name ); ?></a><?php endforeach; ?></div><?php else : ?><p class="bhg-muted">No tags added.</p><?php endif; ?></section>
                     <section class="bhg-sidebar-card"><h2>Schedule</h2><div class="bhg-schedule"><?php echo $schedule !== '' ? wp_kses_post( nl2br( esc_html( $schedule ) ) ) : '<span class="bhg-muted">Schedule not added yet.</span>'; ?></div></section>
                     <section class="bhg-sidebar-card"><h2>Schedule notes</h2><div class="bhg-schedule-notes"><?php echo $schedule_note !== '' ? wp_kses_post( nl2br( esc_html( $schedule_note ) ) ) : '<span class="bhg-muted">No additional notes.</span>'; ?></div></section>
-                    <section class="bhg-sidebar-card bhg-ready"><div class="bhg-ready-icon" aria-hidden="true">✓</div><h2>Ready to Join?</h2><p>Secure your spot for this group right away.</p><a href="#booking" class="bhg-book-button">Book My Space Now <span>→</span></a></section>
+                    <section class="bhg-sidebar-card bhg-ready"><div class="bhg-ready-icon" aria-hidden="true">✓</div><h2>Ready to Join?</h2><p>Secure your spot for this group right away.</p><a href="#bh-booking" class="bhg-book-button">Book My Space Now <span>→</span></a></section>
                 </aside>
             </div>
         </div>

@@ -6,8 +6,14 @@
         else fn();
     }
 
-    function showBookingConfirmation(){
+    function showBookingConfirmation(type){
         if(document.querySelector('#bh-booking-confirmation')) return;
+
+        var isBookNow = type === 'book_now';
+        var title = isBookNow ? 'Thank you for your booking.' : 'Thank you for your reservation.';
+        var message = isBookNow
+            ? 'Your booking has been received and confirmed.'
+            : 'The organiser will be in touch to confirm booking';
 
         var modal = document.createElement('div');
         modal.id = 'bh-booking-confirmation';
@@ -19,8 +25,8 @@
             '<div class="bh-booking-confirmation-dialog">' +
                 '<button type="button" class="bh-booking-confirmation-close" aria-label="Close confirmation">×</button>' +
                 '<div class="bh-booking-confirmation-icon" aria-hidden="true">✓</div>' +
-                '<h2 id="bh-booking-confirmation-title">Thank you for your booking.</h2>' +
-                '<p>The organiser will be in touch to confirm booking</p>' +
+                '<h2 id="bh-booking-confirmation-title">' + title + '</h2>' +
+                '<p>' + message + '</p>' +
                 '<button type="button" class="bh-booking-primary bh-booking-confirmation-done">Done</button>' +
             '</div>';
 
@@ -52,12 +58,39 @@
         }, 0);
     }
 
+    function watchNinjaSuccess(){
+        var form = document.querySelector('.nf-form-cont');
+        if(!form) return;
+
+        function check(){
+            var response = form.querySelector('.nf-response-msg');
+            if(response && response.textContent.trim()) showBookingConfirmation('book_now');
+        }
+
+        check();
+
+        if(window.MutationObserver){
+            var observer = new MutationObserver(check);
+            observer.observe(form, {childList:true, subtree:true, characterData:true});
+        }
+
+        if(window.jQuery){
+            window.jQuery(document).on('nfFormSubmitResponse', function(event, response){
+                if(response && response.errors && Object.keys(response.errors).length) return;
+                if(response && response.data && response.data.errors && Object.keys(response.data.errors).length) return;
+                showBookingConfirmation('book_now');
+            });
+        }
+    }
+
     ready(function(){
         var root = document.querySelector('.bh-booking-widget');
         var modal = document.querySelector('#bh-booking-modal');
 
         var successMessage = document.querySelector('.bh-booking-message.is-success');
-        if(successMessage) showBookingConfirmation();
+        if(successMessage) showBookingConfirmation('reserve_spot');
+
+        watchNinjaSuccess();
 
         if(!root || !modal) return;
 

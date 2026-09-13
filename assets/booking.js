@@ -3,6 +3,14 @@
     function ready(fn){ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
     var bookNowHandled = false;
 
+    function goToMyHub(){ window.location.href = new URL('/myhub/', window.location.origin).toString(); }
+
+    function closeConfirmationModal(){
+        var modal = document.querySelector('#bh-booking-confirmation');
+        if(modal) modal.remove();
+        document.body.classList.remove('bh-booking-confirmation-open');
+    }
+
     function showBookingConfirmation(type){
         if(document.querySelector('#bh-booking-confirmation')) return;
         var isBookNow = type === 'book_now';
@@ -14,36 +22,61 @@
         modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true'); modal.setAttribute('aria-labelledby','bh-booking-confirmation-title');
         modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close confirmation">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">✓</div><h2 id="bh-booking-confirmation-title">' + title + '</h2><p>' + message + '</p><button type="button" class="bh-booking-primary bh-booking-confirmation-done">Done</button></div>';
         document.body.appendChild(modal); document.body.classList.add('bh-booking-confirmation-open');
-        function close(){ modal.remove(); document.body.classList.remove('bh-booking-confirmation-open'); }
-        function goToMyHub(){ window.location.href = new URL('/myhub/', window.location.origin).toString(); }
+        function close(){ closeConfirmationModal(); }
         modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', close);
         modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', close);
         modal.querySelector('.bh-booking-confirmation-done').addEventListener('click', goToMyHub);
-        document.addEventListener('keydown', function escapeHandler(e){ if(e.key === 'Escape'){ close(); document.removeEventListener('keydown', escapeHandler); } });
+        setTimeout(function(){ var button = modal.querySelector('.bh-booking-confirmation-done'); if(button) button.focus(); }, 0);
     }
 
+    /*
+     * Book Now always opens the same confirmation-style modal used by
+     * Reserve Spot. When GetPaid is enabled, the modal is upgraded in-place
+     * with the payment button once the checkout URL is available.
+     */
     function showGetPaidModal(url){
-        if(document.querySelector('#bh-booking-confirmation')) return;
-        var modal = document.createElement('div');
-        modal.id = 'bh-booking-confirmation'; modal.className = 'bh-booking-confirmation-modal';
-        modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true'); modal.setAttribute('aria-labelledby','bh-booking-confirmation-title');
-        modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close payment message">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">£</div><h2 id="bh-booking-confirmation-title">Booking received</h2><p>Your booking has been received. Continue to secure payment.</p><button type="button" class="bh-booking-primary bh-booking-payment-continue">Continue to payment</button></div>';
-        document.body.appendChild(modal); document.body.classList.add('bh-booking-confirmation-open');
-        function close(){ modal.remove(); document.body.classList.remove('bh-booking-confirmation-open'); }
-        modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', close);
-        modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', close);
-        modal.querySelector('.bh-booking-payment-continue').addEventListener('click', function(){ window.location.href = url; });
-        setTimeout(function(){ var button = modal.querySelector('.bh-booking-payment-continue'); if(button) button.focus(); }, 0);
+        var modal = document.querySelector('#bh-booking-confirmation');
+        if(!modal){
+            modal = document.createElement('div');
+            modal.id = 'bh-booking-confirmation';
+            modal.className = 'bh-booking-confirmation-modal';
+            modal.setAttribute('role','dialog');
+            modal.setAttribute('aria-modal','true');
+            modal.setAttribute('aria-labelledby','bh-booking-confirmation-title');
+            modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close payment message">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">£</div><h2 id="bh-booking-confirmation-title">Booking received</h2><p class="bh-booking-payment-message">Your booking has been received. Continue to secure payment.</p><button type="button" class="bh-booking-primary bh-booking-payment-continue">Continue to payment</button></div>';
+            document.body.appendChild(modal);
+            document.body.classList.add('bh-booking-confirmation-open');
+            modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', closeConfirmationModal);
+            modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', closeConfirmationModal);
+        }
+        var button = modal.querySelector('.bh-booking-payment-continue');
+        var message = modal.querySelector('.bh-booking-payment-message');
+        if(url){
+            if(message) message.textContent = 'Your booking has been received. Continue to secure payment.';
+            if(button){
+                button.disabled = false;
+                button.textContent = 'Continue to payment';
+                button.onclick = function(){ window.location.href = url; };
+            }
+            setTimeout(function(){ if(button) button.focus(); }, 0);
+        } else {
+            if(message) message.textContent = 'Your booking has been received. Preparing secure payment…';
+            if(button){ button.disabled = true; button.textContent = 'Preparing payment…'; }
+            setTimeout(function(){ if(button) button.focus(); }, 0);
+        }
     }
 
     function showPaymentError(){
-        if(document.querySelector('#bh-booking-confirmation')) return;
-        var modal = document.createElement('div'); modal.id = 'bh-booking-confirmation'; modal.className = 'bh-booking-confirmation-modal'; modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true');
-        modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">!</div><h2>Booking received</h2><p>We received your booking, but the payment page could not be opened. Please try again from MyHub or contact the organiser.</p><button type="button" class="bh-booking-primary bh-booking-confirmation-done">Done</button></div>';
-        document.body.appendChild(modal); document.body.classList.add('bh-booking-confirmation-open');
-        function close(){ modal.remove(); document.body.classList.remove('bh-booking-confirmation-open'); }
-        modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', close); modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', close);
-        modal.querySelector('.bh-booking-confirmation-done').addEventListener('click', function(){ window.location.href = new URL('/myhub/', window.location.origin).toString(); });
+        var modal = document.querySelector('#bh-booking-confirmation');
+        if(!modal){ showGetPaidModal(null); modal = document.querySelector('#bh-booking-confirmation'); }
+        if(!modal) return;
+        var message = modal.querySelector('.bh-booking-payment-message');
+        var button = modal.querySelector('.bh-booking-payment-continue');
+        var title = modal.querySelector('#bh-booking-confirmation-title');
+        if(title) title.textContent = 'Booking received';
+        if(message) message.textContent = 'We received your booking, but the secure payment page could not be opened. Please try again from MyHub or contact the organiser.';
+        if(button){ button.disabled = false; button.textContent = 'Go to MyHub'; button.onclick = goToMyHub; }
+        setTimeout(function(){ if(button) button.focus(); }, 0);
     }
 
     function getHiddenValue(form, fieldKey){
@@ -69,7 +102,11 @@
             .then(function(res){ return res.json().then(function(data){ return {ok:res.ok, status:res.status, data:data}; }); })
             .then(function(result){
                 if(result.ok && result.data && result.data.url){ showGetPaidModal(result.data.url); return; }
-                if(result.status === 409 || (result.data && result.data.code === 'payment_not_required')){ showBookingConfirmation('book_now'); return; }
+                if(result.status === 409 || (result.data && result.data.code === 'payment_not_required')){
+                    closeConfirmationModal();
+                    showBookingConfirmation('book_now');
+                    return;
+                }
                 if(attempt < 5){ window.setTimeout(function(){ fetchGetPaidCheckout(response, attempt + 1); }, 700); return; }
                 showPaymentError();
             })
@@ -78,7 +115,12 @@
                 showPaymentError();
             });
     }
-    function handleBookNowSuccess(response){ if(bookNowHandled) return; bookNowHandled = true; fetchGetPaidCheckout(response || {}, 0); }
+    function handleBookNowSuccess(response){
+        if(bookNowHandled) return;
+        bookNowHandled = true;
+        showGetPaidModal(null);
+        fetchGetPaidCheckout(response || {}, 0);
+    }
 
     function watchNinjaSuccess(){
         var form = document.querySelector('.nf-form-cont'); if(!form) return;

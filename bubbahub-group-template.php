@@ -1,20 +1,21 @@
 <?php
 /**
- * Plugin Name: BubbaHub Group Page
- * Description: Custom single-page template for Group listings in BubbaHub Directory.
- * Version: 1.0.1
- * Author: BubbaHub
- * Requires PHP: 7.4
+ * BubbaHub Directory — Group single-page integration.
+ *
+ * This file is an internal include of the main BubbaHub Directory plugin.
+ * It intentionally contains NO WordPress plugin header so WordPress does not
+ * register it as a second plugin.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_GROUP_PAGE_VERSION', '1.0.1' );
-define( 'BUBBAHUB_GROUP_PAGE_URL', plugin_dir_url( __FILE__ ) );
+if ( ! defined( 'BUBBAHUB_DIRECTORY_VERSION' ) ) {
+    return;
+}
 
 /*
  * IMPORTANT:
- * The Group post type is registered by the existing site/plugin setup.
- * This plugin does NOT register another "group" post type.
+ * The Group post type is registered by the existing site/ACF setup.
+ * This file does NOT register another "group" post type.
  * It only replaces the single Group template when WordPress is displaying
  * an existing Group post, e.g. /group/demo-group/.
  */
@@ -27,7 +28,7 @@ add_action( 'wp_ajax_nopriv_bubbahub_group_alternatives', 'bubbahub_group_altern
 function bubbahub_group_page_template( $template ) {
     if ( ! is_singular( 'group' ) ) return $template;
 
-    $custom = plugin_dir_path( __FILE__ ) . 'templates/single-group.php';
+    $custom = BUBBAHUB_DIRECTORY_PATH . 'templates/single-group.php';
 
     if ( is_readable( $custom ) ) {
         return $custom;
@@ -48,9 +49,9 @@ function bubbahub_group_page_assets() {
 
     wp_enqueue_style(
         'bubbahub-group-page',
-        BUBBAHUB_GROUP_PAGE_URL . 'assets/group-page.css',
+        BUBBAHUB_DIRECTORY_URL . 'assets/group-page.css',
         array(),
-        BUBBAHUB_GROUP_PAGE_VERSION
+        BUBBAHUB_DIRECTORY_VERSION
     );
 
     wp_enqueue_style(
@@ -70,9 +71,9 @@ function bubbahub_group_page_assets() {
 
     wp_enqueue_script(
         'bubbahub-group-page',
-        BUBBAHUB_GROUP_PAGE_URL . 'assets/group-page.js',
+        BUBBAHUB_DIRECTORY_URL . 'assets/group-page.js',
         array( 'jquery', 'bubbahub-leaflet' ),
-        BUBBAHUB_GROUP_PAGE_VERSION,
+        BUBBAHUB_DIRECTORY_VERSION,
         true
     );
 
@@ -308,7 +309,7 @@ function bubbahub_group_related_query( $post_id, $organiser_id, $venue_id = 0 ) 
         $args['meta_query'] = array(
             array(
                 'key'     => 'venue',
-                'value'   => '"' . $venue_id . '"',
+                'value'   => '\"' . $venue_id . '\"',
                 'compare' => 'LIKE',
             ),
         );

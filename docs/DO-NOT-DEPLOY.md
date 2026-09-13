@@ -1,0 +1,1 @@
+This file is temporary and should be removed before merge. It marks that the branch is under verification.

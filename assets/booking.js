@@ -131,80 +131,36 @@
     });
 
     /*
-     * Ninja Forms stores field values in a Backbone model. Updating only the
-     * DOM can leave the visible hidden field changed while the submitted value
-     * remains empty. Use Ninja Forms' jQuery change pattern when available.
+     * Ninja Forms keeps field values in a Backbone model. The booking
+     * integration writes the hidden booking fields, then this bridge triggers
+     * Ninja Forms' normal jQuery change event so those values are included in
+     * the actual submission payload.
      */
     ready(function(){
         var form = document.querySelector('.nf-form-cont');
         if(!form) return;
 
-        var contextScript = document.querySelector('script[data-bh-ninja-context]');
-        if(!contextScript) return;
-
-        var map;
-        var context;
-        try {
-            map = JSON.parse(contextScript.getAttribute('data-field-map') || '{}');
-            context = JSON.parse(contextScript.getAttribute('data-context') || '{}');
-        } catch(e) {
-            return;
-        }
-
-        function inputFor(key){
-            if(!map[key]) return null;
-            return document.getElementById('nf-field-' + map[key]) || form.querySelector('[name="nf-field-' + map[key] + '"]');
-        }
-
-        function setField(key, value){
-            var input = inputFor(key);
-            if(!input) return;
-            var stringValue = value == null ? '' : String(value);
-
-            if(window.jQuery){
-                window.jQuery(input).val(stringValue).trigger('change');
-            } else {
-                input.value = stringValue;
-                input.dispatchEvent(new Event('input', {bubbles:true}));
-                input.dispatchEvent(new Event('change', {bubbles:true}));
-            }
-        }
-
-        function sync(){
-            var rows = Array.prototype.slice.call(document.querySelectorAll('[data-ticket-row]'));
-            var items = [];
-            var places = 0;
-            var total = 0;
-
-            rows.forEach(function(row){
-                var input = row.querySelector('[data-ticket-quantity]');
-                if(!input) return;
-                var qty = Math.max(0, parseInt(input.value || '0', 10) || 0);
-                var slug = row.getAttribute('data-ticket-slug') || '';
-                var price = parseFloat(row.getAttribute('data-ticket-price') || '0') || 0;
-                if(qty > 0 && slug) items.push({slug:slug, quantity:qty});
-                places += qty;
-                total += qty * price;
+        function syncHiddenFields(){
+            if(!window.jQuery) return;
+            window.jQuery(form).find('input[type="hidden"]').each(function(){
+                window.jQuery(this).trigger('change');
             });
-
-            setField('group_id', context.group_id);
-            setField('session_id', context.session_id);
-            setField('booking_date', context.booking_date);
-            setField('ticket_breakdown', JSON.stringify(items));
-            setField('total_places', places);
-            setField('total_price', total.toFixed(2));
-            setField('booking_method', 'book_now');
-            setField('booking_status', 'confirmed');
         }
 
-        sync();
+        setTimeout(syncHiddenFields, 100);
+        setTimeout(syncHiddenFields, 500);
+
         document.addEventListener('click', function(event){
             if(event.target.closest('[data-ticket-plus]') || event.target.closest('[data-ticket-minus]')){
-                window.setTimeout(sync, 50);
+                window.setTimeout(syncHiddenFields, 100);
+                window.setTimeout(syncHiddenFields, 300);
             }
         });
+
         document.addEventListener('input', function(event){
-            if(event.target.matches('[data-ticket-quantity]')) sync();
+            if(event.target.matches('[data-ticket-quantity]')){
+                window.setTimeout(syncHiddenFields, 50);
+            }
         });
     });
 })();

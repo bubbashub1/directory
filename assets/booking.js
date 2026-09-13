@@ -79,38 +79,4 @@
 
         updateContinue();
     });
-
-    /* Booking page: keep the selected ticket count in links/forms. */
-    ready(function(){
-        var ticketSelect = document.querySelector('#bh-ticket-count');
-        if(!ticketSelect) return;
-
-        function syncTickets(){
-            var count = Math.max(1, parseInt(ticketSelect.value || '1', 10));
-            var details = document.querySelector('.bh-booking-details');
-            if(!details) return;
-
-            details.querySelectorAll('a.bh-booking-primary, a.bh-booking-external').forEach(function(link){
-                try {
-                    var url = new URL(link.href, window.location.origin);
-                    if(url.pathname.indexOf('/book/') !== -1 || url.searchParams.has('session_id')) {
-                        url.searchParams.set('places', String(count));
-                        link.href = url.toString();
-                    }
-                } catch(err) {}
-            });
-
-            var placesInput = details.querySelector('input[name="places"]');
-            if(placesInput) placesInput.value = String(count);
-
-            try {
-                var current = new URL(window.location.href);
-                current.searchParams.set('places', String(count));
-                window.history.replaceState({}, '', current.toString());
-            } catch(err) {}
-        }
-
-        ticketSelect.addEventListener('change', syncTickets);
-        syncTickets();
-    });
 })();

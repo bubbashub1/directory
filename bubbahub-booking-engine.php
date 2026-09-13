@@ -94,6 +94,25 @@ function bubbahub_booking_session_stats( $session_id ) {
     );
 }
 
+/**
+ * Normalise a stored booking-session date to ISO YYYY-MM-DD.
+ * Older/manual sessions may contain UK DD/MM/YYYY values, while the
+ * frontend date selector uses the ISO value as its option value.
+ */
+function bubbahub_booking_normalize_session_date( $value ) {
+    $value = trim( (string) $value );
+    if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m ) ) {
+        return $value;
+    }
+    if ( preg_match( '/^(\d{2})\/(\d{2})\/(\d{4})$/', $value, $m ) ) {
+        return $m[3] . '-' . $m[2] . '-' . $m[1];
+    }
+    if ( preg_match( '/^(\d{2})-(\d{2})-(\d{4})$/', $value, $m ) ) {
+        return $m[3] . '-' . $m[2] . '-' . $m[1];
+    }
+    return '';
+}
+
 function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
     $meta_query = array(
         array(
@@ -108,14 +127,11 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
         ),
     );
 
-    if ( $date && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
-        $meta_query[] = array(
-            'key'     => '_bh_date',
-            'value'   => $date,
-            'compare' => '=',
-        );
-    }
-
+    /*
+     * Do not use an exact meta query for the date. Sessions created before
+     * the UK date-format change may contain DD/MM/YYYY. Fetch the group's
+     * open sessions and compare normalised dates instead.
+     */
     $query = new WP_Query( array(
         'post_type'      => 'bh_session',
         'post_status'    => 'publish',
@@ -127,9 +143,17 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
         'meta_query'     => $meta_query,
     ) );
 
+    $requested_date = bubbahub_booking_normalize_session_date( $date );
     $sessions = array();
 
     foreach ( $query->posts as $session ) {
+        $stored_date = bubbahub_booking_meta( $session->ID, '_bh_date', '' );
+        $session_date = bubbahub_booking_normalize_session_date( $stored_date );
+
+        if ( $requested_date && $session_date !== $requested_date ) {
+            continue;
+        }
+
         $stats = bubbahub_booking_session_stats( $session->ID );
         if ( $stats['full'] ) {
             continue;
@@ -140,7 +164,7 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
             'title'           => get_the_title( $session->ID ),
             'group_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ),
             'venue_id'        => (int) bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ),
-            'date'            => bubbahub_booking_meta( $session->ID, '_bh_date', '' ),
+            'date'            => $session_date,
             'start_time'      => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ),
             'end_time'        => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
             'price'           => bubbahub_booking_meta( $session->ID, '_bh_price', '' ),

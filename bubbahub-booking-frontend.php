@@ -64,7 +64,7 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                     <select id="bh-booking-date" class="bh-booking-select">
                         <option value="">Choose a date</option>
                         <?php foreach ( $dates as $date ) : ?>
-                            <option value="<?php echo esc_attr( $date ); ?>"><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $date ) ) ); ?></option>
+                            <option value="<?php echo esc_attr( $date ); ?>"><?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

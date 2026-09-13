@@ -2,6 +2,7 @@
     'use strict';
     function ready(fn){ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
     var bookNowHandled = false;
+    var bookingContext = { sessionId: '', email: '', groupId: '', bookingDate: '' };
 
     function goToMyHub(){ window.location.href = new URL('/myhub/', window.location.origin).toString(); }
 
@@ -29,11 +30,6 @@
         setTimeout(function(){ var button = modal.querySelector('.bh-booking-confirmation-done'); if(button) button.focus(); }, 0);
     }
 
-    /*
-     * Book Now always opens the same confirmation-style modal used by
-     * Reserve Spot. When GetPaid is enabled, the modal is upgraded in-place
-     * with the payment button once the checkout URL is available.
-     */
     function showGetPaidModal(url){
         var modal = document.querySelector('#bh-booking-confirmation');
         if(!modal){
@@ -74,7 +70,6 @@
         var button = modal.querySelector('.bh-booking-payment-continue');
         var title = modal.querySelector('#bh-booking-confirmation-title');
         if(title) title.textContent = 'Booking received';
-
         var safeDetail = detail ? String(detail).replace(/\s+/g, ' ').trim() : '';
         if(safeDetail.length > 180) safeDetail = safeDetail.substring(0, 177) + '…';
         if(message){
@@ -91,10 +86,55 @@
         var input = form.querySelector('input[name*="' + fieldKey + '"]');
         return input ? input.value : '';
     }
+
+    function rememberBookingContext(form){
+        if(!form) return;
+        var sessionId = getHiddenValue(form, 'session_id');
+        var email = getHiddenValue(form, 'email');
+        if(sessionId) bookingContext.sessionId = String(sessionId).trim();
+        if(email) bookingContext.email = String(email).trim();
+        if(!bookingContext.groupId){
+            var groupId = getHiddenValue(form, 'group_id');
+            if(groupId) bookingContext.groupId = String(groupId).trim();
+        }
+        if(!bookingContext.bookingDate){
+            var bookingDate = getHiddenValue(form, 'booking_date');
+            if(bookingDate) bookingContext.bookingDate = String(bookingDate).trim();
+        }
+    }
+
+    function initialiseBookingContext(form){
+        try {
+            var params = new URLSearchParams(window.location.search);
+            bookingContext.sessionId = params.get('session_id') || bookingContext.sessionId;
+            bookingContext.groupId = params.get('group_id') || bookingContext.groupId;
+            bookingContext.bookingDate = params.get('date') || bookingContext.bookingDate;
+        } catch(e) {}
+        rememberBookingContext(form);
+        if(form){
+            form.addEventListener('input', function(event){
+                var key = event.target && event.target.name ? event.target.name : '';
+                if(key.indexOf('email') !== -1 && event.target.value) bookingContext.email = String(event.target.value).trim();
+                if(key.indexOf('session_id') !== -1 && event.target.value) bookingContext.sessionId = String(event.target.value).trim();
+            });
+            form.addEventListener('change', function(event){
+                var key = event.target && event.target.name ? event.target.name : '';
+                if(key.indexOf('email') !== -1 && event.target.value) bookingContext.email = String(event.target.value).trim();
+                if(key.indexOf('session_id') !== -1 && event.target.value) bookingContext.sessionId = String(event.target.value).trim();
+            });
+        }
+        document.addEventListener('input', function(event){
+            if(!event.target || !event.target.name) return;
+            var key = event.target.name;
+            if(key.indexOf('email') !== -1 && event.target.value) bookingContext.email = String(event.target.value).trim();
+        });
+    }
+
     function extractSubmissionId(response){
         var data = response && response.data ? response.data : {};
         return parseInt(data.id || data.sub_id || data.submission_id || data.submissionId || '', 10) || 0;
     }
+
     function getCheckoutError(result){
         if(!result || !result.data) return '';
         var data = result.data;
@@ -103,16 +143,20 @@
         if(typeof data.code === 'string' && data.code) return data.code.replace(/_/g, ' ');
         return '';
     }
+
     function fetchGetPaidCheckout(response, attempt){
         attempt = attempt || 0;
         var form = document.querySelector('.nf-form-cont');
+        rememberBookingContext(form);
         var submissionId = extractSubmissionId(response);
-        var sessionId = getHiddenValue(form, 'session_id');
-        var email = getHiddenValue(form, 'email');
+        var sessionId = bookingContext.sessionId;
+        var email = bookingContext.email;
         var endpoint = new URL('/wp-json/bubbahub/v1/getpaid/checkout', window.location.origin);
         if(submissionId) endpoint.searchParams.set('submission_id', submissionId);
         if(sessionId) endpoint.searchParams.set('session_id', sessionId);
         if(email) endpoint.searchParams.set('email', email);
+        if(bookingContext.groupId) endpoint.searchParams.set('group_id', bookingContext.groupId);
+        if(bookingContext.bookingDate) endpoint.searchParams.set('booking_date', bookingContext.bookingDate);
         fetch(endpoint.toString(), {credentials:'same-origin', headers:{'Accept':'application/json'}})
             .then(function(res){ return res.json().then(function(data){ return {ok:res.ok, status:res.status, data:data}; }); })
             .then(function(result){
@@ -130,15 +174,19 @@
                 showPaymentError('The website could not reach the GetPaid checkout service.');
             });
     }
+
     function handleBookNowSuccess(response){
         if(bookNowHandled) return;
         bookNowHandled = true;
+        var form = document.querySelector('.nf-form-cont');
+        initialiseBookingContext(form);
         showGetPaidModal(null);
         fetchGetPaidCheckout(response || {}, 0);
     }
 
     function watchNinjaSuccess(){
         var form = document.querySelector('.nf-form-cont'); if(!form) return;
+        initialiseBookingContext(form);
         function validResponse(response){
             if(!response) return true;
             if(response.errors && Object.keys(response.errors).length) return false;
@@ -179,8 +227,10 @@
 
     ready(function(){
         var form = document.querySelector('.nf-form-cont'); if(!form) return;
+        initialiseBookingContext(form);
         function syncHiddenFields(){ if(!window.jQuery) return; window.jQuery(form).find('input[type="hidden"]').each(function(){ window.jQuery(this).trigger('change'); }); }
-        setTimeout(syncHiddenFields, 100); setTimeout(syncHiddenFields, 500);
+        setTimeout(function(){ rememberBookingContext(form); syncHiddenFields(); }, 100);
+        setTimeout(function(){ rememberBookingContext(form); syncHiddenFields(); }, 500);
         document.addEventListener('click', function(event){ if(event.target.closest('[data-ticket-plus]') || event.target.closest('[data-ticket-minus]')){ window.setTimeout(syncHiddenFields, 100); window.setTimeout(syncHiddenFields, 300); } });
         document.addEventListener('input', function(event){ if(event.target.matches('[data-ticket-quantity]')) window.setTimeout(syncHiddenFields, 50); });
     });

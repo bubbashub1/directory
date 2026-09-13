@@ -15,7 +15,7 @@ if ( file_exists( $getpaid_file ) ) require_once $getpaid_file;
 /**
  * GetPaid can operate BubbaHub as the platform/seller, so a separate seller
  * ID does not need to be entered manually when the connected GetPaid account
- * exposes exactly one account. We discover that account once and save its ID.
+ * exposes exactly one account. We discover that account for the current request.
  */
 function bubbahub_getpaid_auto_seller_id( $value ) {
     $value = trim( (string) $value );
@@ -103,7 +103,6 @@ function bubbahub_getpaid_auto_seller_id( $value ) {
     }
 
     $resolved = sanitize_text_field( $accounts[0]['id'] );
-    update_option( 'bubbahub_getpaid_seller_id', $resolved, false );
     return $resolved;
 }
 add_filter( 'option_bubbahub_getpaid_seller_id', 'bubbahub_getpaid_auto_seller_id', 10, 1 );

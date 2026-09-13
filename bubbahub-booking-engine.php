@@ -137,12 +137,14 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
         if ( ! in_array( $booking_action, array( 'book_now', 'reserve_spot', 'external', 'none' ), true ) ) {
             $booking_action = 'external' === $booking_method ? 'external' : ( 'none' === $booking_method ? 'none' : ( (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ) ? 'reserve_spot' : 'book_now' ) );
         }
+        $ninja_form_id = absint( bubbahub_booking_meta( $session->ID, '_bh_ninja_form_id', 0 ) );
+        if ( 'book_now' === $booking_action && ! $ninja_form_id ) $ninja_form_id = 4;
         $sessions[] = array(
             'id' => $session->ID, 'title' => get_the_title( $session->ID ), 'group_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_group_id', 0 ) ),
             'venue_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_venue_id', 0 ) ), 'date' => $session_date,
             'start_time' => bubbahub_booking_meta( $session->ID, '_bh_start_time', '' ), 'end_time' => bubbahub_booking_meta( $session->ID, '_bh_end_time', '' ),
             'price' => bubbahub_booking_meta( $session->ID, '_bh_price', '' ), 'booking_action' => $booking_action,
-            'booking_method' => $booking_method, 'ninja_form_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_ninja_form_id', 0 ) ),
+            'booking_method' => $booking_method, 'ninja_form_id' => $ninja_form_id,
             'external_url' => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ), 'reserve_enabled' => (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
             'capacity' => $stats['capacity'], 'used' => $stats['used'], 'remaining' => $stats['remaining'],
             'ticket_types' => $stats['ticket_types'],

@@ -32,9 +32,13 @@
             document.body.classList.remove('bh-booking-confirmation-open');
         }
 
+        function goToMyHub(){
+            window.location.href = new URL('/myhub/', window.location.origin).toString();
+        }
+
         modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', close);
         modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', close);
-        modal.querySelector('.bh-booking-confirmation-done').addEventListener('click', close);
+        modal.querySelector('.bh-booking-confirmation-done').addEventListener('click', goToMyHub);
         document.addEventListener('keydown', function escapeHandler(e){
             if(e.key === 'Escape'){
                 close();

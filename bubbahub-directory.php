@@ -2,13 +2,18 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls and map view.
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.1' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.2' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
+
+// Load the custom Group single-page template from this plugin.
+// The Group CPT itself remains owned by the existing site/ACF setup.
+require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
+
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
@@ -44,8 +49,6 @@ function bubbahub_directory_normalise_map( $map ) {
         if ( $lat !== '' && $lng !== '' ) return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
     }
     if ( ! is_string( $map ) || $map === '' ) return null;
-
-    // Extract the OpenStreetMap iframe source first.
     $source = '';
     if ( preg_match( '/<iframe[^>]+src=[\"\']([^\"\']+)[\"\']/i', $map, $iframe_match ) ) {
         $source = html_entity_decode( $iframe_match[1], ENT_QUOTES, 'UTF-8' );
@@ -54,26 +57,18 @@ function bubbahub_directory_normalise_map( $map ) {
     } else {
         $source = $map;
     }
-
     $decoded = urldecode( $source );
-
-    // Standard OpenStreetMap embed URL: marker=LAT,LNG
     if ( preg_match( '/(?:[?&]|%3F|%26)marker=([-+]?\d+(?:\.\d+)?)[, ]([-+]?\d+(?:\.\d+)?)/i', $decoded, $marker ) ) {
         return array( 'lat' => (float) $marker[1], 'lng' => (float) $marker[2] );
     }
-
-    // Some OpenStreetMap embeds expose mlat/mlon instead.
     $mlat = '';
     $mlon = '';
     if ( preg_match( '/(?:[?&])mlat=([-+]?\d+(?:\.\d+)?)/i', $decoded, $lat_match ) ) $mlat = $lat_match[1];
     if ( preg_match( '/(?:[?&])mlon=([-+]?\d+(?:\.\d+)?)/i', $decoded, $lon_match ) ) $mlon = $lon_match[1];
     if ( $mlat !== '' && $mlon !== '' ) return array( 'lat' => (float) $mlat, 'lng' => (float) $mlon );
-
-    // Fallback for a plain coordinate string stored by an OSM-compatible field.
     if ( preg_match( '/^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$/', trim( $decoded ), $coords ) ) {
         return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
     }
-
     return null;
 }
 function bubbahub_directory_region( $post_id ) {

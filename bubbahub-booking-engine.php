@@ -2,13 +2,13 @@
 /**
  * Plugin Name: BubbaHub Booking Engine
  * Description: Session, availability and booking engine for BubbaHub groups.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires PHP: 7.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_BOOKING_VERSION', '1.1.0' );
+define( 'BUBBAHUB_BOOKING_VERSION', '1.2.0' );
 
 function bubbahub_booking_meta( $post_id, $key, $default = '' ) {
     $value = get_post_meta( $post_id, $key, true );
@@ -28,19 +28,84 @@ add_action( 'init', function() {
     ) );
 } );
 
+function bubbahub_booking_normalize_ticket_types( $ticket_types ) {
+    if ( ! is_array( $ticket_types ) ) return array();
+    $normalized = array();
+    foreach ( $ticket_types as $index => $ticket ) {
+        if ( ! is_array( $ticket ) ) continue;
+        $name = isset( $ticket['name'] ) ? sanitize_text_field( $ticket['name'] ) : '';
+        if ( '' === $name ) continue;
+        $price = isset( $ticket['price'] ) ? sanitize_text_field( $ticket['price'] ) : '';
+        $capacity = isset( $ticket['capacity'] ) ? absint( $ticket['capacity'] ) : 0;
+        $slug = ! empty( $ticket['slug'] ) ? sanitize_key( $ticket['slug'] ) : sanitize_title( $name );
+        if ( '' === $slug ) $slug = 'ticket-' . absint( $index );
+        $base_slug = $slug;
+        $suffix = 2;
+        while ( isset( $normalized[ $slug ] ) ) $slug = $base_slug . '-' . $suffix++;
+        $normalized[ $slug ] = array( 'slug' => $slug, 'name' => $name, 'price' => $price, 'capacity' => $capacity );
+    }
+    return array_values( $normalized );
+}
+
+function bubbahub_booking_ticket_price( $price ) {
+    if ( is_numeric( $price ) ) return (float) $price;
+    $value = preg_replace( '/[^0-9.\-]/', '', (string) $price );
+    return is_numeric( $value ) ? (float) $value : 0.0;
+}
+
+function bubbahub_booking_ticket_breakdown_total( $ticket_breakdown ) {
+    if ( ! is_array( $ticket_breakdown ) ) return array( 'places' => 0, 'total' => 0.0 );
+    $places = 0;
+    $total = 0.0;
+    foreach ( $ticket_breakdown as $ticket ) {
+        if ( ! is_array( $ticket ) ) continue;
+        $qty = isset( $ticket['quantity'] ) ? max( 0, absint( $ticket['quantity'] ) ) : 0;
+        if ( ! $qty ) continue;
+        $places += $qty;
+        $total += $qty * bubbahub_booking_ticket_price( isset( $ticket['price'] ) ? $ticket['price'] : 0 );
+    }
+    return array( 'places' => $places, 'total' => round( $total, 2 ) );
+}
+
 function bubbahub_booking_session_stats( $session_id ) {
     $capacity = absint( bubbahub_booking_meta( $session_id, '_bh_capacity', 0 ) );
+    $ticket_types = bubbahub_booking_normalize_ticket_types( get_post_meta( $session_id, '_bh_ticket_types', true ) );
     $bookings = get_posts( array(
         'post_type' => 'bh_booking', 'post_status' => 'publish', 'posts_per_page' => -1,
         'fields' => 'ids', 'meta_query' => array( array( 'key' => '_bh_session_id', 'value' => absint( $session_id ) ) )
     ) );
     $used = 0;
+    $ticket_used = array();
+    foreach ( $ticket_types as $ticket ) $ticket_used[ $ticket['slug'] ] = 0;
     foreach ( $bookings as $booking_id ) {
         $status = bubbahub_booking_meta( $booking_id, '_bh_status', '' );
-        if ( in_array( $status, array( 'confirmed', 'reserved' ), true ) ) $used += max( 1, absint( bubbahub_booking_meta( $booking_id, '_bh_places', 1 ) ) );
+        if ( ! in_array( $status, array( 'confirmed', 'reserved' ), true ) ) continue;
+        $used += max( 1, absint( bubbahub_booking_meta( $booking_id, '_bh_places', 1 ) ) );
+        $breakdown = get_post_meta( $booking_id, '_bh_ticket_breakdown', true );
+        if ( is_array( $breakdown ) ) {
+            foreach ( $breakdown as $ticket ) {
+                if ( ! is_array( $ticket ) ) continue;
+                $slug = isset( $ticket['slug'] ) ? sanitize_key( $ticket['slug'] ) : '';
+                if ( $slug && isset( $ticket_used[ $slug ] ) ) $ticket_used[ $slug ] += max( 0, absint( isset( $ticket['quantity'] ) ? $ticket['quantity'] : 0 ) );
+            }
+        }
     }
     $remaining = $capacity > 0 ? max( 0, $capacity - $used ) : null;
-    return array( 'capacity' => $capacity, 'used' => $used, 'remaining' => $remaining, 'full' => $capacity > 0 && $remaining <= 0 );
+    $ticket_availability = array();
+    foreach ( $ticket_types as $ticket ) {
+        $ticket_capacity = absint( $ticket['capacity'] );
+        $ticket_remaining = $ticket_capacity > 0 ? max( 0, $ticket_capacity - absint( $ticket_used[ $ticket['slug'] ] ) ) : null;
+        $ticket_availability[] = array_merge( $ticket, array(
+            'used' => absint( $ticket_used[ $ticket['slug'] ] ),
+            'remaining' => $ticket_remaining,
+            'full' => $ticket_capacity > 0 && $ticket_remaining <= 0,
+        ) );
+    }
+    $has_available_ticket = false;
+    foreach ( $ticket_availability as $ticket ) if ( ! $ticket['full'] ) { $has_available_ticket = true; break; }
+    $full = $capacity > 0 && $remaining <= 0;
+    if ( $ticket_types && ! $has_available_ticket ) $full = true;
+    return array( 'capacity' => $capacity, 'used' => $used, 'remaining' => $remaining, 'full' => $full, 'ticket_types' => $ticket_availability );
 }
 
 function bubbahub_booking_normalize_session_date( $value ) {
@@ -80,6 +145,7 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
             'booking_method' => $booking_method, 'ninja_form_id' => absint( bubbahub_booking_meta( $session->ID, '_bh_ninja_form_id', 0 ) ),
             'external_url' => bubbahub_booking_meta( $session->ID, '_bh_external_url', '' ), 'reserve_enabled' => (bool) bubbahub_booking_meta( $session->ID, '_bh_reserve_enabled', false ),
             'capacity' => $stats['capacity'], 'used' => $stats['used'], 'remaining' => $stats['remaining'],
+            'ticket_types' => $stats['ticket_types'],
         );
     }
     return $sessions;
@@ -96,14 +162,39 @@ function bubbahub_booking_sessions_ajax() {
 }
 
 function bubbahub_booking_create( $args = array() ) {
-    $args = wp_parse_args( $args, array( 'session_id'=>0,'group_id'=>0,'venue_id'=>0,'user_id'=>get_current_user_id(),'customer_name'=>'','customer_email'=>'','places'=>1,'status'=>'reserved','payment_status'=>'not_required','payment_method'=>'','invoice_id'=>0,'notes'=>'' ) );
+    $args = wp_parse_args( $args, array( 'session_id'=>0,'group_id'=>0,'venue_id'=>0,'user_id'=>get_current_user_id(),'customer_name'=>'','customer_email'=>'','places'=>1,'ticket_breakdown'=>array(),'total_price'=>0,'status'=>'reserved','payment_status'=>'not_required','payment_method'=>'','invoice_id'=>0,'notes'=>'' ) );
     $session_id = absint( $args['session_id'] );
     if ( ! $session_id || get_post_type( $session_id ) !== 'bh_session' ) return new WP_Error( 'invalid_session', 'The selected booking session is invalid.' );
-    $stats = bubbahub_booking_session_stats( $session_id ); $places = max( 1, (int) $args['places'] );
+
+    $stats = bubbahub_booking_session_stats( $session_id );
+    $ticket_types = $stats['ticket_types'];
+    $ticket_map = array();
+    foreach ( $ticket_types as $ticket ) $ticket_map[ $ticket['slug'] ] = $ticket;
+
+    $breakdown = array();
+    if ( is_array( $args['ticket_breakdown'] ) ) {
+        foreach ( $args['ticket_breakdown'] as $key => $ticket ) {
+            if ( ! is_array( $ticket ) ) continue;
+            $slug = isset( $ticket['slug'] ) ? sanitize_key( $ticket['slug'] ) : sanitize_key( $key );
+            $quantity = isset( $ticket['quantity'] ) ? max( 0, absint( $ticket['quantity'] ) ) : 0;
+            if ( ! $quantity || ! isset( $ticket_map[ $slug ] ) ) continue;
+            $definition = $ticket_map[ $slug ];
+            if ( $definition['capacity'] > 0 && $quantity > $definition['remaining'] ) {
+                return new WP_Error( 'ticket_full', sprintf( 'There are not enough %s tickets remaining.', $definition['name'] ) );
+            }
+            $breakdown[] = array( 'slug' => $slug, 'name' => $definition['name'], 'price' => $definition['price'], 'quantity' => $quantity );
+        }
+    }
+
+    $calculated = bubbahub_booking_ticket_breakdown_total( $breakdown );
+    $places = $calculated['places'] > 0 ? $calculated['places'] : max( 1, (int) $args['places'] );
+    if ( $ticket_types && ! $calculated['places'] ) return new WP_Error( 'ticket_required', 'Please select at least one ticket.' );
     if ( $stats['capacity'] > 0 && ( $stats['remaining'] === null || $places > $stats['remaining'] ) ) return new WP_Error( 'session_full', 'There are not enough spaces remaining for this session.' );
+
+    $total_price = $calculated['places'] > 0 ? $calculated['total'] : (float) $args['total_price'];
     $booking_id = wp_insert_post( array( 'post_type'=>'bh_booking','post_status'=>'publish','post_title'=>sprintf( 'Booking - %s - %s', get_the_title( $args['group_id'] ) ?: 'Group', sanitize_text_field( $args['customer_name'] ) ?: sanitize_email( $args['customer_email'] ) ) ), true );
     if ( is_wp_error( $booking_id ) ) return $booking_id;
-    foreach ( array( '_bh_session_id'=> $session_id, '_bh_group_id'=>absint($args['group_id']), '_bh_venue_id'=>absint($args['venue_id']), '_bh_user_id'=>absint($args['user_id']), '_bh_customer_name'=>sanitize_text_field($args['customer_name']), '_bh_customer_email'=>sanitize_email($args['customer_email']), '_bh_places'=>$places, '_bh_status'=>sanitize_key($args['status']), '_bh_payment_status'=>sanitize_key($args['payment_status']), '_bh_payment_method'=>sanitize_key($args['payment_method']), '_bh_invoice_id'=>absint($args['invoice_id']), '_bh_notes'=>sanitize_textarea_field($args['notes']) ) as $key=>$value ) update_post_meta($booking_id,$key,$value);
+    foreach ( array( '_bh_session_id'=> $session_id, '_bh_group_id'=>absint($args['group_id']), '_bh_venue_id'=>absint($args['venue_id']), '_bh_user_id'=>absint($args['user_id']), '_bh_customer_name'=>sanitize_text_field($args['customer_name']), '_bh_customer_email'=>sanitize_email($args['customer_email']), '_bh_places'=>$places, '_bh_ticket_breakdown'=>$breakdown, '_bh_total_price'=>number_format( $total_price, 2, '.', '' ), '_bh_status'=>sanitize_key($args['status']), '_bh_payment_status'=>sanitize_key($args['payment_status']), '_bh_payment_method'=>sanitize_key($args['payment_method']), '_bh_invoice_id'=>absint($args['invoice_id']), '_bh_notes'=>sanitize_textarea_field($args['notes']) ) as $key=>$value ) update_post_meta($booking_id,$key,$value);
     return $booking_id;
 }
 

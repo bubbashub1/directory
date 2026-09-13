@@ -12,6 +12,10 @@ if ( ! defined( 'BUBBAHUB_DIRECTORY_VERSION' ) ) {
     return;
 }
 
+if ( ! defined( 'BUBBAHUB_DIRECTORY_PATH' ) ) {
+    define( 'BUBBAHUB_DIRECTORY_PATH', plugin_dir_path( __FILE__ ) );
+}
+
 /*
  * IMPORTANT:
  * The Group post type is registered by the existing site/ACF setup.

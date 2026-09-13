@@ -1,7 +1,6 @@
 <?php
 /**
  * BubbaHub Booking Engine — Group frontend integration.
- * Internal include loaded by the Booking Engine plugin.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,35 +11,43 @@ if ( ! function_exists( 'bubbahub_booking_get_available_sessions' ) ) {
     return;
 }
 
+add_action( 'init', 'bubbahub_booking_register_page', 20 );
+function bubbahub_booking_register_page() {
+    if ( ! get_page_by_path( 'book' ) ) {
+        wp_insert_post( array(
+            'post_title'   => 'Book',
+            'post_name'    => 'book',
+            'post_content' => '[bubbahub_booking_page]',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+        ) );
+    }
+}
+
+add_shortcode( 'bubbahub_booking_page', 'bubbahub_booking_page_shortcode' );
+
 add_action( 'wp_enqueue_scripts', 'bubbahub_booking_frontend_assets', 30 );
 function bubbahub_booking_frontend_assets() {
-    if ( ! is_singular( 'group' ) ) {
+    if ( ! is_singular( 'group' ) && ! is_page( 'book' ) ) {
         return;
     }
 
     $url = plugin_dir_url( __FILE__ );
-
-    // Use the actual file modification times so browsers cannot keep serving an old
-    // booking.js/booking.css after a Booking Engine update.
     $css_file = plugin_dir_path( __FILE__ ) . 'assets/booking.css';
     $js_file  = plugin_dir_path( __FILE__ ) . 'assets/booking.js';
-    $css_ver  = file_exists( $css_file ) ? (string) filemtime( $css_file ) : '1.1.1';
-    $js_ver   = file_exists( $js_file ) ? (string) filemtime( $js_file ) : '1.1.1';
+    $css_ver  = file_exists( $css_file ) ? (string) filemtime( $css_file ) : '1.2.0';
+    $js_ver   = file_exists( $js_file ) ? (string) filemtime( $js_file ) : '1.2.0';
 
     wp_enqueue_style( 'bubbahub-booking-frontend', $url . 'assets/booking.css', array(), $css_ver );
-    wp_enqueue_script( 'bubbahub-booking-frontend', $url . 'assets/booking.js', array(), $js_ver, true );
 
-    wp_localize_script( 'bubbahub-booking-frontend', 'BubbaHubBookingUI', array(
-        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-        'nonce'   => wp_create_nonce( 'bubbahub_booking' ),
-        'loading' => 'Loading availability…',
-        'empty'   => 'No bookable sessions are currently available for this group.',
-        'error'   => 'We could not load availability. Please try again.',
-    ) );
+    if ( is_singular( 'group' ) ) {
+        wp_enqueue_script( 'bubbahub-booking-frontend', $url . 'assets/booking.js', array(), $js_ver, true );
+        wp_localize_script( 'bubbahub-booking-frontend', 'BubbaHubBookingUI', array(
+            'loading' => 'Preparing booking…',
+        ) );
+    }
 }
 
-add_action( 'wp_ajax_bubbahub_booking_reserve', 'bubbahub_booking_reserve_ajax' );
-add_action( 'wp_ajax_nopriv_bubbahub_booking_reserve', 'bubbahub_booking_reserve_ajax' );
 function bubbahub_booking_reserve_ajax() {
     check_ajax_referer( 'bubbahub_booking', 'nonce' );
 
@@ -65,15 +72,15 @@ function bubbahub_booking_reserve_ajax() {
     $venue_id = absint( bubbahub_booking_meta( $session_id, '_bh_venue_id', 0 ) );
 
     $booking_id = bubbahub_booking_create( array(
-        'session_id'      => $session_id,
-        'group_id'        => $group_id,
-        'venue_id'        => $venue_id,
-        'customer_name'   => $name,
-        'customer_email'  => $email,
-        'places'          => $places,
-        'status'          => 'reserved',
-        'payment_status'  => 'not_required',
-        'payment_method'  => 'reservation',
+        'session_id'     => $session_id,
+        'group_id'       => $group_id,
+        'venue_id'       => $venue_id,
+        'customer_name'  => $name,
+        'customer_email' => $email,
+        'places'         => $places,
+        'status'         => 'reserved',
+        'payment_status' => 'not_required',
+        'payment_method' => 'reservation',
     ) );
 
     if ( is_wp_error( $booking_id ) ) {
@@ -85,6 +92,9 @@ function bubbahub_booking_reserve_ajax() {
         'message'    => 'Your space has been reserved.',
     ) );
 }
+
+add_action( 'wp_ajax_bubbahub_booking_reserve', 'bubbahub_booking_reserve_ajax' );
+add_action( 'wp_ajax_nopriv_bubbahub_booking_reserve', 'bubbahub_booking_reserve_ajax' );
 
 function bubbahub_booking_render_group_widget( $group_id ) {
     if ( ! $group_id || get_post_type( $group_id ) !== 'group' ) {
@@ -99,7 +109,6 @@ function bubbahub_booking_render_group_widget( $group_id ) {
             $dates[ $session['date'] ] = $session['date'];
         }
     }
-
     ksort( $dates );
     ?>
     <div id="bh-booking-modal" class="bh-booking-modal" hidden aria-hidden="true">
@@ -109,18 +118,17 @@ function bubbahub_booking_render_group_widget( $group_id ) {
 
             <section id="bh-booking" class="bh-booking-widget"
                 data-group-id="<?php echo esc_attr( $group_id ); ?>"
+                data-book-url="<?php echo esc_url( home_url( '/book/' ) ); ?>"
                 data-initial-sessions="<?php echo esc_attr( wp_json_encode( $sessions ) ); ?>">
 
                 <div class="bh-booking-heading">
-                    <div>
-                        <span class="bh-booking-eyebrow">BOOKING &amp; AVAILABILITY</span>
-                        <h2 id="bh-booking-title">Book this group</h2>
-                        <p>Select a date to see the available sessions and spaces.</p>
-                    </div>
+                    <span class="bh-booking-eyebrow">BOOKING</span>
+                    <h2 id="bh-booking-title">Book this group</h2>
+                    <p>Select your date and continue to the booking page.</p>
                 </div>
 
                 <div class="bh-booking-step">
-                    <label for="bh-booking-date">1. Select a date</label>
+                    <label for="bh-booking-date">Select a date</label>
                     <select id="bh-booking-date" class="bh-booking-select">
                         <option value="">Choose a date</option>
                         <?php foreach ( $dates as $date ) : ?>
@@ -131,39 +139,102 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                     </select>
                 </div>
 
-                <div class="bh-booking-step">
-                    <div class="bh-booking-label-row">
-                        <label>2. Select a session</label>
-                        <span class="bh-booking-status" aria-live="polite"></span>
-                    </div>
-                    <div class="bh-booking-sessions" data-sessions>
-                        <div class="bh-booking-empty">Choose a date to see available sessions.</div>
-                    </div>
-                </div>
-
-                <div class="bh-booking-actions" data-booking-actions hidden>
-                    <div class="bh-booking-selected" data-selected-session>Choose a session above.</div>
-                    <div class="bh-booking-action-buttons" data-action-buttons></div>
-                </div>
-
-                <div class="bh-booking-reserve" data-reserve-panel hidden>
-                    <div class="bh-booking-reserve-head">
-                        <div>
-                            <strong>Reserve your spot</strong>
-                            <span>No payment is taken for a reservation.</span>
-                        </div>
-                        <button type="button" class="bh-booking-close" data-reserve-close aria-label="Close reservation form">×</button>
-                    </div>
-                    <div class="bh-booking-form-grid">
-                        <label>Name<input type="text" data-reserve-name autocomplete="name"></label>
-                        <label>Email<input type="email" data-reserve-email autocomplete="email"></label>
-                        <label>Places<input type="number" data-reserve-places min="1" value="1" inputmode="numeric"></label>
-                    </div>
-                    <button type="button" class="bh-booking-primary" data-reserve-submit>Reserve Spot</button>
-                    <div class="bh-booking-message" data-reserve-message aria-live="polite"></div>
+                <div class="bh-booking-continue-wrap">
+                    <a href="#" class="bh-booking-primary bh-booking-continue" data-booking-continue aria-disabled="true">Continue to Book →</a>
                 </div>
             </section>
         </div>
     </div>
     <?php
+}
+
+function bubbahub_booking_page_shortcode() {
+    $group_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0;
+    $date     = isset( $_GET['date'] ) ? bubbahub_booking_normalize_session_date( sanitize_text_field( wp_unslash( $_GET['date'] ) ) ) : '';
+    $session  = isset( $_GET['session_id'] ) ? absint( $_GET['session_id'] ) : 0;
+
+    if ( ! $group_id || get_post_type( $group_id ) !== 'group' ) {
+        return '<div class="bh-booking-page"><div class="bh-booking-page-card"><h1>Booking</h1><p>Please return to the group page and choose a booking date.</p></div></div>';
+    }
+
+    $group_title = get_the_title( $group_id );
+    $sessions = bubbahub_booking_get_available_sessions( $group_id, $date );
+
+    ob_start();
+    ?>
+    <main class="bh-booking-page">
+        <div class="bh-booking-page-card">
+            <span class="bh-booking-eyebrow">BUBBA HUB BOOKING</span>
+            <h1><?php echo esc_html( $group_title ); ?></h1>
+
+            <?php if ( $date ) : ?>
+                <p class="bh-booking-page-date"><strong>Date:</strong> <?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?></p>
+            <?php endif; ?>
+
+            <?php if ( ! $date ) : ?>
+                <p>Choose a date from the group page to continue.</p>
+                <a class="bh-booking-primary" href="<?php echo esc_url( get_permalink( $group_id ) . '#bh-booking' ); ?>">Choose a date →</a>
+            <?php elseif ( empty( $sessions ) ) : ?>
+                <div class="bh-booking-empty">There are currently no bookable sessions for this date.</div>
+                <a class="bh-booking-secondary" href="<?php echo esc_url( get_permalink( $group_id ) . '#bh-booking' ); ?>">Choose another date</a>
+            <?php else : ?>
+                <div class="bh-booking-next-steps">
+                    <h2>Next steps</h2>
+                    <p>Choose the session you want to book, then follow the booking option provided by the group.</p>
+                </div>
+
+                <div class="bh-booking-sessions bh-booking-page-sessions">
+                    <?php foreach ( $sessions as $item ) :
+                        $action = isset( $item['booking_action'] ) ? $item['booking_action'] : 'book_now';
+                        $session_url = add_query_arg( array(
+                            'group_id'   => $group_id,
+                            'date'       => $date,
+                            'session_id' => absint( $item['id'] ),
+                        ), home_url( '/book/' ) );
+                        ?>
+                        <article class="bh-booking-session-card">
+                            <div>
+                                <strong><?php echo esc_html( $item['title'] ?: $group_title ); ?></strong>
+                                <div class="bh-booking-session-time"><?php echo esc_html( $item['start_time'] ); ?><?php echo ! empty( $item['end_time'] ) ? ' – ' . esc_html( $item['end_time'] ) : ''; ?></div>
+                                <?php if ( $item['price'] !== '' ) : ?><div class="bh-booking-session-price"><?php echo esc_html( is_numeric( $item['price'] ) ? '£' . $item['price'] : $item['price'] ); ?></div><?php endif; ?>
+                            </div>
+                            <div>
+                                <?php if ( 'external' === $action && ! empty( $item['external_url'] ) ) : ?>
+                                    <a class="bh-booking-external" href="<?php echo esc_url( $item['external_url'] ); ?>" target="_blank" rel="noopener noreferrer">Continue to External Booking →</a>
+                                <?php elseif ( 'reserve_spot' === $action ) : ?>
+                                    <a class="bh-booking-primary" href="<?php echo esc_url( $session_url ); ?>#reserve">Reserve Spot →</a>
+                                <?php elseif ( 'none' === $action ) : ?>
+                                    <span class="bh-booking-secondary">Booking unavailable</span>
+                                <?php else : ?>
+                                    <a class="bh-booking-primary" href="<?php echo esc_url( $session_url ); ?>#details">Book Now →</a>
+                                <?php endif; ?>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php if ( $session ) :
+                    $selected = null;
+                    foreach ( $sessions as $item ) {
+                        if ( absint( $item['id'] ) === $session ) { $selected = $item; break; }
+                    }
+                    if ( $selected ) : ?>
+                        <section id="details" class="bh-booking-next-steps bh-booking-details">
+                            <h2><?php echo esc_html( $selected['title'] ?: 'Booking details' ); ?></h2>
+                            <p><?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?> · <?php echo esc_html( $selected['start_time'] ); ?></p>
+                            <?php if ( ! empty( $selected['ninja_form_id'] ) && function_exists( 'Ninja_Forms' ) ) : ?>
+                                <?php echo do_shortcode( '[ninja_form id="' . absint( $selected['ninja_form_id'] ) . '"]' ); ?>
+                            <?php elseif ( 'external' === $selected['booking_action'] && ! empty( $selected['external_url'] ) ) : ?>
+                                <a class="bh-booking-primary" href="<?php echo esc_url( $selected['external_url'] ); ?>" target="_blank" rel="noopener noreferrer">Continue to External Booking →</a>
+                            <?php else : ?>
+                                <p>Use the booking option above to continue. Your selected session is <?php echo esc_html( $selected['start_time'] ); ?>.</p>
+                            <?php endif; ?>
+                        </section>
+                    <?php endif;
+                endif; ?>
+            <?php endif; ?>
+        </div>
+    </main>
+    <?php
+    return ob_get_clean();
 }

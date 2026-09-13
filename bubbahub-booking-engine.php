@@ -252,3 +252,4 @@ function bubbahub_booking_sessions_ajax() {
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-booking-frontend.php';
+require_once plugin_dir_path( __FILE__ ) . 'bubbahub-booking-session-admin.php';

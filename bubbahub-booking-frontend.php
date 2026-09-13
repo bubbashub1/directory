@@ -72,7 +72,7 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                 </div>
                 <div class="bh-booking-step">
                     <label for="bh-booking-date">Select a date</label>
-                    <select id="bh-booking-date" class="bh-booking-select">
+                    <select id="bh-booking-date" class="bh-booking-select" data-booking-date>
                         <option value="">Choose a date</option>
                         <?php foreach ( $dates as $date ) : ?>
                             <option value="<?php echo esc_attr( $date ); ?>"><?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?></option>
@@ -92,6 +92,7 @@ function bubbahub_booking_page_shortcode() {
     $group_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0;
     $date = isset( $_GET['date'] ) ? bubbahub_booking_normalize_session_date( sanitize_text_field( wp_unslash( $_GET['date'] ) ) ) : '';
     $session_id = isset( $_GET['session_id'] ) ? absint( $_GET['session_id'] ) : 0;
+    $places = isset( $_GET['places'] ) ? max( 1, absint( $_GET['places'] ) ) : 1;
     $notice = '';
 
     if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['bh_reserve_submit'] ) ) {
@@ -115,7 +116,7 @@ function bubbahub_booking_page_shortcode() {
                     ) );
                     $notice = is_wp_error( $booking_id )
                         ? '<div class="bh-booking-message is-error">' . esc_html( $booking_id->get_error_message() ) . '</div>'
-                        : '<div class="bh-booking-message is-success">Your space has been reserved. Reference #' . absint( $booking_id ) . '.</div>';
+                        : '<div class="bh-booking-message is-success">Your ' . absint( $places ) . ' space' . ( 1 === $places ? '' : 's' ) . ' have been reserved. Reference #' . absint( $booking_id ) . '.</div>';
                     if ( ! is_wp_error( $booking_id ) ) $session_id = $post_session;
                 } else {
                     $notice = '<div class="bh-booking-message is-error">That reservation is no longer available.</div>';
@@ -134,6 +135,9 @@ function bubbahub_booking_page_shortcode() {
     ?>
     <main class="bh-booking-page">
         <div class="bh-booking-page-card">
+            <div class="bh-booking-back-wrap">
+                <a class="bh-booking-back" href="<?php echo esc_url( get_permalink( $group_id ) ); ?>">← Back to listing</a>
+            </div>
             <span class="bh-booking-eyebrow">BUBBA HUB BOOKING</span>
             <h1><?php echo esc_html( $group_title ); ?></h1>
             <?php if ( $date ) : ?><p class="bh-booking-page-date"><strong>Date:</strong> <?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?></p><?php endif; ?>
@@ -153,7 +157,7 @@ function bubbahub_booking_page_shortcode() {
                 <div class="bh-booking-sessions bh-booking-page-sessions">
                     <?php foreach ( $sessions as $item ) :
                         $action = isset( $item['booking_action'] ) ? $item['booking_action'] : 'book_now';
-                        $session_url = add_query_arg( array( 'group_id' => $group_id, 'date' => $date, 'session_id' => absint( $item['id'] ) ), home_url( '/book/' ) );
+                        $session_url = add_query_arg( array( 'group_id' => $group_id, 'date' => $date, 'session_id' => absint( $item['id'] ), 'places' => $places ), home_url( '/book/' ) );
                         ?>
                         <article class="bh-booking-session-card">
                             <div>
@@ -183,6 +187,14 @@ function bubbahub_booking_page_shortcode() {
                         <section id="details" class="bh-booking-next-steps bh-booking-details">
                             <h2>Next step</h2>
                             <p><strong><?php echo esc_html( $selected['title'] ?: $group_title ); ?></strong><br><?php echo esc_html( wp_date( 'l, j F Y', strtotime( $date ) ) ); ?> · <?php echo esc_html( $selected['start_time'] ); ?></p>
+                            <div class="bh-ticket-selector">
+                                <label for="bh-ticket-count">Number of tickets</label>
+                                <select id="bh-ticket-count" class="bh-booking-select" onchange="this.form && (this.form.places.value=this.value)">
+                                    <?php for ( $i = 1; $i <= min( 20, max( 1, absint( $selected['remaining'] ) ) ); $i++ ) : ?>
+                                        <option value="<?php echo $i; ?>" <?php selected( $places, $i ); ?>><?php echo $i; ?> <?php echo 1 === $i ? 'ticket' : 'tickets'; ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
                             <?php if ( 'external' === $selected['booking_action'] && ! empty( $selected['external_url'] ) ) : ?>
                                 <a class="bh-booking-primary" href="<?php echo esc_url( $selected['external_url'] ); ?>" target="_blank" rel="noopener noreferrer">Continue to External Booking →</a>
                             <?php elseif ( 'reserve_spot' === $selected['booking_action'] ) : ?>
@@ -191,7 +203,7 @@ function bubbahub_booking_page_shortcode() {
                                     <input type="hidden" name="session_id" value="<?php echo absint( $selected['id'] ); ?>">
                                     <label>Name<input type="text" name="customer_name" autocomplete="name" required></label>
                                     <label>Email<input type="email" name="customer_email" autocomplete="email" required></label>
-                                    <label>Places<input type="number" name="places" min="1" value="1" required></label>
+                                    <label>Places<input type="number" name="places" min="1" max="<?php echo absint( $selected['remaining'] ); ?>" value="<?php echo absint( $places ); ?>" required></label>
                                     <button type="submit" name="bh_reserve_submit" class="bh-booking-primary">Reserve Spot</button>
                                 </form>
                             <?php elseif ( ! empty( $selected['ninja_form_id'] ) && shortcode_exists( 'ninja_form' ) ) : ?>

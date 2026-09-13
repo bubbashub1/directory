@@ -127,3 +127,30 @@ function bubbahub_leader_manage_shortcode( $atts ) {
     return ob_get_clean();
 }
 add_shortcode( 'bubbahub_leader_manage', 'bubbahub_leader_manage_shortcode' );
+
+/*
+ * Keep the ACF frontend form visually close to wp-admin. The main dashboard
+ * stylesheet is intentionally not allowed to restyle individual ACF fields.
+ * This override is scoped to the standalone management card only.
+ */
+add_action( 'wp_head', function() {
+    if ( ! function_exists( 'bubbahub_leader_management_page_ids' ) ) return;
+    $ids = array_filter( array_values( bubbahub_leader_management_page_ids() ) );
+    if ( ! $ids || ! is_page( $ids ) ) return;
+    ?>
+    <style id="bh-acf-management-native-reset">
+        .bh-management-page-card .bh-acf-fields{display:block;width:100%;margin:0;padding:0}
+        .bh-management-page-card .bh-acf-fields .acf-field{display:block;float:none;width:100%;clear:both;box-sizing:border-box;margin:0 0 18px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+        .bh-management-page-card .bh-acf-fields .acf-label{display:block;width:100%;margin:0 0 7px;padding:0}
+        .bh-management-page-card .bh-acf-fields .acf-label label{display:block;font-weight:700}
+        .bh-management-page-card .bh-acf-fields .acf-input{display:block;width:100%;padding:0}
+        .bh-management-page-card .bh-acf-fields .acf-input input:not([type="checkbox"]):not([type="radio"]),
+        .bh-management-page-card .bh-acf-fields .acf-input textarea,
+        .bh-management-page-card .bh-acf-fields .acf-input select{width:100%;max-width:100%;box-sizing:border-box}
+        .bh-management-page-card .bh-acf-fields .acf-field-repeater,
+        .bh-management-page-card .bh-acf-fields .acf-field-group{width:100%;clear:both}
+        .bh-management-page-card .bh-acf-fields .acf-repeater{width:100%;clear:both}
+        .bh-management-page-card .bh-acf-submit{width:100%;clear:both;margin-top:8px}
+    </style>
+    <?php
+}, 99 );

@@ -20,8 +20,9 @@ function bubbahub_booking_frontend_assets() {
     }
 
     $url = plugin_dir_url( __FILE__ );
-    wp_enqueue_style( 'bubbahub-booking-frontend', $url . 'assets/booking.css', array(), defined( 'BUBBAHUB_BOOKING_VERSION' ) ? BUBBAHUB_BOOKING_VERSION : '1.1.0' );
-    wp_enqueue_script( 'bubbahub-booking-frontend', $url . 'assets/booking.js', array(), defined( 'BUBBAHUB_BOOKING_VERSION' ) ? BUBBAHUB_BOOKING_VERSION : '1.1.0', true );
+    $version = defined( 'BUBBAHUB_BOOKING_VERSION' ) ? BUBBAHUB_BOOKING_VERSION : '1.1.0';
+    wp_enqueue_style( 'bubbahub-booking-frontend', $url . 'assets/booking.css', array(), $version );
+    wp_enqueue_script( 'bubbahub-booking-frontend', $url . 'assets/booking.js', array(), $version, true );
     wp_localize_script( 'bubbahub-booking-frontend', 'BubbaHubBookingUI', array(
         'ajaxUrl' => admin_url( 'admin-ajax.php' ),
         'nonce'   => wp_create_nonce( 'bubbahub_booking' ),
@@ -101,7 +102,6 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                 <p>Select a date to see the available sessions and spaces.</p>
             </div>
         </div>
-
         <div class="bh-booking-step">
             <label for="bh-booking-date">1. Select a date</label>
             <select id="bh-booking-date" class="bh-booking-select">
@@ -111,7 +111,6 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                 <?php endforeach; ?>
             </select>
         </div>
-
         <div class="bh-booking-step">
             <div class="bh-booking-label-row">
                 <label>2. Select a session</label>
@@ -121,18 +120,13 @@ function bubbahub_booking_render_group_widget( $group_id ) {
                 <div class="bh-booking-empty">Choose a date to see available sessions.</div>
             </div>
         </div>
-
         <div class="bh-booking-actions" data-booking-actions hidden>
             <div class="bh-booking-selected" data-selected-session>Choose a session above.</div>
             <div class="bh-booking-action-buttons" data-action-buttons></div>
         </div>
-
         <div class="bh-booking-reserve" data-reserve-panel hidden>
             <div class="bh-booking-reserve-head">
-                <div>
-                    <strong>Reserve your spot</strong>
-                    <span>No payment is taken for a reservation.</span>
-                </div>
+                <div><strong>Reserve your spot</strong><span>No payment is taken for a reservation.</span></div>
                 <button type="button" class="bh-booking-close" data-reserve-close aria-label="Close reservation form">×</button>
             </div>
             <div class="bh-booking-form-grid">
@@ -146,15 +140,3 @@ function bubbahub_booking_render_group_widget( $group_id ) {
     </section>
     <?php
 }
-
-function bubbahub_booking_output_group_widget( $content ) {
-    if ( ! is_singular( 'group' ) || ! in_the_loop() || ! is_main_query() ) {
-        return $content;
-    }
-
-    ob_start();
-    bubbahub_booking_render_group_widget( get_the_ID() );
-    return $content . ob_get_clean();
-}
-
-add_filter( 'the_content', 'bubbahub_booking_output_group_widget', 25 );

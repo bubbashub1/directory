@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: BubbaHub Booking Engine
- * Description: Stable booking data layer for BubbaHub Groups. Provides booking sessions, capacity tracking and booking records for later Ninja Forms + GetPaid integration.
- * Version: 1.0.1
+ * Description: Booking data layer for BubbaHub Groups with session availability, capacity tracking and frontend booking integration.
+ * Version: 1.1.0
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BUBBAHUB_BOOKING_VERSION', '1.0.1' );
+define( 'BUBBAHUB_BOOKING_VERSION', '1.1.0' );
 
 add_action( 'init', 'bubbahub_booking_register_post_types' );
 
@@ -56,10 +56,6 @@ function bubbahub_booking_meta( $post_id, $key, $default = '' ) {
     return ( $value !== '' && $value !== false && $value !== null ) ? $value : $default;
 }
 
-/**
- * Return a session's capacity and current occupied places.
- * A booking may reserve more than one place, so _bh_places is summed.
- */
 function bubbahub_booking_session_stats( $session_id ) {
     $capacity = max( 0, (int) bubbahub_booking_meta( $session_id, '_bh_capacity', 0 ) );
 
@@ -160,9 +156,6 @@ function bubbahub_booking_get_available_sessions( $group_id, $date = '' ) {
     return $sessions;
 }
 
-/**
- * Create a booking record. Payment/invoice creation is deliberately separate.
- */
 function bubbahub_booking_create( $args = array() ) {
     $defaults = array(
         'session_id'      => 0,
@@ -258,17 +251,4 @@ function bubbahub_booking_sessions_ajax() {
     ) );
 }
 
-add_action( 'wp_enqueue_scripts', 'bubbahub_booking_enqueue_frontend' );
-
-function bubbahub_booking_enqueue_frontend() {
-    if ( ! is_singular( 'group' ) ) {
-        return;
-    }
-
-    wp_register_script( 'bubbahub-booking-engine', false, array(), BUBBAHUB_BOOKING_VERSION, true );
-    wp_enqueue_script( 'bubbahub-booking-engine' );
-    wp_localize_script( 'bubbahub-booking-engine', 'BubbaHubBooking', array(
-        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-        'nonce'   => wp_create_nonce( 'bubbahub_booking' ),
-    ) );
-}
+require_once plugin_dir_path( __FILE__ ) . 'bubbahub-booking-frontend.php';

@@ -2,13 +2,13 @@
 /**
  * Plugin Name: BubbaHub Leader Dashboard
  * Description: Front-end dashboard for BubbaHub leaders and leaderpro users.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_LEADER_DASHBOARD_VERSION', '1.1.0' );
+define( 'BUBBAHUB_LEADER_DASHBOARD_VERSION', '1.2.0' );
 define( 'BUBBAHUB_LEADER_DASHBOARD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BUBBAHUB_LEADER_DASHBOARD_URL', plugin_dir_url( __FILE__ ) );
 
@@ -26,9 +26,15 @@ function bubbahub_leader_dashboard_activate() {
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_leader_dashboard_assets' );
 function bubbahub_leader_dashboard_assets() {
-    if ( ! is_page( 'leader' ) ) return;
+    $dashboard_id = (int) get_option( 'bubbahub_leader_dashboard_page_id', 0 );
+    $management_ids = function_exists( 'bubbahub_leader_management_page_ids' ) ? bubbahub_leader_management_page_ids() : array();
+    $allowed_ids = array_filter( array_merge( array( $dashboard_id ), array_values( $management_ids ) ) );
+    if ( ! $allowed_ids || ! is_page( $allowed_ids ) ) return;
+
     $css = BUBBAHUB_LEADER_DASHBOARD_DIR . 'leader-dashboard.css';
-    if ( file_exists( $css ) ) wp_enqueue_style( 'bubbahub-leader-dashboard', BUBBAHUB_LEADER_DASHBOARD_URL . 'leader-dashboard.css', array(), BUBBAHUB_LEADER_DASHBOARD_VERSION );
+    if ( file_exists( $css ) ) {
+        wp_enqueue_style( 'bubbahub-leader-dashboard', BUBBAHUB_LEADER_DASHBOARD_URL . 'leader-dashboard.css', array(), BUBBAHUB_LEADER_DASHBOARD_VERSION );
+    }
 }
 
 add_shortcode( 'bubbahub_leader_dashboard', 'bubbahub_leader_dashboard_shortcode' );
@@ -56,21 +62,20 @@ function bubbahub_leader_dashboard_shortcode() {
     $published_venues = array_filter( $venues, function($id){ return 'publish' === get_post_status($id); } );
     $dashboard_url = home_url( '/leader/' );
     $logout_url = wp_logout_url( $dashboard_url );
-    $edit_listing = isset($_GET['edit_listing']) ? absint($_GET['edit_listing']) : 0;
-    $edit_venue = isset($_GET['edit_venue']) ? absint($_GET['edit_venue']) : 0;
-    $edit_booking = isset($_GET['edit_booking']) ? absint($_GET['edit_booking']) : 0;
-
-    ob_start(); ?>
+    $listings_url = function_exists( 'bubbahub_leader_management_url' ) ? bubbahub_leader_management_url( 'listings' ) : home_url( '/leader/listings/' );
+    $venues_url = function_exists( 'bubbahub_leader_management_url' ) ? bubbahub_leader_management_url( 'venues' ) : home_url( '/leader/venues/' );
+    $bookings_url = function_exists( 'bubbahub_leader_management_url' ) ? bubbahub_leader_management_url( 'bookings' ) : home_url( '/leader/bookings/' );
+    ?>
     <div class="bh-leader-dashboard">
       <div class="bh-leader-shell">
         <aside class="bh-leader-sidebar">
           <div class="bh-leader-brand"><span class="bh-leader-brand-main">BubbaHub</span><span class="bh-leader-brand-sub">Leader</span></div>
           <nav class="bh-leader-nav" aria-label="Leader dashboard">
             <a class="is-active" href="<?php echo esc_url($dashboard_url); ?>"><span>⌂</span> Dashboard</a>
-            <a href="#listings"><span>▦</span> My Listings</a>
-            <a href="#venues"><span>⌂</span> My Venues</a>
+            <a href="<?php echo esc_url($listings_url); ?>"><span>▦</span> My Listings</a>
+            <a href="<?php echo esc_url($venues_url); ?>"><span>⌂</span> My Venues</a>
             <a href="#sessions"><span>◷</span> Sessions &amp; Dates</a>
-            <a href="#bookings"><span>▣</span> Bookings</a>
+            <a href="<?php echo esc_url($bookings_url); ?>"><span>▣</span> Bookings</a>
             <a href="#payments"><span>£</span> Payments</a>
             <a href="#earnings"><span>↗</span> Earnings</a>
             <a href="#account"><span>⚙</span> Account</a>
@@ -81,7 +86,7 @@ function bubbahub_leader_dashboard_shortcode() {
         <main class="bh-leader-main">
           <header class="bh-leader-header">
             <div><p class="bh-leader-eyebrow">Leader area</p><h1>Welcome back, <?php echo esc_html($name); ?></h1><p>Manage your BubbaHub listings, venues, sessions and bookings from one place.</p></div>
-            <a class="bh-leader-primary" href="#listings">Manage my listings <span aria-hidden="true">→</span></a>
+            <a class="bh-leader-primary" href="<?php echo esc_url($listings_url); ?>">Manage my listings <span aria-hidden="true">→</span></a>
           </header>
 
           <section class="bh-leader-stats" aria-label="Dashboard overview">
@@ -94,29 +99,22 @@ function bubbahub_leader_dashboard_shortcode() {
           <section class="bh-leader-content-grid">
             <article class="bh-leader-panel bh-leader-panel-wide" id="listings">
               <div class="bh-panel-heading"><div><p>Listings</p><h2>My Listings</h2></div><span class="bh-panel-count"><?php echo count($published_groups); ?> live</span></div>
-              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new_listing','1',$dashboard_url)); ?>#listings">+ Add listing</a></div>
-              <?php if($edit_listing && bubbahub_leader_owned_post($edit_listing,'group')): ?><div class="bh-management-form"><h3>Edit listing</h3><?php bubbahub_leader_listing_form($edit_listing); ?></div>
-              <?php elseif(isset($_GET['new_listing'])): ?><div class="bh-management-form"><h3>Add listing</h3><?php bubbahub_leader_listing_form(); ?></div>
-              <?php endif; ?>
-              <?php if($groups): ?><div class="bh-group-list"><?php foreach(array_slice($groups,0,10) as $id): ?><div class="bh-group-row"><div class="bh-group-avatar"><?php echo esc_html(strtoupper(substr(get_the_title($id),0,1))); ?></div><div class="bh-group-info"><strong><?php echo esc_html(get_the_title($id)); ?></strong><span><?php echo esc_html(ucfirst(get_post_status($id))); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit_listing',$id,$dashboard_url)); ?>#listings">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-empty-dashboard"><div class="bh-empty-icon">+</div><h3>Create your first listing</h3><p>Add your first group listing from the button above.</p></div><?php endif; ?>
+              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new','1',$listings_url)); ?>">+ Add listing</a><a class="bh-secondary-button" href="<?php echo esc_url($listings_url); ?>">Manage listings</a></div>
+              <?php if($groups): ?><div class="bh-group-list"><?php foreach(array_slice($groups,0,10) as $id): ?><div class="bh-group-row"><div class="bh-group-avatar"><?php echo esc_html(strtoupper(substr(get_the_title($id),0,1))); ?></div><div class="bh-group-info"><strong><?php echo esc_html(get_the_title($id)); ?></strong><span><?php echo esc_html(ucfirst(get_post_status($id))); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit',$id,$listings_url)); ?>">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-empty-dashboard"><div class="bh-empty-icon">+</div><h3>Create your first listing</h3><p>Add your first group listing from the button above.</p></div><?php endif; ?>
             </article>
 
             <article class="bh-leader-panel bh-leader-panel-wide" id="venues">
               <div class="bh-panel-heading"><div><p>Locations</p><h2>My Venues</h2></div><span class="bh-panel-count"><?php echo count($published_venues); ?> live</span></div>
-              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new_venue','1',$dashboard_url)); ?>#venues">+ Add venue</a></div>
-              <?php if($edit_venue && bubbahub_leader_owned_post($edit_venue,'venue')): ?><div class="bh-management-form"><h3>Edit venue</h3><?php bubbahub_leader_venue_form($edit_venue); ?></div>
-              <?php elseif(isset($_GET['new_venue'])): ?><div class="bh-management-form"><h3>Add venue</h3><?php bubbahub_leader_venue_form(); ?></div>
-              <?php endif; ?>
-              <?php if($venues): ?><div class="bh-group-list"><?php foreach(array_slice($venues,0,10) as $id): ?><div class="bh-group-row"><div class="bh-group-avatar">⌂</div><div class="bh-group-info"><strong><?php echo esc_html(get_the_title($id)); ?></strong><span><?php echo esc_html(ucfirst(get_post_status($id))); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit_venue',$id,$dashboard_url)); ?>#venues">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-empty-dashboard"><div class="bh-empty-icon">+</div><h3>Add your first venue</h3><p>Venues you own will appear here.</p></div><?php endif; ?>
+              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new','1',$venues_url)); ?>">+ Add venue</a><a class="bh-secondary-button" href="<?php echo esc_url($venues_url); ?>">Manage venues</a></div>
+              <?php if($venues): ?><div class="bh-group-list"><?php foreach(array_slice($venues,0,10) as $id): ?><div class="bh-group-row"><div class="bh-group-avatar">⌂</div><div class="bh-group-info"><strong><?php echo esc_html(get_the_title($id)); ?></strong><span><?php echo esc_html(ucfirst(get_post_status($id))); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit',$id,$venues_url)); ?>">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-empty-dashboard"><div class="bh-empty-icon">+</div><h3>Add your first venue</h3><p>Venues you own will appear here.</p></div><?php endif; ?>
             </article>
 
             <article class="bh-leader-panel" id="sessions"><div class="bh-panel-heading"><div><p>Schedule</p><h2>Sessions &amp; Dates</h2></div></div><div class="bh-coming"><span>◷</span><div><strong>Session management</strong><p>Your dates, availability, capacity and ticket settings will appear here.</p></div></div></article>
 
             <article class="bh-leader-panel" id="bookings">
               <div class="bh-panel-heading"><div><p>Customers</p><h2>Bookings</h2></div><span class="bh-panel-count"><?php echo count($booking_ids); ?></span></div>
-              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new_booking','1',$dashboard_url)); ?>#bookings">+ Add booking</a></div>
-              <?php if($edit_booking && in_array($edit_booking,$booking_ids,true)): ?><div class="bh-management-form"><h3>Edit booking</h3><?php bubbahub_leader_booking_form($edit_booking); ?></div><?php elseif(isset($_GET['new_booking'])): ?><div class="bh-management-form"><h3>Add booking</h3><?php bubbahub_leader_booking_form(); ?></div><?php endif; ?>
-              <?php if($booking_ids): ?><div class="bh-group-list"><?php foreach(array_slice($booking_ids,0,10) as $bid): $title=get_the_title($bid); ?><div class="bh-group-row"><div class="bh-group-avatar">▣</div><div class="bh-group-info"><strong><?php echo esc_html($title); ?></strong><span><?php echo esc_html(ucfirst(get_post_meta($bid,'_bh_status',true) ?: 'pending')); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit_booking',$bid,$dashboard_url)); ?>#bookings">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-coming"><span>▣</span><div><strong>No bookings yet</strong><p>Book Now and Reserve Spot bookings will appear here.</p></div></div><?php endif; ?>
+              <div class="bh-management-toolbar"><a class="bh-leader-button" href="<?php echo esc_url(add_query_arg('new','1',$bookings_url)); ?>">+ Add booking</a><a class="bh-secondary-button" href="<?php echo esc_url($bookings_url); ?>">Manage bookings</a></div>
+              <?php if($booking_ids): ?><div class="bh-group-list"><?php foreach(array_slice($booking_ids,0,10) as $bid): $title=get_the_title($bid); ?><div class="bh-group-row"><div class="bh-group-avatar">▣</div><div class="bh-group-info"><strong><?php echo esc_html($title); ?></strong><span><?php echo esc_html(ucfirst(get_post_meta($bid,'_bh_status',true) ?: 'pending')); ?></span></div><a href="<?php echo esc_url(add_query_arg('edit',$bid,$bookings_url)); ?>">Edit <span>→</span></a></div><?php endforeach; ?></div><?php else: ?><div class="bh-coming"><span>▣</span><div><strong>No bookings yet</strong><p>Book Now and Reserve Spot bookings will appear here.</p></div></div><?php endif; ?>
             </article>
 
             <article class="bh-leader-panel" id="payments"><div class="bh-panel-heading"><div><p>Payments</p><h2>Payment Accounts</h2></div></div><div class="bh-payment-card"><span class="bh-payment-logo">S</span><div><strong>Stripe</strong><span>Connect your Stripe account</span></div><span class="bh-payment-status">Next stage</span></div><div class="bh-payment-card"><span class="bh-payment-logo">P</span><div><strong>PayPal</strong><span>Connect your PayPal account</span></div><span class="bh-payment-status">Next stage</span></div><p class="bh-panel-note">Your own Stripe or PayPal account will be connected here.</p></article>

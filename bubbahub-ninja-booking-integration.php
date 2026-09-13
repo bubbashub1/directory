@@ -67,8 +67,6 @@ function bubbahub_ninja_booking_normalize_ticket_breakdown( $raw_value, $ticket_
             ? absint( $definition['remaining'] )
             : null;
 
-        // Do an early ticket-capacity check. bubbahub_booking_create() checks
-        // again immediately before the booking is saved.
         if ( $capacity > 0 && null !== $remaining && $quantity > $remaining ) {
             return new WP_Error(
                 'ticket_full',
@@ -87,10 +85,6 @@ function bubbahub_ninja_booking_normalize_ticket_breakdown( $raw_value, $ticket_
     return $breakdown;
 }
 
-/**
- * Create the BubbaHub booking after Ninja Forms has processed the submission.
- * The integration is deliberately limited to forms carrying booking_method=book_now.
- */
 add_action( 'ninja_forms_after_submission', 'bubbahub_ninja_booking_after_submission', 20 );
 function bubbahub_ninja_booking_after_submission( $form_data ) {
     if ( ! function_exists( 'bubbahub_booking_create' ) ) return;
@@ -121,7 +115,6 @@ function bubbahub_ninja_booking_after_submission( $form_data ) {
     if ( ! $group_id || get_post_type( $group_id ) !== 'group' ) return;
     if ( ! is_email( $email ) || '' === $name ) return;
 
-    // If the session is configured to use a specific Ninja Form, only accept that form.
     $configured_form_id = absint( bubbahub_booking_meta( $session_id, '_bh_ninja_form_id', 0 ) );
     if ( $configured_form_id && $form_id && $configured_form_id !== $form_id ) return;
 
@@ -134,12 +127,8 @@ function bubbahub_ninja_booking_after_submission( $form_data ) {
     );
 
     if ( is_wp_error( $ticket_breakdown ) ) return;
-
-    // When a session has ticket types, at least one ticket must be selected.
     if ( $ticket_types && empty( $ticket_breakdown ) ) return;
 
-    // Recalculate totals from the session's ticket prices. Never trust the
-    // submitted total_price for a ticket-based booking.
     $calculated = function_exists( 'bubbahub_booking_ticket_breakdown_total' )
         ? bubbahub_booking_ticket_breakdown_total( $ticket_breakdown )
         : array( 'places' => 0, 'total' => 0.0 );
@@ -155,7 +144,6 @@ function bubbahub_ninja_booking_after_submission( $form_data ) {
 
     if ( $places < 1 ) $places = 1;
 
-    // Prevent accidental duplicate creation if Ninja Forms fires the hook twice for the same submission.
     $submission_id = ! empty( $form_data['id'] ) ? absint( $form_data['id'] ) : 0;
     if ( $submission_id ) {
         $existing = get_posts( array(
@@ -193,9 +181,7 @@ function bubbahub_ninja_booking_after_submission( $form_data ) {
 
     if ( is_wp_error( $booking_id ) ) return;
 
-    if ( $submission_id ) {
-        update_post_meta( $booking_id, '_bh_ninja_submission_id', $submission_id );
-    }
+    if ( $submission_id ) update_post_meta( $booking_id, '_bh_ninja_submission_id', $submission_id );
 
     update_post_meta(
         $booking_id,
@@ -222,14 +208,12 @@ function bubbahub_ninja_booking_context_script() {
     if ( ! $group_id || ! $session_id || get_post_type( $group_id ) !== 'group' || get_post_type( $session_id ) !== 'bh_session' ) return;
 
     $form_id = absint( bubbahub_booking_meta( $session_id, '_bh_ninja_form_id', 0 ) );
-    if ( ! $form_id ) return;
+    if ( ! $form_id ) $form_id = 4;
 
     $field_map = array();
     foreach ( Ninja_Forms()->form( $form_id )->get_fields() as $field ) {
         $key = $field->get_setting( 'key' );
-        if ( $key ) {
-            $field_map[ sanitize_key( $key ) ] = absint( $field->get_id() );
-        }
+        if ( $key ) $field_map[ sanitize_key( $key ) ] = absint( $field->get_id() );
     }
 
     if ( empty( $field_map ) ) return;
@@ -251,8 +235,7 @@ function bubbahub_ninja_booking_context_script() {
 
         function inputFor(key) {
             if (!map[key]) return null;
-            return document.getElementById('nf-field-' + map[key]) ||
-                form.querySelector('[name="nf-field-' + map[key] + '"]');
+            return document.getElementById('nf-field-' + map[key]) || form.querySelector('[name="nf-field-' + map[key] + '"]');
         }
 
         function setField(key, value) {
@@ -276,10 +259,7 @@ function bubbahub_ninja_booking_context_script() {
                 var slug = row.getAttribute('data-ticket-slug') || '';
                 var price = parseFloat(row.getAttribute('data-ticket-price') || '0') || 0;
 
-                if (qty > 0 && slug) {
-                    items.push({slug: slug, quantity: qty});
-                }
-
+                if (qty > 0 && slug) items.push({slug: slug, quantity: qty});
                 places += qty;
                 total += qty * price;
             });
@@ -297,9 +277,7 @@ function bubbahub_ninja_booking_context_script() {
         sync();
 
         document.addEventListener('click', function (event) {
-            if (event.target.closest('[data-ticket-plus]') || event.target.closest('[data-ticket-minus]')) {
-                window.setTimeout(sync, 0);
-            }
+            if (event.target.closest('[data-ticket-plus]') || event.target.closest('[data-ticket-minus]')) window.setTimeout(sync, 0);
         });
 
         document.addEventListener('input', function (event) {

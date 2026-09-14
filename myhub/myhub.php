@@ -7,7 +7,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.0.0' );
+if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.1.0' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 
@@ -209,6 +209,8 @@ function bubbahub_myhub_shortcode() {
     }
 
     wp_enqueue_style( 'bubbahub-myhub' );
+    wp_enqueue_style( 'bubbahub-myhub-groups' );
+    wp_enqueue_script( 'bubbahub-myhub-groups' );
     $user = wp_get_current_user();
     $first_name = $user->first_name ? $user->first_name : $user->display_name;
     $bookings = bubbahub_myhub_bookings();
@@ -272,6 +274,15 @@ function bubbahub_myhub_shortcode() {
             <?php endif; ?>
         </section>
 
+        <section class="bh-myhub-section bh-myhub-group-collections">
+            <div class="bh-myhub-section-heading"><div><div class="bh-myhub-kicker">YOUR LOCAL ACTIVITIES</div><h2>Groups for your family</h2><p>Save favourites, keep track of places you have visited, and discover something new.</p></div></div>
+            <div class="bh-myhub-groups-row">
+                <div class="bh-myhub-group-column"><div class="bh-myhub-group-column-head"><h3>♡ Fav Groups</h3><a data-group-view-more href="<?php echo esc_url( home_url( '/my-groups/?group_view=favourite' ) ); ?>">View more →</a></div><div class="bh-myhub-group-widget" data-myhub-group-widget data-group-type="favourite" data-view-more="1"><div class="bh-myhub-groups-loading">Loading…</div></div></div>
+                <div class="bh-myhub-group-column"><div class="bh-myhub-group-column-head"><h3>✓ Visited Groups</h3><a data-group-view-more href="<?php echo esc_url( home_url( '/my-groups/?group_view=visited' ) ); ?>">View more →</a></div><div class="bh-myhub-group-widget" data-myhub-group-widget data-group-type="visited" data-view-more="1"><div class="bh-myhub-groups-loading">Loading…</div></div></div>
+                <div class="bh-myhub-group-column"><div class="bh-myhub-group-column-head"><h3>✦ Suggested Groups</h3><a data-group-view-more href="<?php echo esc_url( home_url( '/my-groups/?group_view=suggested' ) ); ?>">View more →</a></div><div class="bh-myhub-group-widget" data-myhub-group-widget data-group-type="suggested" data-view-more="1"><div class="bh-myhub-groups-loading">Loading…</div></div></div>
+            </div>
+        </section>
+
         <?php if ( isset( $_GET['bh_add_child'] ) ) :
             $edit_child_id = absint( $_GET['child_id'] ?? 0 );
             if ( $edit_child_id && ( get_post_type( $edit_child_id ) !== 'bh_child' || (int) get_post_field( 'post_author', $edit_child_id ) !== get_current_user_id() ) ) $edit_child_id = 0;
@@ -300,3 +311,5 @@ function bubbahub_myhub_shortcode() {
     </div>
     <?php return ob_get_clean();
 }
+
+require_once BUBBAHUB_MYHUB_PATH . 'myhub-groups.php';

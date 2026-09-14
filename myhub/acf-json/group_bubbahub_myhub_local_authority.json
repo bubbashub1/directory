@@ -1,0 +1,44 @@
+{
+  "key": "group_bubbahub_myhub_local_authority",
+  "title": "BubbaHub – Local Authority School Admissions",
+  "fields": [
+    {
+      "key": "field_bh_la_primary_open",
+      "label": "Primary Application Open",
+      "name": "school_primary_application_open",
+      "type": "date_picker",
+      "instructions": "Enter the current local authority primary/reception application opening date for this location.",
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    },
+    {
+      "key": "field_bh_la_primary_deadline",
+      "label": "Primary Application Deadline",
+      "name": "school_primary_application_deadline",
+      "type": "date_picker",
+      "instructions": "Enter the local authority primary/reception deadline. This overrides the national fallback in My Hub.",
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    },
+    {
+      "key": "field_bh_la_admissions_url",
+      "label": "School Admissions URL",
+      "name": "school_admissions_url",
+      "type": "url",
+      "instructions": "Official local authority admissions page for this location."
+    }
+  ],
+  "location": [[
+    { "param": "taxonomy", "operator": "==", "value": "location" }
+  ]],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "active": true,
+  "description": "Local authority dates and admissions links used by My Hub school tracking.",
+  "show_in_rest": 0,
+  "modified": 1789400002
+}

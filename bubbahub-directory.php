@@ -2,17 +2,20 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls and map view.
- * Version: 1.2.2
+ * Version: 1.2.3
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.2' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.3' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 // Load the custom Group single-page template from this plugin.
 // The Group CPT itself remains owned by the existing site/ACF setup.
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
+
+// Load the logged-in family dashboard / My Hub module.
+require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );

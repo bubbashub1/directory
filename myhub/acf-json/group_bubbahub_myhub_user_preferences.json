@@ -1,0 +1,63 @@
+{
+  "key": "group_bubbahub_myhub_user_preferences",
+  "title": "BubbaHub – My Hub User Preferences",
+  "fields": [
+    {
+      "key": "field_bh_user_interests",
+      "label": "User Interests",
+      "name": "user_interests",
+      "type": "checkbox",
+      "instructions": "Select the interests BubbaHub should use when recommending groups.",
+      "choices": {
+        "music": "Music",
+        "sensory": "Sensory",
+        "baby_classes": "Baby classes",
+        "toddler": "Toddler activities",
+        "messy_play": "Messy play",
+        "soft_play": "Soft play",
+        "outdoor": "Outdoor play",
+        "swimming": "Swimming",
+        "dance": "Dance",
+        "fitness": "Parent & baby fitness",
+        "support": "Parent support",
+        "antenatal": "Antenatal",
+        "postnatal": "Postnatal",
+        "storytime": "Story time",
+        "craft": "Arts & crafts"
+      },
+      "allow_custom": 0,
+      "save_custom": 0,
+      "toggle": 0,
+      "return_format": "value",
+      "multiple": 0,
+      "layout": "vertical"
+    },
+    {
+      "key": "field_bh_user_locations",
+      "label": "Preferred Locations",
+      "name": "preferred_locations",
+      "type": "taxonomy",
+      "instructions": "Choose up to three preferred locations. This uses the existing location taxonomy.",
+      "taxonomy": "location",
+      "field_type": "checkbox",
+      "allow_null": 1,
+      "add_term": 0,
+      "save_terms": 0,
+      "load_terms": 0,
+      "return_format": "id",
+      "multiple": 1,
+      "max": 3
+    }
+  ],
+  "location": [[
+    { "param": "user_form", "operator": "==", "value": "all" }
+  ]],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "active": true,
+  "description": "User preferences used by the My Hub recommendation engine.",
+  "show_in_rest": 0,
+  "modified": 1789400000
+}

@@ -1,0 +1,100 @@
+{
+  "key": "group_bubbahub_myhub_children",
+  "title": "BubbaHub – My Hub Child Profile",
+  "fields": [
+    {
+      "key": "field_bh_child_name",
+      "label": "Child Name",
+      "name": "child_name",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Child's first name or preferred name.",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": 100,
+      "allow_in_bindings": 0,
+      "placeholder": "Oliver"
+    },
+    {
+      "key": "field_bh_child_dob",
+      "label": "Date of Birth",
+      "name": "child_date_of_birth",
+      "aria-label": "",
+      "type": "date_picker",
+      "instructions": "Used to calculate the child's age on My Hub.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1,
+      "allow_in_bindings": 0
+    },
+    {
+      "key": "field_bh_school_status",
+      "label": "School Application Status",
+      "name": "school_application_status",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "Controls the school tracker shown on the family card.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "choices": {
+        "not_started": "Not started",
+        "active": "Active",
+        "submitted": "Submitted",
+        "complete": "Complete"
+      },
+      "default_value": "not_started",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 0,
+      "allow_in_bindings": 0
+    },
+    {
+      "key": "field_bh_school_deadline",
+      "label": "School Application Deadline",
+      "name": "school_application_deadline",
+      "aria-label": "",
+      "type": "date_picker",
+      "instructions": "The date used for the countdown, for example 15/01/2028.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1,
+      "allow_in_bindings": 0
+    },
+    {
+      "key": "field_bh_school_name",
+      "label": "School / Setting Name",
+      "name": "school_name",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Optional school, nursery or setting name.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "100", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": 150,
+      "allow_in_bindings": 0
+    }
+  ],
+  "location": [[
+    { "param": "post_type", "operator": "==", "value": "bh_child" }
+  ]],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": ["the_content", "excerpt", "discussion", "comments", "revisions", "slug", "author", "format", "page_attributes", "featured_image"],
+  "active": true,
+  "description": "ACF fields used by the BubbaHub My Hub family dashboard.",
+  "show_in_rest": 0,
+  "modified": 1778430000
+}

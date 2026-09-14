@@ -1,0 +1,43 @@
+{
+  "key": "group_bubbahub_myhub_antenatal",
+  "title": "BubbaHub – My Hub Child & Antenatal Profile",
+  "fields": [
+    {
+      "key": "field_bh_child_status",
+      "label": "Child Profile Status",
+      "name": "child_status",
+      "type": "select",
+      "instructions": "Use Expecting for a pregnancy profile. Use Child born for an existing child.",
+      "choices": {
+        "born": "Child born",
+        "expecting": "Expecting a baby"
+      },
+      "default_value": "born",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 0
+    },
+    {
+      "key": "field_bh_child_due_date",
+      "label": "Due Date",
+      "name": "child_due_date",
+      "type": "date_picker",
+      "instructions": "For an expecting profile. My Hub calculates the 28–32 week antenatal class window automatically.",
+      "required": 0,
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    }
+  ],
+  "location": [[
+    { "param": "post_type", "operator": "==", "value": "bh_child" }
+  ]],
+  "menu_order": 1,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "active": true,
+  "description": "Antenatal and child status fields for My Hub.",
+  "show_in_rest": 0,
+  "modified": 1789400001
+}

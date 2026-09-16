@@ -37,4 +37,5 @@ function bubbahub_myhub_shortcode(){return '<div class="bh-myhub-login"><h2>Load
 require_once BUBBAHUB_MYHUB_PATH . 'myhub-groups.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-v2.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'profile-settings.php';
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php';

@@ -1,7 +1,7 @@
 <?php
 /** BubbaHub My Hub */
 if ( ! defined( 'ABSPATH' ) ) exit;
-if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.0' );
+if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.1' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 add_action( 'init', 'bubbahub_myhub_register_child_post_type' );
@@ -26,4 +26,5 @@ if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) require_once 
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage3.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage3.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage4.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage4.php';
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage5.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage5.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php';

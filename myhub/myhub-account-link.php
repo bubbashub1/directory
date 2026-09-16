@@ -1,7 +1,7 @@
 <?php
 /**
- * Adds the Account Settings entry point to the existing My Hub v2 UI
- * without modifying the stable dashboard template.
+ * Adds the Account Settings entry point to the existing My Hub v2 UI.
+ * Stage 2 routes the settings screen through account-settings-stage2.php.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -11,6 +11,9 @@ add_action( 'wp_footer', 'bubbahub_myhub_account_settings_button', 30 );
 function bubbahub_myhub_account_settings_route( $output, $tag, $attr, $m ) {
     if ( ! is_user_logged_in() || empty( $_GET['bh_account_settings'] ) ) return $output;
     if ( ! in_array( $tag, array( 'bubbahub_my_hub', 'bubbahub-my-hub' ), true ) ) return $output;
+    if ( function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
+        return bubbahub_account_settings_stage2_shortcode();
+    }
     return function_exists( 'bubbahub_account_settings_shortcode' ) ? bubbahub_account_settings_shortcode() : $output;
 }
 

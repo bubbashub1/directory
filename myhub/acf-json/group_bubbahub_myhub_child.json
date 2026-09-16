@@ -1,0 +1,346 @@
+{
+  "key": "group_bubbahub_myhub_child",
+  "title": "BubbaHub My Hub — Child Profile",
+  "fields": [
+    {
+      "key": "field_bubbahub_child_name",
+      "label": "Child Name",
+      "name": "child_name",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "The child's full name.",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": ""
+    },
+    {
+      "key": "field_bubbahub_child_nickname",
+      "label": "Nickname",
+      "name": "child_nickname",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Optional nickname.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": ""
+    },
+    {
+      "key": "field_bubbahub_child_status",
+      "label": "Child Status",
+      "name": "child_status",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "Choose whether this profile is for a child who has been born or is currently expected.",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "choices": { "born": "Born", "expecting": "Expecting" },
+      "default_value": "born",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 0,
+      "ui": 0,
+      "ajax": 0,
+      "placeholder": ""
+    },
+    {
+      "key": "field_bubbahub_child_date_of_birth",
+      "label": "Date of Birth",
+      "name": "child_date_of_birth",
+      "aria-label": "",
+      "type": "date_picker",
+      "instructions": "Used to calculate the child's age group.",
+      "required": 0,
+      "conditional_logic": [ [ { "field": "field_bubbahub_child_status", "operator": "==", "value": "born" } ] ],
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    },
+    {
+      "key": "field_bubbahub_child_due_date",
+      "label": "Due Date",
+      "name": "child_due_date",
+      "aria-label": "",
+      "type": "date_picker",
+      "instructions": "Used for expecting/pregnancy profiles.",
+      "required": 0,
+      "conditional_logic": [ [ { "field": "field_bubbahub_child_status", "operator": "==", "value": "expecting" } ] ],
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    },
+    {
+      "key": "field_bubbahub_child_avatar_url",
+      "label": "Avatar URL",
+      "name": "avatar_url",
+      "aria-label": "",
+      "type": "url",
+      "instructions": "Optional image URL for the child profile.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "default_value": ""
+    },
+    {
+      "key": "field_bubbahub_child_allergies",
+      "label": "Allergies",
+      "name": "allergies",
+      "aria-label": "",
+      "type": "textarea",
+      "instructions": "Optional allergy information.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": "",
+      "rows": 3,
+      "new_lines": "br"
+    },
+    {
+      "key": "field_bubbahub_child_notes",
+      "label": "Notes",
+      "name": "notes",
+      "aria-label": "",
+      "type": "textarea",
+      "instructions": "Optional notes about the child.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": "",
+      "rows": 3,
+      "new_lines": "br"
+    },
+    {
+      "key": "field_bubbahub_child_age_group",
+      "label": "Age Group",
+      "name": "age_group",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "Calculated automatically by My Hub from the date of birth.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "choices": {
+        "0-3": "0–3 months",
+        "3-6": "3–6 months",
+        "6-9": "6–9 months",
+        "9-12": "9–12 months",
+        "1-3": "1–3 years",
+        "2-4": "2–4 years",
+        "3-5": "3–5 years",
+        "5-plus": "5+ years"
+      },
+      "default_value": "",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 1,
+      "ui": 0,
+      "ajax": 0,
+      "placeholder": "Calculated automatically"
+    },
+    {
+      "key": "field_bubbahub_child_school_name",
+      "label": "School / Nursery",
+      "name": "school_name",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Optional school or nursery name.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": ""
+    },
+    {
+      "key": "field_bubbahub_child_school_application_status",
+      "label": "School Application Status",
+      "name": "school_application_status",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "Current application status.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "choices": {
+        "active": "Active",
+        "not_started": "Not started",
+        "submitted": "Submitted",
+        "accepted": "Accepted",
+        "declined": "Declined"
+      },
+      "default_value": "active",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 0,
+      "ui": 0,
+      "ajax": 0,
+      "placeholder": ""
+    },
+    {
+      "key": "field_bubbahub_child_school_application_deadline",
+      "label": "School Application Deadline",
+      "name": "school_application_deadline",
+      "aria-label": "",
+      "type": "date_picker",
+      "instructions": "Optional application deadline.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "display_format": "d/m/Y",
+      "return_format": "Y-m-d",
+      "first_day": 1
+    },
+    {
+      "key": "field_bubbahub_child_school_year",
+      "label": "School Year",
+      "name": "school_year",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Optional school year or class.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": ""
+    },
+    {
+      "key": "field_bubbahub_child_ofsted_rating",
+      "label": "Ofsted Rating",
+      "name": "ofsted_rating",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "Optional Ofsted rating.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "choices": {
+        "outstanding": "Outstanding",
+        "good": "Good",
+        "requires_improvement": "Requires improvement",
+        "inadequate": "Inadequate",
+        "not_rated": "Not rated"
+      },
+      "default_value": "not_rated",
+      "return_format": "value",
+      "multiple": 0,
+      "allow_null": 0,
+      "ui": 0,
+      "ajax": 0,
+      "placeholder": ""
+    },
+    {
+      "key": "field_bubbahub_child_nap_schedule",
+      "label": "Nap Schedule",
+      "name": "nap_schedule",
+      "aria-label": "",
+      "type": "group",
+      "instructions": "Optional nap schedule used by the My Hub child profile.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "layout": "block",
+      "sub_fields": [
+        {
+          "key": "field_bubbahub_nap_mon",
+          "label": "Monday",
+          "name": "Mon",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_mon_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_mon_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_mon_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_tue",
+          "label": "Tuesday",
+          "name": "Tue",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_tue_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_tue_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_tue_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_wed",
+          "label": "Wednesday",
+          "name": "Wed",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_wed_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_wed_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_wed_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_thu",
+          "label": "Thursday",
+          "name": "Thu",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_thu_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_thu_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_thu_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_fri",
+          "label": "Friday",
+          "name": "Fri",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_fri_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_fri_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_fri_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_sat",
+          "label": "Saturday",
+          "name": "Sat",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_sat_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_sat_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_sat_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        },
+        {
+          "key": "field_bubbahub_nap_sun",
+          "label": "Sunday",
+          "name": "Sun",
+          "type": "group",
+          "layout": "table",
+          "sub_fields": [
+            { "key": "field_bubbahub_nap_sun_enabled", "label": "Enabled", "name": "enabled", "type": "true_false", "default_value": 0, "ui": 1 },
+            { "key": "field_bubbahub_nap_sun_start", "label": "Start", "name": "start", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "13:00" },
+            { "key": "field_bubbahub_nap_sun_end", "label": "End", "name": "end", "type": "time_picker", "display_format": "H:i", "return_format": "H:i", "default_value": "15:00" }
+          ]
+        }
+      ]
+    }
+  ],
+  "location": [ [ { "param": "post_type", "operator": "==", "value": "bh_child" } ] ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": "",
+  "active": true,
+  "description": "Child profile fields used by BubbaHub My Hub and profile-settings.php.",
+  "show_in_rest": 0,
+  "modified": 1778970000
+}

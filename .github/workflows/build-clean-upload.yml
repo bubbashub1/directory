@@ -1,0 +1,33 @@
+name: Build Clean Upload ZIP
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build clean ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package
+          mkdir -p package/directory-main
+          rsync -a --exclude='.git' --exclude='.github' --exclude='package' ./ package/directory-main/
+          cd package
+          zip -qr ../bubbahub-directory-main-clean-upload.zip directory-main
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bubbahub-directory-main-clean-upload
+          path: bubbahub-directory-main-clean-upload.zip
+          if-no-files-found: error

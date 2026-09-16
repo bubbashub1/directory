@@ -2,13 +2,13 @@
 /**
  * Plugin Name: BubbaHub Leader Dashboard
  * Description: Front-end dashboard for BubbaHub leaders and leaderpro users.
- * Version: 1.3.1
+ * Version: 1.3.2
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_VERSION' ) ) define( 'BUBBAHUB_LEADER_DASHBOARD_VERSION', '1.3.1' );
+if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_VERSION' ) ) define( 'BUBBAHUB_LEADER_DASHBOARD_VERSION', '1.3.2' );
 if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_DIR' ) ) define( 'BUBBAHUB_LEADER_DASHBOARD_DIR', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_URL' ) ) define( 'BUBBAHUB_LEADER_DASHBOARD_URL', plugin_dir_url( __FILE__ ) );
 
@@ -39,7 +39,12 @@ function bubbahub_leader_dashboard_assets() {
     $dashboard_id  = (int) get_option( 'bubbahub_leader_dashboard_page_id', 0 );
     $management_ids = function_exists( 'bubbahub_leader_management_page_ids' ) ? bubbahub_leader_management_page_ids() : array();
     $allowed_ids = array_filter( array_merge( array( $dashboard_id ), array_values( $management_ids ) ) );
-    if ( ! $allowed_ids || ! is_page( $allowed_ids ) ) return;
+
+    // When the Leader Portal is bundled with the main Directory plugin,
+    // its standalone activation hook may not have run. The /leader/ slug
+    // is therefore also treated as a dashboard page.
+    $is_leader_page = is_page( 'leader' );
+    if ( ! $is_leader_page && ( ! $allowed_ids || ! is_page( $allowed_ids ) ) ) return;
 
     $css = BUBBAHUB_LEADER_DASHBOARD_DIR . 'leader-dashboard.css';
     if ( file_exists( $css ) ) {

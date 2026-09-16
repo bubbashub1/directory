@@ -1,0 +1,53 @@
+/* BubbaHub Leader Portal — theme-native/full-width presentation layer.
+ * Keeps the site's existing typography and page chrome, while allowing the
+ * dashboard to use the full content width instead of the theme's narrow article column.
+ */
+.bh-leader-dashboard{
+  width:100vw;
+  max-width:none;
+  margin-left:calc(50% - 50vw);
+  margin-right:calc(50% - 50vw);
+  padding:32px clamp(20px,4vw,60px) 48px;
+  background:transparent;
+  color:inherit;
+  font-family:inherit;
+  min-height:0;
+}
+.bh-leader-dashboard *{font-family:inherit;box-sizing:border-box}
+.bh-leader-shell{width:100%;max-width:none;margin:0;grid-template-columns:240px minmax(0,1fr);gap:28px}
+.bh-leader-sidebar{min-height:calc(100vh - 160px);position:sticky;top:24px;background:transparent;border:1px solid color-mix(in srgb,currentColor 16%,transparent);box-shadow:none;border-radius:12px}
+.bh-leader-brand-main,.bh-leader-header h1,.bh-panel-heading h2,.bh-empty-dashboard h3,.bh-leader-message-card h2,.bh-management-page-header h1{font-family:inherit}
+.bh-leader-brand-main{font-weight:inherit;letter-spacing:normal}
+.bh-leader-brand-sub,.bh-leader-eyebrow,.bh-panel-heading p{color:inherit;opacity:.65}
+.bh-leader-nav a,.bh-leader-sidebar-footer a,.bh-group-row>a,.bh-back-dashboard{color:inherit}
+.bh-leader-nav a:hover{background:transparent;color:inherit;transform:none;text-decoration:underline;text-underline-offset:3px}
+.bh-leader-nav a.is-active{background:transparent;color:inherit;box-shadow:none;font-weight:700}
+.bh-leader-header,.bh-leader-stat,.bh-leader-panel,.bh-group-row,.bh-management-page-header,.bh-management-page-card{background:transparent;border-color:color-mix(in srgb,currentColor 16%,transparent);box-shadow:none}
+.bh-leader-header{border-radius:12px}
+.bh-leader-header:after{display:none}
+.bh-leader-primary,.bh-leader-button{background:currentColor;color:Canvas!important;border-radius:6px;font-family:inherit}
+.bh-secondary-button{background:transparent;color:inherit!important;border-color:color-mix(in srgb,currentColor 28%,transparent);border-radius:6px;font-family:inherit}
+.bh-leader-primary:hover,.bh-leader-button:hover{box-shadow:none;transform:none}
+.bh-leader-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.bh-leader-stat{border-radius:10px}
+.bh-stat-icon,.bh-group-avatar,.bh-empty-icon,.bh-payment-logo,.bh-coming>span,.bh-management-page-icon{background:transparent;color:inherit;border:1px solid color-mix(in srgb,currentColor 16%,transparent)}
+.bh-leader-content-grid{gap:20px}
+.bh-leader-panel{border-radius:12px}
+.bh-group-row{border-radius:8px}
+.bh-group-row:hover{background:transparent;border-color:color-mix(in srgb,currentColor 28%,transparent)}
+.bh-empty-dashboard,.bh-coming,.bh-management-form{background:transparent;border-color:color-mix(in srgb,currentColor 18%,transparent)}
+.bh-payment-card{border-color:color-mix(in srgb,currentColor 16%,transparent)}
+.bh-payment-status{background:transparent;color:inherit;border:1px solid color-mix(in srgb,currentColor 16%,transparent)}
+.bh-leader-message{background:transparent}
+.bh-leader-message-card{background:transparent;border-color:color-mix(in srgb,currentColor 16%,transparent);box-shadow:none}
+.bh-leader-form input,.bh-leader-form textarea,.bh-leader-form select{font-family:inherit;color:inherit;background:transparent;border-color:color-mix(in srgb,currentColor 24%,transparent);border-radius:6px}
+.bh-acf-fields .acf-field{background:transparent!important;border-color:color-mix(in srgb,currentColor 16%,transparent)!important;border-radius:8px}
+.bh-acf-fields .acf-input input,.bh-acf-fields .acf-input textarea,.bh-acf-fields .acf-input select{font-family:inherit;color:inherit;background:transparent;border-color:color-mix(in srgb,currentColor 24%,transparent);border-radius:6px}
+.bh-leader-dashboard a{text-decoration:none}
+.bh-leader-dashboard a:hover{text-decoration:underline;text-underline-offset:3px}
+.bh-leader-dashboard .bh-leader-primary:hover,.bh-leader-dashboard .bh-leader-button:hover,.bh-leader-dashboard .bh-secondary-button:hover{text-decoration:none}
+.bh-management-page{width:100vw;max-width:none;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:32px clamp(20px,4vw,60px) 48px;background:transparent;color:inherit;font-family:inherit}
+.bh-leader-management-shell{width:100%;max-width:none}
+@media(max-width:1100px){.bh-leader-shell{grid-template-columns:210px minmax(0,1fr)}.bh-leader-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:780px){.bh-leader-dashboard,.bh-management-page{width:100%;margin-left:0;margin-right:0;padding:20px 16px 32px}.bh-leader-shell{grid-template-columns:1fr}.bh-leader-sidebar{min-height:auto;position:relative;top:auto}.bh-leader-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.bh-leader-stats{grid-template-columns:1fr}.bh-leader-dashboard,.bh-management-page{padding-left:12px;padding-right:12px}}

@@ -113,6 +113,10 @@ function bubbahub_stage10_shortcode_output( $booking ) {
           <a href="<?php echo esc_url($calendar); ?>">Add to calendar</a>
           <?php if($can_pay && $booking['checkout']): ?><a href="<?php echo esc_url($booking['checkout']); ?>">Continue payment</a><?php endif; ?>
           <a href="<?php echo esc_url(bubbahub_stage10_contact_url($booking)); ?>">Contact Bubba Hub</a>
+          <?php if(function_exists('bubbahub_stage11_render_actions')): echo bubbahub_stage11_render_actions($booking['id']); endif; ?>
+        </div>
+        <div id="bubbahub-cancellation">
+          <?php if(function_exists('bubbahub_stage11_cancellation_shortcode')) echo bubbahub_stage11_cancellation_shortcode(); ?>
         </div>
         <div class="bh-stage10-note">Keep this booking number for reference. If your booking is reserved rather than confirmed, payment or organiser confirmation may still be required.</div>
       </article>

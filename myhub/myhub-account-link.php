@@ -5,13 +5,13 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_filter( 'the_content', 'bubbahub_myhub_account_settings_route', 5 );
+add_filter( 'pre_do_shortcode_tag', 'bubbahub_myhub_account_settings_route', 5, 4 );
 add_action( 'wp_footer', 'bubbahub_myhub_account_settings_button', 30 );
 
-function bubbahub_myhub_account_settings_route( $content ) {
-    if ( ! is_user_logged_in() || empty( $_GET['bh_account_settings'] ) ) return $content;
-    if ( false === strpos( $content, '[bubbahub_my_hub]' ) && false === strpos( $content, '[bubbahub-my-hub]' ) ) return $content;
-    return do_shortcode( '[bubbahub_account_settings]' );
+function bubbahub_myhub_account_settings_route( $output, $tag, $attr, $m ) {
+    if ( ! is_user_logged_in() || empty( $_GET['bh_account_settings'] ) ) return $output;
+    if ( ! in_array( $tag, array( 'bubbahub_my_hub', 'bubbahub-my-hub' ), true ) ) return $output;
+    return function_exists( 'bubbahub_account_settings_shortcode' ) ? bubbahub_account_settings_shortcode() : $output;
 }
 
 function bubbahub_myhub_account_settings_button() {

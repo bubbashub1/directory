@@ -1,7 +1,7 @@
 <?php
 /** BubbaHub My Hub */
 if ( ! defined( 'ABSPATH' ) ) exit;
-if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.7' );
+if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.8' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 add_action( 'init', 'bubbahub_myhub_register_child_post_type' );
@@ -34,3 +34,4 @@ if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php' ) ) requir
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php';
 // Stage 11 is temporarily disabled while its cancellation workflow is validated.
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php';
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php';

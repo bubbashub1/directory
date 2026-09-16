@@ -32,5 +32,5 @@ if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage7.php' ) ) requir
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php';
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php';
+// Stage 11 is temporarily disabled while its cancellation workflow is validated.
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php';

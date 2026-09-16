@@ -17,6 +17,10 @@ require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
 // Load the logged-in family dashboard / My Hub module.
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 
+// Load the Leader Portal module. require_once keeps this safe if the
+// standalone Leader Dashboard plugin is also active on the same site.
+require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
+
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );

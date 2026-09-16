@@ -7,7 +7,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.1.0' );
+if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.2.0' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 
@@ -35,7 +35,5 @@ function bubbahub_myhub_handle_child_form(){if(!is_user_logged_in()||empty($_POS
 function bubbahub_myhub_render_booking_card($booking){ob_start();?><article class="bh-myhub-booking-card"><div class="bh-myhub-booking-icon">📅</div><div class="bh-myhub-booking-content"><div class="bh-myhub-eyebrow">Upcoming Booking</div><h2><?php echo esc_html($booking['title']?:$booking['group']);?></h2><div class="bh-myhub-booking-date"><?php echo esc_html(bubbahub_myhub_booking_date_label($booking['date'],$booking['start']));?></div><?php if($booking['venue']):?><div class="bh-myhub-booking-venue">⌖ <?php echo esc_html($booking['venue']);?></div><?php endif;?></div></article><?php return ob_get_clean();}
 function bubbahub_myhub_shortcode(){return '<div class="bh-myhub-login"><h2>Loading My Hub…</h2></div>';}
 require_once BUBBAHUB_MYHUB_PATH . 'myhub-groups.php';
-/* My Hub v2 is temporarily isolated while its replacement is validated. */
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) {
-    require_once BUBBAHUB_MYHUB_PATH . 'myhub-v2.php';
-}
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-v2.php';
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'profile-settings.php';

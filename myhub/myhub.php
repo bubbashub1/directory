@@ -20,6 +20,16 @@ function bubbahub_myhub_booking_date_label($date,$time){$timestamp=strtotime(tri
 function bubbahub_myhub_handle_child_form(){if(!is_user_logged_in()||empty($_POST['bubbahub_myhub_child_nonce']))return;if(!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['bubbahub_myhub_child_nonce'])),'bubbahub_myhub_child'))return;if(!current_user_can('read'))return;return;}
 function bubbahub_myhub_render_booking_card($booking){ob_start();?><article class="bh-myhub-booking-card"><div class="bh-myhub-booking-icon">📅</div><div class="bh-myhub-booking-content"><div class="bh-myhub-eyebrow">Upcoming Booking</div><h2><?php echo esc_html($booking['title']?:$booking['group']);?></h2><div class="bh-myhub-booking-date"><?php echo esc_html(bubbahub_myhub_booking_date_label($booking['date'],$booking['start']));?></div><?php if($booking['venue']):?><div class="bh-myhub-booking-venue">⌖ <?php echo esc_html($booking['venue']);?></div><?php endif;?></div></article><?php return ob_get_clean();}
 function bubbahub_myhub_shortcode(){return '<div class="bh-myhub-login"><h2>Loading My Hub…</h2></div>';}
+
+/* Load BubbaHub's ACF JSON from the plugin so the bh_child field group is available without manual import. */
+add_filter( 'acf/settings/load_json', function( $paths ) {
+    $paths[] = BUBBAHUB_MYHUB_PATH . 'acf-json';
+    return array_values( array_unique( $paths ) );
+} );
+add_filter( 'acf/settings/save_json', function( $path ) {
+    return BUBBAHUB_MYHUB_PATH . 'acf-json';
+} );
+
 require_once BUBBAHUB_MYHUB_PATH . 'myhub-groups.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'myhub-v2.php';
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) require_once BUBBAHUB_MYHUB_PATH . 'profile-settings.php';

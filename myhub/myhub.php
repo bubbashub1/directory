@@ -7,7 +7,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.2.0' );
+if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.4.0' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 

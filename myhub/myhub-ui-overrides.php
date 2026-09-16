@@ -1,8 +1,6 @@
 <?php
 /**
- * Bubba Hub My Hub - UI and My Bookings fixes.
- * Keeps WordPress/theme typography and native account styling while providing
- * the user-facing labels and a working /my-bookings/ page.
+ * Bubba Hub My Hub - UI, My Bookings and child-form fixes.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -36,6 +34,23 @@ function bubbahub_myhub_ui_overrides() {
             });
         });
     " );
+}
+
+/* The stable My Hub dashboard now turns ?bh_add_child=1 into the actual child editor. */
+add_action( 'init', 'bubbahub_myhub_child_route_override', 31 );
+function bubbahub_myhub_child_route_override() {
+    if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) return;
+    remove_shortcode( 'bubbahub_my_hub' );
+    remove_shortcode( 'bubbahub-my-hub' );
+    add_shortcode( 'bubbahub_my_hub', 'bubbahub_myhub_child_aware_render' );
+    add_shortcode( 'bubbahub-my-hub', 'bubbahub_myhub_child_aware_render' );
+}
+function bubbahub_myhub_child_aware_render() {
+    if ( ! empty( $_GET['bh_add_child'] ) && function_exists( 'bubbahub_profile_child_form' ) ) {
+        $child_id = isset( $_GET['child_id'] ) ? absint( $_GET['child_id'] ) : 0;
+        return bubbahub_profile_child_form( $child_id );
+    }
+    return bubbahub_myhub_v3_render();
 }
 
 add_shortcode( 'bubbahub_my_bookings', 'bubbahub_my_bookings_shortcode' );
@@ -83,12 +98,7 @@ function bubbahub_myhub_booking_items() {
 
 function bubbahub_my_bookings_shortcode() {
     if ( ! is_user_logged_in() ) return '<div class="bh-my-bookings-page"><div class="bh-my-bookings-login"><h2>Please log in</h2><p>Log in to view your bookings.</p></div></div>';
-
-    /* Stage 10 already contains the secure booking-detail view. */
-    if ( ! empty( $_GET['booking_id'] ) && function_exists( 'bubbahub_stage10_booking_details_shortcode' ) ) {
-        return bubbahub_stage10_booking_details_shortcode();
-    }
-
+    if ( ! empty( $_GET['booking_id'] ) && function_exists( 'bubbahub_stage10_booking_details_shortcode' ) ) return bubbahub_stage10_booking_details_shortcode();
     $items = bubbahub_myhub_booking_items();
     ob_start(); ?>
     <main class="bh-my-bookings-page">

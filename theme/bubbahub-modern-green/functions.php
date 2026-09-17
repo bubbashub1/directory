@@ -1,10 +1,13 @@
 <?php
 /**
  * BubbaHub Modern Green theme functions.
+ *
+ * The visual system follows the calm, editorial feel of modern coaching block
+ * themes while remaining purpose-built for the BubbaHub directory.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_THEME_VERSION', '1.1.0' );
+define( 'BUBBAHUB_THEME_VERSION', '1.2.0' );
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
@@ -13,12 +16,13 @@ add_action('after_setup_theme', function () {
     add_theme_support('custom-logo', array('height'=>80,'width'=>280,'flex-height'=>true,'flex-width'=>true));
     add_theme_support('responsive-embeds');
     add_theme_support('align-wide');
+    add_theme_support('editor-styles');
     register_nav_menus(array('primary'=>'Primary Menu','footer'=>'Footer Menu'));
 });
 
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('bubbahub-modern-green', get_stylesheet_uri(), array(), BUBBAHUB_THEME_VERSION);
-    wp_enqueue_style('bubbahub-fonts', 'https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600&display=swap', array(), null);
+    wp_enqueue_style('bubbahub-fonts', 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Work+Sans:wght@400;500;600;700&display=swap', array(), null);
 });
 
 add_filter('body_class', function($classes){

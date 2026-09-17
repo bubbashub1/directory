@@ -4,7 +4,7 @@
  * Loads the core booking/payment, schedule and family hub stack.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-if ( ! defined( 'BUBBAHUB_PLATFORM_VERSION' ) ) define( 'BUBBAHUB_PLATFORM_VERSION', '2.1.0' );
+if ( ! defined( 'BUBBAHUB_PLATFORM_VERSION' ) ) define( 'BUBBAHUB_PLATFORM_VERSION', '2.1.1' );
 
 $bubbahub_platform_files = array(
     'bubbahub-booking-engine.php',
@@ -14,6 +14,7 @@ $bubbahub_platform_files = array(
     'modules/core/bubbahub-schedule-engine.php',
     'modules/core/bubbahub-family-support.php',
     'modules/core/bubbahub-family-favourites.php',
+    'modules/core/bubbahub-subscriptions.php',
     'modules/core/bubbahub-booking-flow.php',
     'myhub/myhub-booking-lifecycle.php',
     'myhub/myhub-booking-payment.php',

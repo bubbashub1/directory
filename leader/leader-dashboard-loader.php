@@ -15,6 +15,21 @@ require_once __DIR__ . '/leader-venues.php';
 require_once __DIR__ . '/leader-bookings.php';
 require_once __DIR__ . '/leader-management-pages.php';
 
+/*
+ * Internet & Group Monitor is bundled with the Directory plugin. Loading it
+ * here keeps the feature attached to the existing plugin without duplicating
+ * the main Directory loader or conflicting with the older monitor branch.
+ */
+$bh_monitor_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php';
+if ( file_exists( $bh_monitor_file ) ) {
+    require_once $bh_monitor_file;
+
+    if ( class_exists( 'BubbaHub_Internet_Group_Monitor' ) ) {
+        register_activation_hook( dirname( __DIR__ ) . '/bubbahub-directory.php', [ 'BubbaHub_Internet_Group_Monitor', 'activate' ] );
+        register_deactivation_hook( dirname( __DIR__ ) . '/bubbahub-directory.php', [ 'BubbaHub_Internet_Group_Monitor', 'deactivate' ] );
+    }
+}
+
 add_action( 'init', 'bubbahub_leader_dashboard_register', 99 );
 
 function bubbahub_leader_dashboard_register() {
@@ -51,6 +66,37 @@ function bubbahub_leader_theme_overrides() {
         array( 'bubbahub-leader-dashboard' ),
         BUBBAHUB_LEADER_DASHBOARD_VERSION . '.1'
     );
+}
+
+/* Keep the monitor dashboard usable on phones/tablets as well as desktop. */
+add_action( 'admin_head', 'bubbahub_internet_monitor_admin_css' );
+function bubbahub_internet_monitor_admin_css() {
+    if ( ! isset( $_GET['page'] ) || 'bh-igm' !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) return;
+    ?>
+    <style>
+        .toplevel_page_bh-igm .wrap .widefat { width:100%; }
+        .toplevel_page_bh-igm .wrap .widefat td,
+        .toplevel_page_bh-igm .wrap .widefat th { vertical-align:top; }
+        @media (max-width:782px) {
+            .toplevel_page_bh-igm .wrap { margin-right:12px; }
+            .toplevel_page_bh-igm .wrap > div[style*="display:flex"] { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .toplevel_page_bh-igm .wrap > div[style*="display:flex"] > div { min-width:0 !important; box-sizing:border-box; }
+            .toplevel_page_bh-igm .wrap .widefat { display:block; overflow-x:auto; white-space:normal; }
+            .toplevel_page_bh-igm .wrap .widefat th,
+            .toplevel_page_bh-igm .wrap .widefat td { min-width:130px; }
+            .toplevel_page_bh-igm .wrap .widefat th:nth-child(4),
+            .toplevel_page_bh-igm .wrap .widefat td:nth-child(4) { min-width:240px; }
+            .toplevel_page_bh-igm .form-table th,
+            .toplevel_page_bh-igm .form-table td { display:block; width:auto; padding:10px 0; }
+            .toplevel_page_bh-igm .form-table input.regular-text,
+            .toplevel_page_bh-igm .form-table textarea,
+            .toplevel_page_bh-igm .form-table input[type="number"] { max-width:100%; box-sizing:border-box; }
+        }
+        @media (max-width:480px) {
+            .toplevel_page_bh-igm .wrap > div[style*="display:flex"] { grid-template-columns:1fr; }
+        }
+    </style>
+    <?php
 }
 
 bubbahub_leader_dashboard_register();

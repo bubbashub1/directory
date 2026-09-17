@@ -4,6 +4,17 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+/*
+ * The Directory plugin bundles the Leader Portal. Load all Leader Portal
+ * modules here so the dashboard, listings, venues and bookings work even
+ * when the standalone Leader Dashboard plugin activation hook has not run.
+ * require_once keeps this safe when the standalone plugin is also active.
+ */
+require_once __DIR__ . '/leader-listings.php';
+require_once __DIR__ . '/leader-venues.php';
+require_once __DIR__ . '/leader-bookings.php';
+require_once __DIR__ . '/leader-management-pages.php';
+
 add_action( 'init', 'bubbahub_leader_dashboard_register', 99 );
 
 function bubbahub_leader_dashboard_register() {

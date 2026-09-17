@@ -1,25 +1,19 @@
 <?php
 /**
  * Plugin Name: BubbaHub Directory
- * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls and map view.
- * Version: 1.2.4
+ * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and a configurable drag-and-drop layout.
+ * Version: 1.2.5
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.4' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.5' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
-// Load the custom Group single-page template from this plugin.
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
-
-// Load the logged-in family dashboard / My Hub module.
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
-
-// Load the Leader Portal module.
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 
-// Load the admin drag-and-drop directory builder.
 if ( is_admin() ) {
     require_once plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
 }
@@ -104,11 +98,97 @@ function bubbahub_directory_term_time( $post_id ) {
     if ( is_string( $value ) ) return in_array( strtolower( trim( $value ) ), array( '1', 'true', 'yes', 'on', 'term time', 'term-time' ), true );
     return ! empty( $value );
 }
+function bubbahub_directory_format_value( $value ) {
+    if ( is_array( $value ) ) {
+        $out = array();
+        foreach ( $value as $item ) {
+            if ( is_array( $item ) ) {
+                $parts = array();
+                foreach ( $item as $key => $part ) { if ( is_scalar( $part ) && trim( (string) $part ) !== '' ) $parts[] = is_string( $key ) ? ucwords( str_replace( array( '_', '-' ), ' ', $key ) ) . ': ' . $part : (string) $part; }
+                $item = implode( ' · ', $parts );
+            } elseif ( is_object( $item ) && isset( $item->post_title ) ) { $item = $item->post_title; }
+            if ( is_scalar( $item ) && trim( (string) $item ) !== '' ) $out[] = (string) $item;
+        }
+        return implode( ', ', $out );
+    }
+    return is_scalar( $value ) ? (string) $value : '';
+}
+function bubbahub_directory_layout() {
+    $layout = get_option( 'bubbahub_directory_builder_layout', array() );
+    if ( ! is_array( $layout ) || empty( $layout ) ) {
+        $layout = array(
+            array( 'type' => 'title' ), array( 'type' => 'image' ), array( 'type' => 'description' ),
+            array( 'type' => 'location' ), array( 'type' => 'schedule' ), array( 'type' => 'price' ),
+            array( 'type' => 'booking' ), array( 'type' => 'other_classes' ), array( 'type' => 'map' ),
+        );
+    }
+    return $layout;
+}
+function bubbahub_directory_render_element( $type, $id, $data ) {
+    $title = $data['title']; $url = $data['url'];
+    switch ( $type ) {
+        case 'image':
+            return $data['image'] ? '<div class="bh-builder-element bh-builder-image"><a href="' . esc_url( $url ) . '"><img src="' . esc_url( $data['image'] ) . '" alt="' . esc_attr( $title ) . '" loading="lazy"></a></div>' : '';
+        case 'title':
+            return '<div class="bh-builder-element bh-builder-title"><h2><a href="' . esc_url( $url ) . '">' . esc_html( $title ) . '</a></h2></div>';
+        case 'description':
+            $text = wp_trim_words( wp_strip_all_tags( get_post_field( 'post_content', $id ) ), 24 );
+            return $text ? '<div class="bh-builder-element bh-builder-description">' . esc_html( $text ) . '</div>' : '';
+        case 'location':
+            $text = $data['region'];
+            if ( $data['address'] ) $text = $text ? $text . ' · ' . $data['address'] : $data['address'];
+            return $text ? '<div class="bh-builder-element bh-builder-location"><span class="bh-icon" aria-hidden="true">⌖</span>' . esc_html( $text ) . '</div>' : '';
+        case 'schedule':
+            $value = bubbahub_directory_get_field( $id, 'business_hours', '' );
+            if ( $value === '' ) $value = bubbahub_directory_get_field( $id, 'schedule', '' );
+            if ( $value === '' ) $value = bubbahub_directory_get_field( $id, 'timetable', '' );
+            $text = bubbahub_directory_format_value( $value );
+            return $text ? '<div class="bh-builder-element bh-builder-schedule"><strong>Schedule</strong><span>' . esc_html( $text ) . '</span></div>' : '';
+        case 'price':
+            return $data['price'] ? '<div class="bh-builder-element bh-builder-price"><span>' . esc_html( $data['price'] ) . '</span></div>' : '';
+        case 'booking':
+            if ( shortcode_exists( 'bubbahub_booking' ) ) return '<div class="bh-builder-element bh-builder-booking">' . do_shortcode( '[bubbahub_booking group_id="' . absint( $id ) . '"]' ) . '</div>';
+            if ( shortcode_exists( 'bubbahub_bookings' ) ) return '<div class="bh-builder-element bh-builder-booking">' . do_shortcode( '[bubbahub_bookings group_id="' . absint( $id ) . '"]' ) . '</div>';
+            return '<div class="bh-builder-element bh-builder-booking"><a class="bh-view-more" href="' . esc_url( $url ) . '">View booking options →</a></div>';
+        case 'subscription':
+            if ( shortcode_exists( 'bubbahub_subscription' ) ) return '<div class="bh-builder-element bh-builder-subscription">' . do_shortcode( '[bubbahub_subscription]' ) . '</div>';
+            if ( shortcode_exists( 'bubbahub_subscriptions' ) ) return '<div class="bh-builder-element bh-builder-subscription">' . do_shortcode( '[bubbahub_subscriptions]' ) . '</div>';
+            return '<div class="bh-builder-element bh-builder-subscription"><a class="bh-view-more" href="' . esc_url( $url ) . '">Membership options →</a></div>';
+        case 'other_classes':
+            $author = (int) get_post_field( 'post_author', $id );
+            if ( ! $author ) return '';
+            $related = new WP_Query( array( 'post_type' => 'group', 'post_status' => 'publish', 'posts_per_page' => 3, 'post__not_in' => array( $id ), 'author' => $author, 'orderby' => 'title', 'order' => 'ASC', 'no_found_rows' => true ) );
+            if ( ! $related->have_posts() ) { wp_reset_postdata(); return ''; }
+            $html = '<div class="bh-builder-element bh-builder-other"><strong>Other classes</strong><ul>';
+            while ( $related->have_posts() ) { $related->the_post(); $html .= '<li><a href="' . esc_url( get_permalink() ) . '">' . esc_html( get_the_title() ) . '</a></li>'; }
+            $html .= '</ul></div>'; wp_reset_postdata(); return $html;
+        case 'map':
+            if ( ! $data['map'] ) return '';
+            return '<div class="bh-builder-element bh-builder-map"><a href="https://www.openstreetmap.org/?mlat=' . rawurlencode( $data['map']['lat'] ) . '&mlon=' . rawurlencode( $data['map']['lng'] ) . '#map=16/' . rawurlencode( $data['map']['lat'] ) . '/' . rawurlencode( $data['map']['lng'] ) . '" target="_blank" rel="noopener">View location on map ↗</a></div>';
+        case 'contact':
+            $email = bubbahub_directory_get_field( $id, 'email', '' ); $phone = bubbahub_directory_get_field( $id, 'phone', '' ); $website = bubbahub_directory_get_field( $id, 'website', '' );
+            $links = array();
+            if ( $email && is_email( $email ) ) $links[] = '<a href="mailto:' . antispambot( $email ) . '">Email</a>';
+            if ( $phone ) $links[] = '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $phone ) ) . '">Call</a>';
+            if ( $website && filter_var( $website, FILTER_VALIDATE_URL ) ) $links[] = '<a href="' . esc_url( $website ) . '" target="_blank" rel="noopener">Website</a>';
+            return $links ? '<div class="bh-builder-element bh-builder-contact">' . implode( ' · ', $links ) . '</div>' : '';
+        case 'social':
+            $socials = array(); foreach ( array( 'facebook', 'instagram', 'twitter', 'tiktok', 'social_url' ) as $field ) { $value = bubbahub_directory_get_field( $id, $field, '' ); if ( $value && filter_var( $value, FILTER_VALIDATE_URL ) ) $socials[] = '<a href="' . esc_url( $value ) . '" target="_blank" rel="noopener">' . esc_html( ucfirst( str_replace( '_', ' ', $field ) ) ) . '</a>'; }
+            return $socials ? '<div class="bh-builder-element bh-builder-social">' . implode( ' · ', $socials ) . '</div>' : '';
+        case 'search':
+            return '<div class="bh-builder-element bh-builder-search-note">Search &amp; filters are available above the directory.</div>';
+    }
+    return '';
+}
 function bubbahub_directory_render_cards( $query ) {
     ob_start();
     if ( $query->have_posts() ) : while ( $query->have_posts() ) : $query->the_post();
         $id = get_the_ID(); $title = get_the_title(); $url = get_permalink(); $image = bubbahub_directory_image_url( $id ); $map = bubbahub_directory_normalise_map( bubbahub_directory_get_field( $id, 'map' ) ); $region = bubbahub_directory_region( $id ); $age = bubbahub_directory_get_field( $id, 'age_range' ); $price = bubbahub_directory_get_field( $id, 'price' ); $term_time = bubbahub_directory_term_time( $id );
         if ( is_array( $age ) ) $age = implode( ', ', $age ); if ( is_array( $price ) ) $price = implode( ', ', $price );
+        $venue_id = bubbahub_directory_get_field( $id, 'venue', 0 ); if ( is_array( $venue_id ) ) $venue_id = isset( $venue_id['ID'] ) ? $venue_id['ID'] : ( isset( $venue_id[0] ) ? $venue_id[0] : 0 ); if ( is_object( $venue_id ) ) $venue_id = isset( $venue_id->ID ) ? $venue_id->ID : 0;
+        $address = $venue_id ? bubbahub_directory_get_field( $venue_id, 'address', '' ) : bubbahub_directory_get_field( $id, 'address', '' );
+        if ( is_array( $address ) ) { $parts = array(); foreach ( array( 'address', 'street', 'city', 'region', 'postcode', 'zip' ) as $key ) if ( ! empty( $address[$key] ) ) $parts[] = $address[$key]; $address = implode( ', ', $parts ); }
+        $data = array( 'title' => $title, 'url' => $url, 'image' => $image, 'map' => $map, 'region' => $region, 'age' => $age, 'price' => $price, 'address' => is_string( $address ) ? trim( $address ) : '' );
         ?>
         <article class="bh-card" data-post-id="<?php echo esc_attr( $id ); ?>" data-lat="<?php echo $map ? esc_attr( $map['lat'] ) : ''; ?>" data-lng="<?php echo $map ? esc_attr( $map['lng'] ) : ''; ?>" data-title="<?php echo esc_attr( $title ); ?>" data-url="<?php echo esc_url( $url ); ?>">
             <div class="bh-card-image">
@@ -120,9 +200,12 @@ function bubbahub_directory_render_cards( $query ) {
                     <?php if ( $term_time ) : ?><span class="bh-badge bh-badge-term" title="Runs in term time"><span aria-hidden="true">▣</span><span class="bh-badge-label">Term Time</span></span><?php endif; ?>
                 </div>
             </div>
-            <div class="bh-card-body"><h2><a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $title ); ?></a></h2>
-                <?php if ( $region ) : ?><div class="bh-meta"><span class="bh-icon" aria-hidden="true">⌖</span><?php echo esc_html( $region ); ?></div><?php endif; ?>
-                <div class="bh-card-meta"><?php if ( $age ) : ?><span><?php echo esc_html( $age ); ?></span><?php endif; ?><?php if ( $price ) : ?><span><?php echo esc_html( $price ); ?></span><?php endif; ?></div>
+            <div class="bh-card-body">
+                <?php foreach ( bubbahub_directory_layout() as $item ) { $type = isset( $item['type'] ) ? sanitize_key( $item['type'] ) : ''; if ( $type === 'image' ) continue; echo bubbahub_directory_render_element( $type, $id, $data ); } ?>
+                <div class="bh-builder-element bh-builder-meta">
+                    <?php if ( $age ) : ?><span><?php echo esc_html( $age ); ?></span><?php endif; ?>
+                    <?php if ( $price && ! in_array( 'price', wp_list_pluck( bubbahub_directory_layout(), 'type' ), true ) ) : ?><span><?php echo esc_html( $price ); ?></span><?php endif; ?>
+                </div>
                 <a class="bh-view-more" href="<?php echo esc_url( $url ); ?>">View More <span aria-hidden="true">→</span></a>
             </div>
         </article>

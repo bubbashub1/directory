@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": true,
+    "layout": { "contentSize": "1180px", "wideSize": "1400px" },
+    "spacing": { "blockGap": "1.25rem", "units": ["px","em","rem","%","vw","vh"] },
+    "typography": {
+      "fluid": true,
+      "fontFamilies": [
+        { "fontFamily": "Nunito Sans, system-ui, sans-serif", "slug": "nunito-sans", "name": "Nunito Sans" },
+        { "fontFamily": "Playfair Display, Georgia, serif", "slug": "playfair-display", "name": "Playfair Display" }
+      ],
+      "fontSizes": [
+        { "slug": "small", "size": "0.875rem", "name": "Small" },
+        { "slug": "medium", "size": "1.125rem", "name": "Medium" },
+        { "slug": "large", "size": "clamp(2rem, 5vw, 3.5rem)", "name": "Large" },
+        { "slug": "x-large", "size": "clamp(2.6rem, 7vw, 4.5rem)", "name": "Extra large" }
+      ]
+    },
+    "color": {
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "green-950", "color": "#173a2b", "name": "Deep green" },
+        { "slug": "green-800", "color": "#245b43", "name": "Forest green" },
+        { "slug": "green-700", "color": "#34765a", "name": "Bubba green" },
+        { "slug": "green-500", "color": "#73aa8d", "name": "Sage" },
+        { "slug": "green-200", "color": "#cfe3d8", "name": "Soft green" },
+        { "slug": "green-100", "color": "#eaf4ee", "name": "Pale green" },
+        { "slug": "cream", "color": "#fbfaf6", "name": "Warm cream" },
+        { "slug": "ink", "color": "#203028", "name": "Ink" },
+        { "slug": "white", "color": "#ffffff", "name": "White" }
+      ]
+    },
+    "border": { "radius": true },
+    "blocks": {
+      "core/button": { "border": { "radius": "14px" } },
+      "core/image": { "border": { "radius": true } }
+    }
+  },
+  "styles": {
+    "color": { "background": "#fbfaf6", "text": "#203028" },
+    "typography": { "fontFamily": "Nunito Sans, system-ui, sans-serif", "lineHeight": "1.65" },
+    "elements": {
+      "heading": { "typography": { "fontFamily": "Playfair Display, Georgia, serif", "fontWeight": "500", "lineHeight": "1.1" }, "color": { "text": "#173a2b" } },
+      "link": { "color": { "text": "#34765a" }, "typography": { "textDecoration": "underline" } },
+      "button": { "color": { "background": "#34765a", "text": "#ffffff" }, "spacing": { "padding": { "top": "0.75rem", "bottom": "0.75rem", "left": "1.25rem", "right": "1.25rem" } }, "typography": { "fontWeight": "800" } }
+    }
+  }
+}

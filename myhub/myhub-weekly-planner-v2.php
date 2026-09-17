@@ -61,3 +61,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     </section>
     <?php return ob_get_clean();
 }
+
+/* Booking bridge: the planner AJAX now returns live sessions with capacity-aware booking links. */
+$bh_planner_booking_bridge = BUBBAHUB_MYHUB_PATH . 'planner-booking-bridge.php';
+if ( file_exists( $bh_planner_booking_bridge ) ) require_once $bh_planner_booking_bridge;

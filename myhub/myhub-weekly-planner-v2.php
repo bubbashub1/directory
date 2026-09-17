@@ -5,6 +5,10 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+/* The booking engine lives in the same Directory plugin; load it before the planner bridge. */
+$bh_booking_engine = dirname( __DIR__ ) . '/bubbahub-booking-engine.php';
+if ( file_exists( $bh_booking_engine ) ) require_once $bh_booking_engine;
+
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
 
 function bubbahub_myhub_planner_v2_tax_terms( $taxonomy, $ids = array() ) {
@@ -62,6 +66,6 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     <?php return ob_get_clean();
 }
 
-/* Booking bridge: the planner AJAX now returns live sessions with capacity-aware booking links. */
+/* Booking bridge: planner refreshes use live booking-engine capacity and direct session links. */
 $bh_planner_booking_bridge = BUBBAHUB_MYHUB_PATH . 'planner-booking-bridge.php';
 if ( file_exists( $bh_planner_booking_bridge ) ) require_once $bh_planner_booking_bridge;

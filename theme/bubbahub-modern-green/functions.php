@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'BUBBAHUB_THEME_VERSION', '1.0.0' );
 
-action('after_setup_theme', function () {
+add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
     add_theme_support('html5', array('search-form','comment-form','comment-list','gallery','caption','style','script'));
@@ -36,7 +36,7 @@ function bubbahub_theme_brand() {
 
 function bubbahub_theme_menu() {
     if ( has_nav_menu('primary') ) {
-        wp_nav_menu(array('theme_location'=>'primary','container'=>false,'menu_class'=>'bh-nav','fallback_cb'=>false));
+        wp_nav_menu(array('theme_location'=>'primary','container'=>false,'menu_id'=>'bh-primary-nav','menu_class'=>'bh-nav','fallback_cb'=>false));
     } else {
         echo '<nav class="bh-nav" id="bh-primary-nav" aria-label="Primary navigation">';
         echo '<a href="' . esc_url(home_url('/')) . '">Home</a>';

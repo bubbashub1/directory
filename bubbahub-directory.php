@@ -9,15 +9,13 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.0' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
-
-// Load the custom Group single-page template from this plugin.
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
-// Load the logged-in family dashboard / My Hub module.
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
-// Load the Leader Portal module.
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
-// Load the Internet & Group Activity Monitor.
 require_once plugin_dir_path( __FILE__ ) . 'modules/internet-monitor/bubbahub-internet-monitor.php';
+
+register_activation_hook( __FILE__, [ 'BubbaHub_Internet_Group_Monitor', 'activate' ] );
+register_deactivation_hook( __FILE__, [ 'BubbaHub_Internet_Group_Monitor', 'deactivate' ] );
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );

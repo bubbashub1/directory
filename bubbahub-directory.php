@@ -2,15 +2,24 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and a configurable drag-and-drop layout.
- * Version: 1.2.5
+ * Version: 1.2.6
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.5' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.6' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
+
+// Load the platform stack directly from the main plugin bootstrap. This keeps
+// booking, subscription, schedule and My Hub shortcodes available even when
+// the Leader Portal loader is not initialised on the current request.
+$bh_platform_loader = plugin_dir_path( __FILE__ ) . 'modules/core/bubbahub-platform-loader.php';
+if ( file_exists( $bh_platform_loader ) ) {
+    require_once $bh_platform_loader;
+}
+
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 

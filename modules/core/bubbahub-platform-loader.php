@@ -14,6 +14,7 @@ $bubbahub_platform_files = array(
     'modules/core/bubbahub-schedule-foundation.php',
     'modules/core/bubbahub-schedule-engine.php',
     'myhub/myhub-booking-lifecycle.php',
+    'myhub/myhub-booking-payment.php',
     'modules/core/bubbahub-ninja-stripe-bridge.php',
 );
 

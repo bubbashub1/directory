@@ -1,0 +1,30 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+<!-- wp:group {"tagName":"main","className":"bh-entry","layout":{"type":"constrained"}} -->
+<main class="wp-block-group bh-entry">
+  <!-- wp:group {"className":"bh-container bh-entry-grid","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group bh-container bh-entry-grid">
+    <!-- wp:group {"className":"bh-entry-main","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group bh-entry-main">
+      <!-- wp:post-featured-image {"isLink":false} /-->
+      <!-- wp:post-title {"level":1} /-->
+      <!-- wp:post-content /-->
+    </div>
+    <!-- /wp:group -->
+    <!-- wp:group {"className":"bh-entry-sidebar","layout":{"type":"constrained"}} -->
+    <aside class="wp-block-group bh-entry-sidebar">
+      <!-- wp:heading {"level":2} -->
+      <h2 class="wp-block-heading">At a glance</h2>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Use the directory information and booking tools provided by Bubba Hub for this group.</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:shortcode -->
+      [bubbahub_booking group_id=""]
+      <!-- /wp:shortcode -->
+    </aside>
+    <!-- /wp:group -->
+  </div>
+  <!-- /wp:group -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

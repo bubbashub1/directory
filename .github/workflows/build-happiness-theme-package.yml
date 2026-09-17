@@ -1,0 +1,41 @@
+name: Build BubbaHub Happiness Green Theme ZIP
+on:
+  push:
+    branches:
+      - theme/bubbahub-happiness-coach
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  package-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate theme
+        run: |
+          set -euo pipefail
+          test -f theme/bubbahub-happiness-coach/style.css
+          test -f theme/bubbahub-happiness-coach/functions.php
+          test -f theme/bubbahub-happiness-coach/index.php
+          test -f theme/bubbahub-happiness-coach/header.php
+          test -f theme/bubbahub-happiness-coach/footer.php
+          test -f theme/bubbahub-happiness-coach/front-page.php
+      - name: Build ZIP
+        run: |
+          set -euo pipefail
+          rm -rf package
+          mkdir -p package
+          cp -a theme/bubbahub-happiness-coach package/bubbahub-happiness-green
+          cd package
+          zip -qr ../bubbahub-happiness-green.zip bubbahub-happiness-green
+          cd ..
+          unzip -l bubbahub-happiness-green.zip
+      - name: Upload ready-to-install ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: bubbahub-happiness-green
+          path: bubbahub-happiness-green.zip
+          if-no-files-found: error
+          retention-days: 30

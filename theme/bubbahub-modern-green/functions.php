@@ -23,6 +23,7 @@ add_action('after_setup_theme', function () {
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('bubbahub-modern-green', get_stylesheet_uri(), array(), BUBBAHUB_THEME_VERSION);
     wp_enqueue_style('bubbahub-fonts', 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Work+Sans:wght@400;500;600;700&display=swap', array(), null);
+    wp_enqueue_style('bubbahub-happiness-template', get_theme_file_uri('assets/happiness-template.css'), array('bubbahub-modern-green'), BUBBAHUB_THEME_VERSION);
 });
 
 add_filter('body_class', function($classes){

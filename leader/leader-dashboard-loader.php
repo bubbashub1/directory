@@ -3,6 +3,8 @@
  * BubbaHub Leader Dashboard loader – stable shortcode registration and theme integration.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
+$bh_platform_loader = dirname( __DIR__ ) . '/modules/core/bubbahub-platform-loader.php';
+if ( file_exists( $bh_platform_loader ) ) require_once $bh_platform_loader;
 require_once __DIR__ . '/leader-listings.php';
 require_once __DIR__ . '/leader-venues.php';
 require_once __DIR__ . '/leader-bookings.php';

@@ -3,31 +3,18 @@
  * BubbaHub Leader Dashboard loader – stable shortcode registration and theme integration.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-
-/*
- * The Directory plugin bundles the Leader Portal. Load all Leader Portal
- * modules here so the dashboard, listings, venues and bookings work even
- * when the standalone Leader Dashboard plugin activation hook has not run.
- * require_once keeps this safe when the standalone plugin is also active.
- */
 require_once __DIR__ . '/leader-listings.php';
 require_once __DIR__ . '/leader-venues.php';
 require_once __DIR__ . '/leader-bookings.php';
 require_once __DIR__ . '/leader-management-pages.php';
-
-/* Schedule foundation + recurring session engine. */
 $bh_schedule_foundation = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-foundation.php';
 if ( file_exists( $bh_schedule_foundation ) ) require_once $bh_schedule_foundation;
 $bh_schedule_engine = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-engine.php';
 if ( file_exists( $bh_schedule_engine ) ) require_once $bh_schedule_engine;
-
-/* Generic/reusable booking pages: e.g. Autumn Term or Summer Programme. */
+$bh_schedule_manager = __DIR__ . '/leader-schedule-manager.php';
+if ( file_exists( $bh_schedule_manager ) ) require_once $bh_schedule_manager;
 $bh_generic_booking_file = dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php';
-if ( file_exists( $bh_generic_booking_file ) ) {
-    require_once $bh_generic_booking_file;
-}
-
-/* Internet & Group Monitor is bundled with the Directory plugin. */
+if ( file_exists( $bh_generic_booking_file ) ) require_once $bh_generic_booking_file;
 $bh_monitor_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php';
 if ( file_exists( $bh_monitor_file ) ) {
     require_once $bh_monitor_file;
@@ -36,11 +23,8 @@ if ( file_exists( $bh_monitor_file ) ) {
         register_deactivation_hook( dirname( __DIR__ ) . '/bubbahub-directory.php', [ 'BubbaHub_Internet_Group_Monitor', 'deactivate' ] );
     }
 }
-
-/* Dedicated alert inbox + WordPress dashboard monitor widget. */
 $bh_monitor_alerts_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-monitor-alerts.php';
 if ( file_exists( $bh_monitor_alerts_file ) ) require_once $bh_monitor_alerts_file;
-
 add_action( 'init', 'bubbahub_leader_dashboard_register', 99 );
 function bubbahub_leader_dashboard_register() {
     $renderer = '';
@@ -50,7 +34,6 @@ function bubbahub_leader_dashboard_register() {
     remove_shortcode( 'bubbahub_leader_dashboard' ); remove_shortcode( 'bubbahub-leader-dashboard' );
     add_shortcode( 'bubbahub_leader_dashboard', $renderer ); add_shortcode( 'bubbahub-leader-dashboard', $renderer );
 }
-
 add_action( 'wp_enqueue_scripts', 'bubbahub_leader_theme_overrides', 20 );
 function bubbahub_leader_theme_overrides() {
     if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_URL' ) || ! defined( 'BUBBAHUB_LEADER_DASHBOARD_VERSION' ) ) return;
@@ -62,14 +45,8 @@ function bubbahub_leader_theme_overrides() {
     if ( ! file_exists( $css ) ) return;
     wp_enqueue_style( 'bubbahub-leader-theme-overrides', BUBBAHUB_LEADER_DASHBOARD_URL . 'leader-theme-overrides.css', array( 'bubbahub-leader-dashboard' ), BUBBAHUB_LEADER_DASHBOARD_VERSION . '.1' );
 }
-
 add_action( 'admin_head', 'bubbahub_internet_monitor_admin_css' );
 function bubbahub_internet_monitor_admin_css() {
     if ( ! isset( $_GET['page'] ) || 'bh-igm' !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) return;
-    ?>
-    <style>
-      @media(max-width:782px){.bh-igm-wrap{margin-right:10px}.bh-igm-grid{grid-template-columns:1fr!important}.bh-igm-table{display:block;overflow-x:auto}.bh-igm-actions a,.bh-igm-actions button{margin-bottom:6px}}
-      @media(max-width:480px){.bh-igm-wrap{margin-left:-10px}.bh-igm-card{padding:14px!important}.bh-igm-table{font-size:13px}}
-    </style>
-    <?php
+    ?><style>@media(max-width:782px){.bh-igm-wrap{margin-right:10px}.bh-igm-grid{grid-template-columns:1fr!important}.bh-igm-table{display:block;overflow-x:auto}.bh-igm-actions a,.bh-igm-actions button{margin-bottom:6px}}@media(max-width:480px){.bh-igm-wrap{margin-left:-10px}.bh-igm-card{padding:14px!important}.bh-igm-table{font-size:13px}}</style><?php
 }

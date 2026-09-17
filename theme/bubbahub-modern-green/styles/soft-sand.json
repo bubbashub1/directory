@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "title": "Soft Sand",
+  "settings": { "color": { "defaultPalette": false } },
+  "styles": {
+    "color": { "background": "#fbf7ef", "text": "#2e342f" },
+    "elements": {
+      "heading": { "color": { "text": "#3b5547" } },
+      "link": { "color": { "text": "#557c68" } },
+      "button": { "color": { "background": "#557c68", "text": "#ffffff" } }
+    }
+  }
+}

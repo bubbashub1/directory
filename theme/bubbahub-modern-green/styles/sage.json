@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "title": "Bubba Sage",
+  "settings": { "color": { "defaultPalette": false } },
+  "styles": {
+    "color": { "background": "#f4f8f3", "text": "#24352d" },
+    "elements": {
+      "heading": { "color": { "text": "#234d3a" } },
+      "link": { "color": { "text": "#3f765e" } },
+      "button": { "color": { "background": "#3f765e", "text": "#ffffff" } }
+    }
+  }
+}

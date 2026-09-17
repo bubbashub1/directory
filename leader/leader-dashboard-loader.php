@@ -15,6 +15,12 @@ require_once __DIR__ . '/leader-venues.php';
 require_once __DIR__ . '/leader-bookings.php';
 require_once __DIR__ . '/leader-management-pages.php';
 
+/* Schedule foundation + recurring session engine. */
+$bh_schedule_foundation = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-foundation.php';
+if ( file_exists( $bh_schedule_foundation ) ) require_once $bh_schedule_foundation;
+$bh_schedule_engine = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-engine.php';
+if ( file_exists( $bh_schedule_engine ) ) require_once $bh_schedule_engine;
+
 /* Generic/reusable booking pages: e.g. Autumn Term or Summer Programme. */
 $bh_generic_booking_file = dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php';
 if ( file_exists( $bh_generic_booking_file ) ) {

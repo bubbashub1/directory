@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_THEME_VERSION', '1.0.0' );
+define( 'BUBBAHUB_THEME_VERSION', '1.1.0' );
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');

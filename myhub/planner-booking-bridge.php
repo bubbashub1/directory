@@ -49,17 +49,13 @@ function bubbahub_myhub_planner_booking_match_tax($group_id, $taxonomy, $wanted)
 }
 
 function bubbahub_myhub_planner_booking_available($session_id) {
-    $capacity = (int)get_post_meta($session_id, '_bh_capacity', true);
-    if ($capacity <= 0) return array('available'=>true,'remaining'=>null);
-    $statuses = array('confirmed','reserved');
-    $bookings = get_posts(array('post_type'=>'bh_booking','post_status'=>'publish','posts_per_page'=>-1,'fields'=>'ids','meta_query'=>array(
-        array('key'=>'_bh_session_id','value'=>$session_id,'compare'=>'='),
-        array('key'=>'_bh_status','value'=>$statuses,'compare'=>'IN')
-    ),'no_found_rows'=>true));
-    $used = 0;
-    foreach ($bookings as $booking_id) $used += max(1,(int)get_post_meta($booking_id,'_bh_quantity',true));
-    $remaining = max(0,$capacity-$used);
-    return array('available'=>$remaining>0,'remaining'=>$remaining);
+    if ( function_exists('bubbahub_booking_session_stats') ) {
+        $stats = bubbahub_booking_session_stats($session_id);
+        return array('available'=>empty($stats['full']),'remaining'=>isset($stats['remaining'])?$stats['remaining']:null);
+    }
+    $capacity=(int)get_post_meta($session_id,'_bh_capacity',true);
+    if($capacity<=0)return array('available'=>true,'remaining'=>null);
+    return array('available'=>true,'remaining'=>null);
 }
 
 function bubbahub_myhub_planner_booking_render($children=array(), $interest=array(), $location=array()) {
@@ -74,36 +70,28 @@ function bubbahub_myhub_planner_booking_render($children=array(), $interest=arra
         if(!$gid || 'group'!==get_post_type($gid)) continue;
         if($children && !bubbahub_myhub_planner_booking_match_age($gid,$children)) continue;
         if($interest && !bubbahub_myhub_planner_booking_match_tax($gid,'user-interests',$interest)) continue;
-        $location_match = true;
-        if($location) {
-            $location_match=false;
-            foreach(array('preferred-location','preferred_location','location','region') as $tax) if(bubbahub_myhub_planner_booking_match_tax($gid,$tax,$location)){ $location_match=true; break; }
-        }
-        if(!$location_match) continue;
-        $date=get_post_meta($sid,'_bh_date',true); $start=get_post_meta($sid,'_bh_start_time',true); $end=get_post_meta($sid,'_bh_end_time',true);
-        $ts=strtotime($date.' '.$start); if(!$ts || $ts<$now) continue;
-        $availability=bubbahub_myhub_planner_booking_available($sid); if(!$availability['available']) continue;
-        $vid=absint(get_post_meta($sid,'_bh_venue_id',true));
-        $group_title=get_the_title($gid); $book_url=add_query_arg(array('session_id'=>$sid,'group_id'=>$gid,'date'=>$date),home_url('/book/'));
+        $location_match=true;
+        if($location){$location_match=false;foreach(array('preferred-location','preferred_location','location','region') as $tax)if(bubbahub_myhub_planner_booking_match_tax($gid,$tax,$location)){$location_match=true;break;}}
+        if(!$location_match)continue;
+        $date=get_post_meta($sid,'_bh_date',true);$start=get_post_meta($sid,'_bh_start_time',true);$end=get_post_meta($sid,'_bh_end_time',true);$ts=strtotime($date.' '.$start);if(!$ts||$ts<$now)continue;
+        $availability=bubbahub_myhub_planner_booking_available($sid);if(!$availability['available'])continue;
+        $vid=absint(get_post_meta($sid,'_bh_venue_id',true));$group_title=get_the_title($gid);
+        $book_url=add_query_arg(array('session_id'=>$sid,'group_id'=>$gid,'date'=>$date),home_url('/book/'));
         $by[wp_date('l',$ts)][]=array('session_id'=>$sid,'group_id'=>$gid,'title'=>$group_title,'url'=>get_permalink($gid),'book_url'=>$book_url,'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'date'=>$date,'start'=>$start,'end'=>$end,'venue'=>$vid?get_the_title($vid):'','remaining'=>$availability['remaining']);
     }
-    wp_reset_postdata();
-    foreach($by as &$items) usort($items,function($a,$b){return strcmp($a['date'].' '.$a['start'],$b['date'].' '.$b['start']);}); unset($items);
+    wp_reset_postdata();foreach($by as &$items)usort($items,function($a,$b){return strcmp($a['date'].' '.$a['start'],$b['date'].' '.$b['start']);});unset($items);
     ob_start();
     foreach($days as $day): ?><div class="bh-planner-day"><div class="bh-planner-day-title"><?php echo esc_html($day); ?></div><div class="bh-planner-day-items">
-    <?php if($by[$day]): foreach($by[$day] as $item): ?><article class="bh-planner-item bh-planner-session-item"><a class="bh-planner-session-main" href="<?php echo esc_url($item['url']); ?>"><span class="bh-planner-thumb"><?php if($item['image']): ?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else: ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span><span class="bh-planner-item-main"><strong><?php echo esc_html($item['title']); ?></strong><span class="bh-planner-hours"><?php echo esc_html(wp_date('g:i A',strtotime($item['date'].' '.$item['start']))); ?><?php if($item['end']): ?> – <?php echo esc_html(wp_date('g:i A',strtotime($item['date'].' '.$item['end']))); ?><?php endif; ?><?php if($item['venue']): ?> · <?php echo esc_html($item['venue']); ?><?php endif; ?></span></span></a><a class="bh-planner-book-button" href="<?php echo esc_url($item['book_url']); ?>">Book<?php if(null!==$item['remaining']): ?> · <?php echo (int)$item['remaining']; ?> left<?php endif; ?></a></article><?php endforeach; else: ?><div class="bh-planner-empty">No available matching sessions.</div><?php endif; ?></div></div><?php endforeach;
+    <?php if($by[$day]):foreach($by[$day] as $item): ?><article class="bh-planner-item bh-planner-session-item"><a class="bh-planner-session-main" href="<?php echo esc_url($item['url']); ?>"><span class="bh-planner-thumb"><?php if($item['image']):?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else:?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif;?></span><span class="bh-planner-item-main"><strong><?php echo esc_html($item['title']); ?></strong><span class="bh-planner-hours"><?php echo esc_html(wp_date('g:i A',strtotime($item['date'].' '.$item['start']))); ?><?php if($item['end']):?> – <?php echo esc_html(wp_date('g:i A',strtotime($item['date'].' '.$item['end']))); ?><?php endif;?><?php if($item['venue']):?> · <?php echo esc_html($item['venue']); ?><?php endif;?></span></span></a><a class="bh-planner-book-button" href="<?php echo esc_url($item['book_url']); ?>">Book<?php if(null!==$item['remaining']):?> · <?php echo (int)$item['remaining']; ?> left<?php endif;?></a></article><?php endforeach;else:?><div class="bh-planner-empty">No available matching sessions.</div><?php endif;?></div></div><?php endforeach;
     return ob_get_clean();
 }
 
 function bubbahub_myhub_planner_booking_ajax() {
     if ( ! is_user_logged_in() ) wp_send_json_error(array('message'=>'Please log in.'),401);
     check_ajax_referer('bubbahub_myhub_planner','nonce');
-    $children=bubbahub_myhub_planner_booking_children();
-    $interest=bubbahub_myhub_planner_booking_user_terms('user-interests');
-    $location=bubbahub_myhub_planner_booking_user_terms('preferred-location');
-    $manual_interest=isset($_POST['interest'])?sanitize_text_field(wp_unslash($_POST['interest'])):'';
-    $manual_location=isset($_POST['location'])?sanitize_text_field(wp_unslash($_POST['location'])):'';
-    if($manual_interest && taxonomy_exists('user-interests')) { $term=get_term_by('slug',sanitize_title($manual_interest),'user-interests'); $interest=$term?array((int)$term->term_id):array(); }
-    if($manual_location) { $ids=array(); foreach(array('preferred-location','preferred_location','location','region') as $tax){$term=taxonomy_exists($tax)?get_term_by('slug',sanitize_title($manual_location),$tax):false;if($term)$ids[]=(int)$term->term_id;} $location=$ids; }
+    $children=bubbahub_myhub_planner_booking_children();$interest=bubbahub_myhub_planner_booking_user_terms('user-interests');$location=bubbahub_myhub_planner_booking_user_terms('preferred-location');
+    $manual_interest=isset($_POST['interest'])?sanitize_text_field(wp_unslash($_POST['interest'])):'';$manual_location=isset($_POST['location'])?sanitize_text_field(wp_unslash($_POST['location'])):'';
+    if($manual_interest&&taxonomy_exists('user-interests')){$term=get_term_by('slug',sanitize_title($manual_interest),'user-interests');$interest=$term?array((int)$term->term_id):array();}
+    if($manual_location){$ids=array();foreach(array('preferred-location','preferred_location','location','region') as $tax){$term=taxonomy_exists($tax)?get_term_by('slug',sanitize_title($manual_location),$tax):false;if($term)$ids[]=(int)$term->term_id;}$location=$ids;}
     wp_send_json_success(array('html'=>bubbahub_myhub_planner_booking_render($children,$interest,$location)));
 }

@@ -1,98 +1,58 @@
 <?php
-/**
- * BubbaHub Leader Schedule Manager
- * Front-end recurring-session editor for leaders.
- */
+/** BubbaHub Leader Schedule Manager */
 if ( ! defined( 'ABSPATH' ) ) exit;
-
 add_shortcode( 'bubbahub_leader_schedule', 'bubbahub_leader_schedule_shortcode' );
 
-function bubbahub_leader_schedule_owned( $id ) {
-    $post = get_post( absint( $id ) );
-    return $post && 'bh_session' === $post->post_type && (int) $post->post_author === get_current_user_id();
+function bubbahub_leader_schedule_owned( $id ) { $post=get_post(absint($id)); return $post && 'bh_session'===$post->post_type && (int)$post->post_author===get_current_user_id(); }
+function bubbahub_leader_schedule_get_sessions() {
+    return get_posts(array('post_type'=>'bh_session','post_status'=>array('publish','draft','private'),'post_author'=>get_current_user_id(),'posts_per_page'=>100,'orderby'=>'meta_value','meta_key'=>'_bh_date','order'=>'ASC','meta_query'=>array(array('key'=>'_bh_date','value'=>current_time('Y-m-d'),'compare'=>'>=','type'=>'DATE')),'no_found_rows'=>true));
+}
+function bubbahub_leader_schedule_action_url($action,$id) { return wp_nonce_url(add_query_arg(array('bh_schedule_action'=>$action,'session'=>$id),bubbahub_leader_management_url('schedule')),'bh_schedule_'.$action.'_'.$id); }
+
+add_action('init','bubbahub_leader_schedule_actions',31);
+function bubbahub_leader_schedule_actions() {
+    if(empty($_GET['bh_schedule_action']))return;
+    if(!is_user_logged_in()||!function_exists('bubbahub_leader_dashboard_is_allowed')||!bubbahub_leader_dashboard_is_allowed())return;
+    $action=sanitize_key(wp_unslash($_GET['bh_schedule_action']));$id=isset($_GET['session'])?absint($_GET['session']):0;
+    if(!$id||!bubbahub_leader_schedule_owned($id))return;
+    if(empty($_GET['_wpnonce'])||!wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])),'bh_schedule_'.$action.'_'.$id))return;
+    if('delete'===$action){$occ=get_posts(array('post_type'=>'bh_session','post_status'=>'any','posts_per_page'=>-1,'fields'=>'ids','meta_key'=>'_bh_schedule_source','meta_value'=>$id,'no_found_rows'=>true));foreach($occ as $oid)wp_delete_post($oid,true);wp_delete_post($id,true);wp_safe_redirect(add_query_arg('schedule_deleted',1,bubbahub_leader_management_url('schedule')));exit;}
+    if('cancel'===$action){$occ=get_posts(array('post_type'=>'bh_session','post_status'=>array('publish','draft','private'),'posts_per_page'=>-1,'fields'=>'ids','meta_key'=>'_bh_schedule_source','meta_value'=>$id,'no_found_rows'=>true));foreach($occ as $oid)wp_update_post(array('ID'=>$oid,'post_status'=>'draft'));update_post_meta($id,'_bh_schedule_cancelled',1);wp_safe_redirect(add_query_arg('schedule_cancelled',1,bubbahub_leader_management_url('schedule')));exit;}
 }
 
-function bubbahub_leader_schedule_shortcode( $atts = array() ) {
-    if ( ! function_exists( 'bubbahub_leader_dashboard_is_allowed' ) || ! bubbahub_leader_dashboard_is_allowed() ) {
-        return '<div class="bh-form-warning">Please log in as an approved BubbaHub leader.</div>';
-    }
-    $user_id = get_current_user_id();
-    $session_id = isset( $_GET['session'] ) ? absint( $_GET['session'] ) : 0;
-    if ( $session_id && ! bubbahub_leader_schedule_owned( $session_id ) ) return '<div class="bh-form-warning">You cannot edit this session.</div>';
-
-    $groups = get_posts( array( 'post_type'=>'group', 'post_status'=>array('publish','draft','pending','private'), 'author'=>$user_id, 'posts_per_page'=>-1, 'orderby'=>'title', 'order'=>'ASC', 'no_found_rows'=>true ) );
-    $venues = post_type_exists('venue') ? get_posts( array( 'post_type'=>'venue', 'post_status'=>array('publish','draft','pending','private'), 'author'=>$user_id, 'posts_per_page'=>-1, 'orderby'=>'title', 'order'=>'ASC', 'no_found_rows'=>true ) ) : array();
-    $values = array(
-        'group_id'=>0,'venue_id'=>0,'date'=>'','start_time'=>'','end_time'=>'','capacity'=>'','price'=>'',
-        'recurrence'=>'none','interval'=>1,'weekday'=>'','start_date'=>'','end_date'=>'','term_time'=>0,'exclusions'=>''
-    );
-    if ( $session_id ) {
-        foreach ( array_keys($values) as $key ) {
-            $meta_key = array('group_id'=>'_bh_group_id','venue_id'=>'_bh_venue_id','date'=>'_bh_date','start_time'=>'_bh_start_time','end_time'=>'_bh_end_time','capacity'=>'_bh_capacity','price'=>'_bh_price','recurrence'=>'_bh_recurrence','interval'=>'_bh_recurrence_interval','weekday'=>'_bh_recurrence_weekday','start_date'=>'_bh_recurrence_start','end_date'=>'_bh_recurrence_end','term_time'=>'_bh_term_time','exclusions'=>'_bh_recurrence_exclusions')[$key];
-            $value = get_post_meta($session_id,$meta_key,true);
-            if ( 'exclusions' === $key && is_array($value) ) $value = implode(', ',$value);
-            if ( '' !== $value && false !== $value ) $values[$key]=$value;
-        }
-    }
-    if ( ! $values['group_id'] && $groups ) $values['group_id'] = (int) $groups[0]->ID;
+function bubbahub_leader_schedule_shortcode($atts=array()) {
+    if(!function_exists('bubbahub_leader_dashboard_is_allowed')||!bubbahub_leader_dashboard_is_allowed())return '<div class="bh-form-warning">Please log in as an approved BubbaHub leader.</div>';
+    $user_id=get_current_user_id();$session_id=isset($_GET['session'])?absint($_GET['session']):0;if($session_id&&!bubbahub_leader_schedule_owned($session_id))return '<div class="bh-form-warning">You cannot edit this session.</div>';
+    $groups=get_posts(array('post_type'=>'group','post_status'=>array('publish','draft','pending','private'),'author'=>$user_id,'posts_per_page'=>-1,'orderby'=>'title','order'=>'ASC','no_found_rows'=>true));
+    $venues=post_type_exists('venue')?get_posts(array('post_type'=>'venue','post_status'=>array('publish','draft','pending','private'),'author'=>$user_id,'posts_per_page'=>-1,'orderby'=>'title','order'=>'ASC','no_found_rows'=>true)):array();
+    $values=array('group_id'=>0,'venue_id'=>0,'date'=>'','start_time'=>'','end_time'=>'','capacity'=>'','price'=>'','recurrence'=>'none','interval'=>1,'weekday'=>'','start_date'=>'','end_date'=>'','term_time'=>0,'exclusions'=>'');
+    if($session_id){$map=array('group_id'=>'_bh_group_id','venue_id'=>'_bh_venue_id','date'=>'_bh_date','start_time'=>'_bh_start_time','end_time'=>'_bh_end_time','capacity'=>'_bh_capacity','price'=>'_bh_price','recurrence'=>'_bh_recurrence','interval'=>'_bh_recurrence_interval','weekday'=>'_bh_recurrence_weekday','start_date'=>'_bh_recurrence_start','end_date'=>'_bh_recurrence_end','term_time'=>'_bh_term_time','exclusions'=>'_bh_recurrence_exclusions');foreach($map as $k=>$mk){$v=get_post_meta($session_id,$mk,true);if('exclusions'===$k&&is_array($v))$v=implode(', ',$v);if(''!==$v&&false!==$v)$values[$k]=$v;}}
+    if(!$values['group_id']&&$groups)$values['group_id']=(int)$groups[0]->ID;$sessions=bubbahub_leader_schedule_get_sessions();
     ob_start(); ?>
     <div class="bh-leader-schedule-manager">
-      <div class="bh-schedule-intro"><p class="bh-leader-eyebrow">Sessions</p><h2><?php echo $session_id ? 'Edit class schedule' : 'Add a class schedule'; ?></h2><p>Create a one-off class or a recurring timetable. Upcoming sessions are generated automatically.</p></div>
-      <form class="bh-leader-form bh-schedule-form" method="post">
-        <?php wp_nonce_field('bubbahub_save_leader_schedule','bh_schedule_nonce'); ?>
-        <input type="hidden" name="bh_schedule_action" value="save">
-        <input type="hidden" name="session_id" value="<?php echo esc_attr($session_id); ?>">
-        <div class="bh-form-grid">
-          <label>Listing<select name="group_id" required><?php foreach($groups as $g): ?><option value="<?php echo esc_attr($g->ID); ?>" <?php selected($values['group_id'],$g->ID); ?>><?php echo esc_html($g->post_title); ?></option><?php endforeach; ?></select></label>
-          <label>Venue<select name="venue_id"><option value="0">Choose a venue</option><?php foreach($venues as $v): ?><option value="<?php echo esc_attr($v->ID); ?>" <?php selected($values['venue_id'],$v->ID); ?>><?php echo esc_html($v->post_title); ?></option><?php endforeach; ?></select></label>
-          <label>First date<input type="date" name="date" value="<?php echo esc_attr($values['date']); ?>" required></label>
-          <label>Start time<input type="time" name="start_time" value="<?php echo esc_attr($values['start_time']); ?>" required></label>
-          <label>End time<input type="time" name="end_time" value="<?php echo esc_attr($values['end_time']); ?>"></label>
-          <label>Capacity<input type="number" min="0" name="capacity" value="<?php echo esc_attr($values['capacity']); ?>"></label>
-          <label>Price<input type="number" min="0" step="0.01" name="price" value="<?php echo esc_attr($values['price']); ?>"></label>
-          <label>Repeats<select name="recurrence"><option value="none" <?php selected($values['recurrence'],'none'); ?>>Does not repeat</option><option value="weekly" <?php selected($values['recurrence'],'weekly'); ?>>Weekly</option><option value="fortnightly" <?php selected($values['recurrence'],'fortnightly'); ?>>Fortnightly</option><option value="monthly" <?php selected($values['recurrence'],'monthly'); ?>>Monthly</option></select></label>
-          <label>Repeat interval<input type="number" min="1" max="52" name="interval" value="<?php echo esc_attr($values['interval']); ?>"></label>
-          <label>Weekday<input type="text" name="weekday" placeholder="e.g. Monday" value="<?php echo esc_attr($values['weekday']); ?>"></label>
-          <label>Repeat from<input type="date" name="start_date" value="<?php echo esc_attr($values['start_date']); ?>"></label>
-          <label>Repeat until<input type="date" name="end_date" value="<?php echo esc_attr($values['end_date']); ?>"></label>
-          <label class="bh-form-full"><span>Excluded dates</span><input type="text" name="exclusions" placeholder="2026-12-21, 2026-12-28" value="<?php echo esc_attr($values['exclusions']); ?>"><small>Use YYYY-MM-DD, separated by commas.</small></label>
-          <label class="bh-checkbox"><input type="checkbox" name="term_time" value="1" <?php checked($values['term_time'],1); ?>> Term-time activity</label>
-        </div>
-        <button class="bh-leader-primary" type="submit"><?php echo $session_id ? 'Save schedule' : 'Create schedule'; ?></button>
-      </form>
-    </div>
-    <?php return ob_get_clean();
+      <?php if(isset($_GET['schedule_saved'])): ?><div class="bh-schedule-notice">Schedule saved successfully.</div><?php endif; ?>
+      <?php if(isset($_GET['schedule_deleted'])): ?><div class="bh-schedule-notice">The session and its generated occurrences have been removed.</div><?php endif; ?>
+      <?php if(isset($_GET['schedule_cancelled'])): ?><div class="bh-schedule-notice">The recurring schedule has been cancelled and future occurrences paused.</div><?php endif; ?>
+      <div class="bh-schedule-nav-card"><div><p class="bh-leader-eyebrow">Sessions</p><h3><?php echo $session_id?'Editing a schedule':'Your upcoming timetable'; ?></h3><p>Manage one-off classes, recurring sessions, venues and capacity from one place.</p></div><?php if($session_id): ?><a class="bh-leader-button" href="<?php echo esc_url(bubbahub_leader_management_url('schedule')); ?>">+ New schedule</a><?php endif; ?></div>
+      <?php if(!$session_id): ?>
+        <?php if($sessions): ?><div class="bh-schedule-list"><?php foreach($sessions as $session):$gid=(int)get_post_meta($session->ID,'_bh_group_id',true);$vid=(int)get_post_meta($session->ID,'_bh_venue_id',true);$date=get_post_meta($session->ID,'_bh_date',true);$start=get_post_meta($session->ID,'_bh_start_time',true);$end=get_post_meta($session->ID,'_bh_end_time',true);$rec=get_post_meta($session->ID,'_bh_recurrence',true)?:'none';$occ=(bool)get_post_meta($session->ID,'_bh_is_occurrence',true);$source=(int)get_post_meta($session->ID,'_bh_schedule_source',true);$cancelled=(bool)get_post_meta($session->ID,'_bh_schedule_cancelled',true); ?>
+          <div class="bh-schedule-row"><div class="bh-schedule-row-main"><p class="bh-schedule-row-title"><?php echo esc_html(get_the_title($gid)?:$session->post_title); ?></p><div class="bh-schedule-row-meta"><span class="bh-schedule-pill"><?php echo esc_html(wp_date(get_option('date_format'),strtotime($date))); ?></span><span class="bh-schedule-pill"><?php echo esc_html($start.($end?'–'.$end:'')); ?></span><?php if($vid): ?><span class="bh-schedule-pill">⌖ <?php echo esc_html(get_the_title($vid)); ?></span><?php endif; ?><span class="bh-schedule-pill"><?php echo $occ?'Occurrence':esc_html(ucfirst($rec)); ?></span><?php if($cancelled): ?><span class="bh-schedule-pill">Cancelled</span><?php endif; ?></div></div><div class="bh-schedule-actions"><?php if($occ&&$source): ?><a href="<?php echo esc_url(add_query_arg('session',$source,bubbahub_leader_management_url('schedule'))); ?>">Edit schedule</a><?php elseif(!$occ): ?><a href="<?php echo esc_url(add_query_arg('session',$session->ID,bubbahub_leader_management_url('schedule'))); ?>">Edit</a><a class="bh-danger" href="<?php echo esc_url(bubbahub_leader_schedule_action_url('delete',$session->ID)); ?>" onclick="return confirm('Delete this schedule and all generated occurrences? This cannot be undone.');">Delete</a><?php endif; ?></div></div>
+        <?php endforeach; ?></div><?php else: ?><div class="bh-schedule-empty"><h3>No upcoming sessions yet</h3><p>Create your first class schedule and it will appear here.</p><a class="bh-leader-primary" href="<?php echo esc_url(bubbahub_leader_management_url('schedule')); ?>?session=0">+ Add a schedule</a></div><?php endif; ?>
+      <?php endif; ?>
+      <?php if($session_id||!$sessions): ?><div class="bh-schedule-editor-card"><div class="bh-schedule-intro"><p class="bh-leader-eyebrow">Schedule editor</p><h2><?php echo $session_id?'Edit class schedule':'Add a class schedule'; ?></h2><p>Create a one-off class or a recurring timetable. Upcoming sessions are generated automatically.</p></div>
+      <form class="bh-leader-form bh-schedule-form" method="post"><?php wp_nonce_field('bubbahub_save_leader_schedule','bh_schedule_nonce'); ?><input type="hidden" name="bh_schedule_action" value="save"><input type="hidden" name="session_id" value="<?php echo esc_attr($session_id); ?>"><div class="bh-form-grid">
+        <label>Listing<select name="group_id" required><?php foreach($groups as $g): ?><option value="<?php echo esc_attr($g->ID); ?>" <?php selected($values['group_id'],$g->ID); ?>><?php echo esc_html($g->post_title); ?></option><?php endforeach; ?></select></label><label>Venue<select name="venue_id"><option value="0">Choose a venue</option><?php foreach($venues as $v): ?><option value="<?php echo esc_attr($v->ID); ?>" <?php selected($values['venue_id'],$v->ID); ?>><?php echo esc_html($v->post_title); ?></option><?php endforeach; ?></select></label><label>First date<input type="date" name="date" value="<?php echo esc_attr($values['date']); ?>" required></label><label>Start time<input type="time" name="start_time" value="<?php echo esc_attr($values['start_time']); ?>" required></label><label>End time<input type="time" name="end_time" value="<?php echo esc_attr($values['end_time']); ?>"></label><label>Capacity<input type="number" min="0" name="capacity" value="<?php echo esc_attr($values['capacity']); ?>"></label><label>Price<input type="number" min="0" step="0.01" name="price" value="<?php echo esc_attr($values['price']); ?>"></label><label>Repeats<select name="recurrence"><option value="none" <?php selected($values['recurrence'],'none'); ?>>Does not repeat</option><option value="weekly" <?php selected($values['recurrence'],'weekly'); ?>>Weekly</option><option value="fortnightly" <?php selected($values['recurrence'],'fortnightly'); ?>>Fortnightly</option><option value="monthly" <?php selected($values['recurrence'],'monthly'); ?>>Monthly</option></select></label><label>Repeat interval<input type="number" min="1" max="52" name="interval" value="<?php echo esc_attr($values['interval']); ?>"></label><label>Weekday<input type="text" name="weekday" placeholder="e.g. Monday" value="<?php echo esc_attr($values['weekday']); ?>"></label><label>Repeat from<input type="date" name="start_date" value="<?php echo esc_attr($values['start_date']); ?>"></label><label>Repeat until<input type="date" name="end_date" value="<?php echo esc_attr($values['end_date']); ?>"></label><label class="bh-form-full"><span>Excluded dates</span><input type="text" name="exclusions" placeholder="2026-12-21, 2026-12-28" value="<?php echo esc_attr($values['exclusions']); ?>"><small>Use YYYY-MM-DD, separated by commas.</small></label><label class="bh-checkbox"><input type="checkbox" name="term_time" value="1" <?php checked($values['term_time'],1); ?>> Term-time activity</label>
+      </div><button class="bh-leader-primary" type="submit"><?php echo $session_id?'Save schedule':'Create schedule'; ?></button></form></div><?php endif; ?>
+    </div><?php return ob_get_clean();
 }
 
-add_action( 'init', 'bubbahub_leader_schedule_save', 30 );
+add_action('init','bubbahub_leader_schedule_save',30);
 function bubbahub_leader_schedule_save() {
-    if ( empty($_POST['bh_schedule_action']) || 'save' !== $_POST['bh_schedule_action'] ) return;
-    if ( ! is_user_logged_in() || ! function_exists('bubbahub_leader_dashboard_is_allowed') || ! bubbahub_leader_dashboard_is_allowed() ) return;
-    if ( empty($_POST['bh_schedule_nonce']) || ! wp_verify_nonce( sanitize_text_field(wp_unslash($_POST['bh_schedule_nonce'])), 'bubbahub_save_leader_schedule' ) ) return;
-    $id = absint($_POST['session_id'] ?? 0);
-    if ( $id && ! bubbahub_leader_schedule_owned($id) ) return;
-    $group_id = absint($_POST['group_id'] ?? 0);
-    if ( ! $group_id || ! bubbahub_leader_owned_post($group_id,'group') ) return;
-    $date = sanitize_text_field(wp_unslash($_POST['date'] ?? ''));
-    $start = sanitize_text_field(wp_unslash($_POST['start_time'] ?? ''));
-    if ( ! preg_match('/^\d{4}-\d{2}-\d{2}$/',$date) || ! preg_match('/^\d{2}:\d{2}$/',$start) ) return;
-    if ( ! $id ) $id = wp_insert_post(array('post_type'=>'bh_session','post_status'=>'publish','post_title'=>get_the_title($group_id).' – '.$date,'post_author'=>get_current_user_id()),true);
-    if ( is_wp_error($id) ) return;
-    $fields = array(
-      '_bh_group_id'=>$group_id,'_bh_venue_id'=>absint($_POST['venue_id'] ?? 0),'_bh_date'=>$date,
-      '_bh_start_time'=>$start,'_bh_end_time'=>sanitize_text_field(wp_unslash($_POST['end_time'] ?? '')),
-      '_bh_capacity'=>absint($_POST['capacity'] ?? 0),'_bh_price'=>sanitize_text_field(wp_unslash($_POST['price'] ?? '')),
-      '_bh_recurrence'=>in_array($_POST['recurrence'] ?? 'none',array('none','weekly','fortnightly','monthly'),true) ? sanitize_key($_POST['recurrence']) : 'none',
-      '_bh_recurrence_interval'=>max(1,min(52,absint($_POST['interval'] ?? 1))),
-      '_bh_recurrence_weekday'=>sanitize_text_field(wp_unslash($_POST['weekday'] ?? '')),
-      '_bh_recurrence_start'=>sanitize_text_field(wp_unslash($_POST['start_date'] ?? '')),
-      '_bh_recurrence_end'=>sanitize_text_field(wp_unslash($_POST['end_date'] ?? '')),
-      '_bh_term_time'=>!empty($_POST['term_time']) ? 1 : 0,
-    );
-    foreach($fields as $key=>$value) update_post_meta($id,$key,$value);
-    $raw = sanitize_text_field(wp_unslash($_POST['exclusions'] ?? ''));
-    $exclusions=array(); foreach(preg_split('/\s*,\s*/',$raw) as $d){ if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$d)) $exclusions[]=$d; }
-    update_post_meta($id,'_bh_recurrence_exclusions',array_values(array_unique($exclusions)));
-    if ( function_exists('bubbahub_schedule_generate_for_session') && 'none' !== $fields['_bh_recurrence'] ) bubbahub_schedule_generate_for_session($id,90);
-    wp_safe_redirect(add_query_arg(array('schedule_saved'=>1,'session'=>$id),home_url('/leader/'))); exit;
+    if(empty($_POST['bh_schedule_action'])||'save'!==$_POST['bh_schedule_action'])return;if(!is_user_logged_in()||!function_exists('bubbahub_leader_dashboard_is_allowed')||!bubbahub_leader_dashboard_is_allowed())return;if(empty($_POST['bh_schedule_nonce'])||!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['bh_schedule_nonce'])),'bubbahub_save_leader_schedule'))return;
+    $id=absint($_POST['session_id']??0);if($id&&!bubbahub_leader_schedule_owned($id))return;$gid=absint($_POST['group_id']??0);if(!$gid||!function_exists('bubbahub_leader_owned_post')||!bubbahub_leader_owned_post($gid,'group'))return;$vid=absint($_POST['venue_id']??0);if($vid&&(!post_type_exists('venue')||!bubbahub_leader_owned_post($vid,'venue')))return;
+    $date=sanitize_text_field(wp_unslash($_POST['date']??''));$start=sanitize_text_field(wp_unslash($_POST['start_time']??''));$end=sanitize_text_field(wp_unslash($_POST['end_time']??''));if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)||!preg_match('/^\d{2}:\d{2}$/',$start))return;if($end&&!preg_match('/^\d{2}:\d{2}$/',$end))return;if($end&&$end<=$start)return;
+    if(!$id)$id=wp_insert_post(array('post_type'=>'bh_session','post_status'=>'publish','post_title'=>get_the_title($gid).' – '.$date,'post_author'=>get_current_user_id()),true);if(is_wp_error($id))return;
+    $rec=in_array($_POST['recurrence']??'none',array('none','weekly','fortnightly','monthly'),true)?sanitize_key($_POST['recurrence']):'none';$fields=array('_bh_group_id'=>$gid,'_bh_venue_id'=>$vid,'_bh_date'=>$date,'_bh_start_time'=>$start,'_bh_end_time'=>$end,'_bh_capacity'=>absint($_POST['capacity']??0),'_bh_price'=>sanitize_text_field(wp_unslash($_POST['price']??'')),'_bh_recurrence'=>$rec,'_bh_recurrence_interval'=>max(1,min(52,absint($_POST['interval']??1))),'_bh_recurrence_weekday'=>sanitize_text_field(wp_unslash($_POST['weekday']??'')),'_bh_recurrence_start'=>sanitize_text_field(wp_unslash($_POST['start_date']??'')),'_bh_recurrence_end'=>sanitize_text_field(wp_unslash($_POST['end_date']??'')),'_bh_term_time'=>!empty($_POST['term_time'])?1:0,'_bh_schedule_cancelled'=>0);foreach($fields as $k=>$v)update_post_meta($id,$k,$v);
+    $raw=sanitize_text_field(wp_unslash($_POST['exclusions']??''));$ex=array();foreach(preg_split('/\s*,\s*/',$raw) as $d){if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$d))$ex[]=$d;}update_post_meta($id,'_bh_recurrence_exclusions',array_values(array_unique($ex)));
+    if(function_exists('bubbahub_schedule_generate_for_session')&&'none'!==$rec)bubbahub_schedule_generate_for_session($id,90);wp_safe_redirect(add_query_arg(array('schedule_saved'=>1,'session'=>$id),bubbahub_leader_management_url('schedule')));exit;
 }

@@ -20,9 +20,7 @@ function bubbahub_schedule_engine_meta( $id, $key, $default = '' ) {
 }
 
 function bubbahub_schedule_engine_definition( $id ) {
-    if ( function_exists( 'bubbahub_schedule_get_definition' ) ) {
-        return bubbahub_schedule_get_definition( $id );
-    }
+    if ( function_exists( 'bubbahub_schedule_get_definition' ) ) return bubbahub_schedule_get_definition( $id );
     return array(
         'session_id' => absint( $id ),
         'group_id' => absint( bubbahub_schedule_engine_meta( $id, '_bh_group_id', 0 ) ),
@@ -45,7 +43,7 @@ function bubbahub_schedule_engine_date_is_valid( $date, $definition ) {
     if ( ! empty( $definition['start_date'] ) && $date < $definition['start_date'] ) return false;
     if ( ! empty( $definition['end_date'] ) && $date > $definition['end_date'] ) return false;
     if ( in_array( $date, (array) $definition['exclusions'], true ) ) return false;
-    if ( ! empty( $definition['weekday'] ) && strtolower( gmdate( 'l', strtotime( $date ) ) ) !== strtolower( $definition['weekday'] ) ) return false;
+    if ( ! empty( $definition['weekday'] ) && strtolower( wp_date( 'l', strtotime( $date ) ) ) !== strtolower( $definition['weekday'] ) ) return false;
     return true;
 }
 
@@ -55,16 +53,12 @@ function bubbahub_schedule_engine_occurrence_key( $source_id, $date, $start_time
 
 function bubbahub_schedule_engine_occurrence_exists( $source_id, $date, $start_time ) {
     $posts = get_posts( array(
-        'post_type' => 'bh_session',
-        'post_status' => 'any',
-        'posts_per_page' => 1,
-        'fields' => 'ids',
+        'post_type' => 'bh_session', 'post_status' => 'any', 'posts_per_page' => 1, 'fields' => 'ids',
         'meta_query' => array(
             array( 'key' => '_bh_schedule_source', 'value' => absint( $source_id ), 'compare' => '=' ),
             array( 'key' => '_bh_date', 'value' => $date, 'compare' => '=' ),
             array( 'key' => '_bh_start_time', 'value' => $start_time, 'compare' => '=' ),
-        ),
-        'no_found_rows' => true,
+        ), 'no_found_rows' => true,
     ) );
     return ! empty( $posts );
 }
@@ -75,8 +69,7 @@ function bubbahub_schedule_engine_create_occurrence( $source_id, $date, $definit
     if ( ! $source ) return 0;
 
     $post_id = wp_insert_post( array(
-        'post_type' => 'bh_session',
-        'post_status' => 'publish',
+        'post_type' => 'bh_session', 'post_status' => 'publish',
         'post_title' => sprintf( '%s – %s', $source->post_title, wp_date( get_option( 'date_format' ), strtotime( $date ) ) ),
         'post_author' => $source->post_author,
     ), true );
@@ -102,23 +95,23 @@ function bubbahub_schedule_engine_generate( $source_id, $days = 90 ) {
     if ( empty( $definition ) || 'none' === $definition['recurrence'] ) return 0;
     if ( empty( $definition['date'] ) || empty( $definition['start_time'] ) ) return 0;
 
-    $start = ! empty( $definition['start_date'] ) ? $definition['start_date'] : $definition['date'];
-    $end = ! empty( $definition['end_date'] ) ? min( $definition['end_date'], gmdate( 'Y-m-d', strtotime( '+' . absint( $days ) . ' days' ) ) ) : gmdate( 'Y-m-d', strtotime( '+' . absint( $days ) . ' days' ) );
+    $origin = new DateTimeImmutable( $definition['date'] );
+    $start = ! empty( $definition['start_date'] ) ? max( $definition['start_date'], $definition['date'] ) : $definition['date'];
+    $today_end = gmdate( 'Y-m-d', strtotime( '+' . absint( $days ) . ' days' ) );
+    $end = ! empty( $definition['end_date'] ) ? min( $definition['end_date'], $today_end ) : $today_end;
     $cursor = new DateTimeImmutable( $start );
     $limit = new DateTimeImmutable( $end );
     $created = 0;
 
     while ( $cursor <= $limit ) {
         $date = $cursor->format( 'Y-m-d' );
-        $valid = bubbahub_schedule_engine_date_is_valid( $date, $definition );
-        if ( $valid ) {
-            $diff_days = (int) $cursor->diff( new DateTimeImmutable( $definition['date'] ) )->format( '%r%a' );
+        if ( bubbahub_schedule_engine_date_is_valid( $date, $definition ) ) {
             $match = false;
-            if ( 'weekly' === $definition['recurrence'] ) $match = $diff_days >= 0 && 0 === $diff_days % ( 7 * max( 1, $definition['interval'] ) );
-            elseif ( 'fortnightly' === $definition['recurrence'] ) $match = $diff_days >= 0 && 0 === $diff_days % ( 14 * max( 1, $definition['interval'] ) );
-            elseif ( 'monthly' === $definition['recurrence'] ) $match = $cursor->format( 'd' ) === ( new DateTimeImmutable( $definition['date'] ) )->format( 'd' ) && $diff_days >= 0 && 0 === $this_months = 0;
-            if ( 'monthly' === $definition['recurrence'] ) {
-                $origin = new DateTimeImmutable( $definition['date'] );
+            if ( 'weekly' === $definition['recurrence'] || 'fortnightly' === $definition['recurrence'] ) {
+                $days_from_origin = (int) $origin->diff( $cursor )->format( '%r%a' );
+                $period = 'fortnightly' === $definition['recurrence'] ? 14 : 7;
+                $match = $days_from_origin >= 0 && 0 === $days_from_origin % ( $period * max( 1, $definition['interval'] ) );
+            } elseif ( 'monthly' === $definition['recurrence'] ) {
                 $months = ( (int) $cursor->format( 'Y' ) * 12 + (int) $cursor->format( 'm' ) ) - ( (int) $origin->format( 'Y' ) * 12 + (int) $origin->format( 'm' ) );
                 $match = $cursor->format( 'd' ) === $origin->format( 'd' ) && $months >= 0 && 0 === $months % max( 1, $definition['interval'] );
             }

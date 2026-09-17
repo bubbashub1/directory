@@ -3,28 +3,49 @@
  * BubbaHub Leader Dashboard loader – stable shortcode registration and theme integration.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-$bh_platform_loader = dirname( __DIR__ ) . '/modules/core/bubbahub-platform-loader.php';
-if ( file_exists( $bh_platform_loader ) ) require_once $bh_platform_loader;
-require_once __DIR__ . '/leader-listings.php';
-require_once __DIR__ . '/leader-venues.php';
-require_once __DIR__ . '/leader-bookings.php';
-require_once __DIR__ . '/leader-management-pages.php';
-$bh_schedule_foundation = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-foundation.php';
-if ( file_exists( $bh_schedule_foundation ) ) require_once $bh_schedule_foundation;
-$bh_schedule_engine = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-engine.php';
-if ( file_exists( $bh_schedule_engine ) ) require_once $bh_schedule_engine;
-$bh_schedule_manager = __DIR__ . '/leader-schedule-manager.php';
-if ( file_exists( $bh_schedule_manager ) ) require_once $bh_schedule_manager;
-$bh_schedule_booking_tools = __DIR__ . '/leader-schedule-booking-tools.php';
-if ( file_exists( $bh_schedule_booking_tools ) ) require_once $bh_schedule_booking_tools;
-$bh_schedule_calendar = __DIR__ . '/leader-schedule-calendar.php';
-if ( file_exists( $bh_schedule_calendar ) ) require_once $bh_schedule_calendar;
-$bh_generic_booking_file = dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php';
-if ( file_exists( $bh_generic_booking_file ) ) require_once $bh_generic_booking_file;
-$bh_monitor_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php';
-if ( file_exists( $bh_monitor_file ) ) { require_once $bh_monitor_file; if ( class_exists( 'BubbaHub_Internet_Group_Monitor' ) ) { register_activation_hook( dirname( __DIR__ ) . '/bubbahub-directory.php', [ 'BubbaHub_Internet_Group_Monitor', 'activate' ] ); register_deactivation_hook( dirname( __DIR__ ) . '/bubbahub-directory.php', [ 'BubbaHub_Internet_Group_Monitor', 'deactivate' ] ); } }
-$bh_monitor_alerts_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-monitor-alerts.php';
-if ( file_exists( $bh_monitor_alerts_file ) ) require_once $bh_monitor_alerts_file;
+
+$bh_guard = dirname( __DIR__ ) . '/modules/core/bubbahub-runtime-guard.php';
+if ( file_exists( $bh_guard ) ) require_once $bh_guard;
+
+if ( function_exists( 'bubbahub_runtime_safe_require' ) ) {
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/core/bubbahub-platform-loader.php', 'platform loader' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-listings.php', 'leader listings' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-venues.php', 'leader venues' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-bookings.php', 'leader bookings' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-management-pages.php', 'leader management pages' );
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-foundation.php', 'schedule foundation' );
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-engine.php', 'schedule engine' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-schedule-manager.php', 'schedule manager' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-schedule-booking-tools.php', 'schedule booking tools' );
+    bubbahub_runtime_safe_require( __DIR__ . '/leader-schedule-calendar.php', 'schedule calendar' );
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php', 'generic booking pages' );
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php', 'internet monitor' );
+    bubbahub_runtime_safe_require( dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-monitor-alerts.php', 'monitor alerts' );
+} else {
+    $bh_platform_loader = dirname( __DIR__ ) . '/modules/core/bubbahub-platform-loader.php';
+    if ( file_exists( $bh_platform_loader ) ) require_once $bh_platform_loader;
+    require_once __DIR__ . '/leader-listings.php';
+    require_once __DIR__ . '/leader-venues.php';
+    require_once __DIR__ . '/leader-bookings.php';
+    require_once __DIR__ . '/leader-management-pages.php';
+    $bh_schedule_foundation = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-foundation.php';
+    if ( file_exists( $bh_schedule_foundation ) ) require_once $bh_schedule_foundation;
+    $bh_schedule_engine = dirname( __DIR__ ) . '/modules/core/bubbahub-schedule-engine.php';
+    if ( file_exists( $bh_schedule_engine ) ) require_once $bh_schedule_engine;
+    $bh_schedule_manager = __DIR__ . '/leader-schedule-manager.php';
+    if ( file_exists( $bh_schedule_manager ) ) require_once $bh_schedule_manager;
+    $bh_schedule_booking_tools = __DIR__ . '/leader-schedule-booking-tools.php';
+    if ( file_exists( $bh_schedule_booking_tools ) ) require_once $bh_schedule_booking_tools;
+    $bh_schedule_calendar = __DIR__ . '/leader-schedule-calendar.php';
+    if ( file_exists( $bh_schedule_calendar ) ) require_once $bh_schedule_calendar;
+    $bh_generic_booking_file = dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php';
+    if ( file_exists( $bh_generic_booking_file ) ) require_once $bh_generic_booking_file;
+    $bh_monitor_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php';
+    if ( file_exists( $bh_monitor_file ) ) require_once $bh_monitor_file;
+    $bh_monitor_alerts_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-monitor-alerts.php';
+    if ( file_exists( $bh_monitor_alerts_file ) ) require_once $bh_monitor_alerts_file;
+}
+
 add_action( 'init', 'bubbahub_leader_dashboard_register', 99 );
 function bubbahub_leader_dashboard_register() { $renderer=''; if(function_exists('bubbahub_leader_dashboard_shortcode'))$renderer='bubbahub_leader_dashboard_shortcode';elseif(function_exists('bubbahub_leader_dashboard_render'))$renderer='bubbahub_leader_dashboard_render';if(!$renderer)return;remove_shortcode('bubbahub_leader_dashboard');remove_shortcode('bubbahub-leader-dashboard');add_shortcode('bubbahub_leader_dashboard',$renderer);add_shortcode('bubbahub-leader-dashboard',$renderer); }
 add_filter( 'the_content', 'bubbahub_leader_dashboard_schedule_nav', 20 );

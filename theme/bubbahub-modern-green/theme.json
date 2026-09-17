@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": true,
+    "layout": { "contentSize": "1180px", "wideSize": "1400px" },
+    "spacing": { "blockGap": "1.35rem", "units": ["px","em","rem","%","vw","vh"] },
+    "typography": {
+      "fluid": true,
+      "fontFamilies": [
+        { "fontFamily": "Work Sans, system-ui, sans-serif", "slug": "work-sans", "name": "Work Sans" },
+        { "fontFamily": "Playfair Display, Georgia, serif", "slug": "playfair-display", "name": "Playfair Display" }
+      ],
+      "fontSizes": [
+        { "slug": "small", "size": "0.875rem", "name": "Small" },
+        { "slug": "medium", "size": "1.125rem", "name": "Medium" },
+        { "slug": "large", "size": "clamp(2rem, 5vw, 3.5rem)", "name": "Large" },
+        { "slug": "x-large", "size": "clamp(2.8rem, 7vw, 5rem)", "name": "Extra large" }
+      ]
+    },
+    "color": {
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "green-950", "color": "#173a2b", "name": "Deep green" },
+        { "slug": "green-800", "color": "#245b43", "name": "Forest green" },
+        { "slug": "green-700", "color": "#34765a", "name": "Bubba green" },
+        { "slug": "green-500", "color": "#73aa8d", "name": "Sage" },
+        { "slug": "green-200", "color": "#cfe3d8", "name": "Soft green" },
+        { "slug": "green-100", "color": "#eaf4ee", "name": "Pale green" },
+        { "slug": "cream", "color": "#fbfaf6", "name": "Warm cream" },
+        { "slug": "sand", "color": "#eee8dc", "name": "Soft sand" },
+        { "slug": "ink", "color": "#203028", "name": "Ink" },
+        { "slug": "white", "color": "#ffffff", "name": "White" }
+      ]
+    },
+    "border": { "radius": true },
+    "blocks": {
+      "core/button": { "border": { "radius": "999px" } },
+      "core/image": { "border": { "radius": true } },
+      "core/group": { "spacing": { "blockGap": "1.25rem" } },
+      "core/cover": { "border": { "radius": "28px" } }
+    }
+  },
+  "styles": {
+    "color": { "background": "#fbfaf6", "text": "#203028" },
+    "typography": { "fontFamily": "Work Sans, system-ui, sans-serif", "lineHeight": "1.65" },
+    "spacing": { "blockGap": "1.35rem" },
+    "elements": {
+      "heading": { "typography": { "fontFamily": "Playfair Display, Georgia, serif", "fontWeight": "500", "lineHeight": "1.08" }, "color": { "text": "#173a2b" } },
+      "link": { "color": { "text": "#34765a" }, "typography": { "textDecoration": "underline" } },
+      "button": { "color": { "background": "#34765a", "text": "#ffffff" }, "spacing": { "padding": { "top": "0.8rem", "bottom": "0.8rem", "left": "1.4rem", "right": "1.4rem" } }, "typography": { "fontWeight": "700" } }
+    }
+  }
+}

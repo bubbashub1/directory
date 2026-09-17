@@ -1,0 +1,41 @@
+name: Build BubbaHub Modern Green Theme ZIP
+
+on:
+  push:
+    branches:
+      - theme/bubbahub-modern-green
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  package-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout theme branch
+        uses: actions/checkout@v4
+
+      - name: Build WordPress theme ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package
+          mkdir -p package
+          test -f theme/bubbahub-modern-green/style.css
+          test -f theme/bubbahub-modern-green/theme.json
+          test -f theme/bubbahub-modern-green/functions.php
+          cp -a theme/bubbahub-modern-green package/bubbahub-modern-green
+          cd package
+          zip -qr ../bubbahub-modern-green.zip bubbahub-modern-green
+          cd ..
+          unzip -l bubbahub-modern-green.zip
+
+      - name: Upload ready-to-install ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: bubbahub-modern-green
+          path: bubbahub-modern-green.zip
+          if-no-files-found: error
+          retention-days: 30

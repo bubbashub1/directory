@@ -1,25 +1,23 @@
 <?php
 /**
  * Plugin Name: BubbaHub Directory
- * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls and map view.
- * Version: 1.2.3
+ * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and internet/group monitoring.
+ * Version: 1.3.0
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.3' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.0' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 // Load the custom Group single-page template from this plugin.
-// The Group CPT itself remains owned by the existing site/ACF setup.
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
-
 // Load the logged-in family dashboard / My Hub module.
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
-
-// Load the Leader Portal module. require_once keeps this safe if the
-// standalone Leader Dashboard plugin is also active on the same site.
+// Load the Leader Portal module.
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
+// Load the Internet & Group Activity Monitor.
+require_once plugin_dir_path( __FILE__ ) . 'modules/internet-monitor/bubbahub-internet-monitor.php';
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
@@ -48,8 +46,6 @@ function bubbahub_directory_image_url( $post_id ) {
     return get_the_post_thumbnail_url( $post_id, 'large' ) ?: '';
 }
 function bubbahub_directory_normalise_map( $map ) {
-    // The ACF field is configured as OpenStreetMap with Return Format = iFrame.
-    // Do not treat arbitrary HTML numbers (for example iframe width/height) as coordinates.
     if ( is_array( $map ) ) {
         $lat = isset( $map['lat'] ) ? $map['lat'] : ( isset( $map['latitude'] ) ? $map['latitude'] : '' );
         $lng = isset( $map['lng'] ) ? $map['lng'] : ( isset( $map['longitude'] ) ? $map['longitude'] : '' );
@@ -57,25 +53,16 @@ function bubbahub_directory_normalise_map( $map ) {
     }
     if ( ! is_string( $map ) || $map === '' ) return null;
     $source = '';
-    if ( preg_match( '/<iframe[^>]+src=[\"\']([^\"\']+)[\"\']/i', $map, $iframe_match ) ) {
-        $source = html_entity_decode( $iframe_match[1], ENT_QUOTES, 'UTF-8' );
-    } elseif ( preg_match( '/https?:\/\/[^\s\"\']*openstreetmap\.org[^\s\"\']*/i', $map, $url_match ) ) {
-        $source = html_entity_decode( $url_match[0], ENT_QUOTES, 'UTF-8' );
-    } else {
-        $source = $map;
-    }
+    if ( preg_match( '/<iframe[^>]+src=[\"\']([^\"\']+)[\"\']/i', $map, $iframe_match ) ) $source = html_entity_decode( $iframe_match[1], ENT_QUOTES, 'UTF-8' );
+    elseif ( preg_match( '/https?:\/\/[^\s\"\']*openstreetmap\.org[^\s\"\']*/i', $map, $url_match ) ) $source = html_entity_decode( $url_match[0], ENT_QUOTES, 'UTF-8' );
+    else $source = $map;
     $decoded = urldecode( $source );
-    if ( preg_match( '/(?:[?&]|%3F|%26)marker=([-+]?\d+(?:\.\d+)?)[, ]([-+]?\d+(?:\.\d+)?)/i', $decoded, $marker ) ) {
-        return array( 'lat' => (float) $marker[1], 'lng' => (float) $marker[2] );
-    }
-    $mlat = '';
-    $mlon = '';
+    if ( preg_match( '/(?:[?&]|%3F|%26)marker=([-+]?\d+(?:\.\d+)?)[, ]([-+]?\d+(?:\.\d+)?)/i', $decoded, $marker ) ) return array( 'lat' => (float) $marker[1], 'lng' => (float) $marker[2] );
+    $mlat = ''; $mlon = '';
     if ( preg_match( '/(?:[?&])mlat=([-+]?\d+(?:\.\d+)?)/i', $decoded, $lat_match ) ) $mlat = $lat_match[1];
     if ( preg_match( '/(?:[?&])mlon=([-+]?\d+(?:\.\d+)?)/i', $decoded, $lon_match ) ) $mlon = $lon_match[1];
     if ( $mlat !== '' && $mlon !== '' ) return array( 'lat' => (float) $mlat, 'lng' => (float) $mlon );
-    if ( preg_match( '/^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$/', trim( $decoded ), $coords ) ) {
-        return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
-    }
+    if ( preg_match( '/^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$/', trim( $decoded ), $coords ) ) return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
     return null;
 }
 function bubbahub_directory_region( $post_id ) {
@@ -144,7 +131,7 @@ function bubbahub_directory_render_pagination( $query ) {
 }
 function bubbahub_directory_ajax_filter() {
     check_ajax_referer( 'bubbahub_directory', 'nonce' );
-    $filters = array( 'search' => isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '', 'region' => isset( $_POST['region'] ) ? sanitize_title( wp_unslash( $_POST['region'] ) ) : '', 'age' => isset( $_POST['age'] ) ? sanitize_text_field( wp_unslash( $_POST['age'] ) ) : '', 'price' => isset( $_POST['price'] ) ? sanitize_text_field( wp_unslash( $_POST['price'] ) ) : '', 'paged' => isset( $_POST['paged'] ) ? max( 1, (int) $_POST['paged'] ) : 1, 'posts_per_page' => isset( $_POST['postsPerPage'] ) ? max( 1, min( 100, (int) $_POST['postsPerPage'] ) ) : 12 );
+    $filters = array( 'search' => isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '', 'region' => isset( $_POST['region'] ) ? sanitize_text_field( wp_unslash( $_POST['region'] ) ) : '', 'age' => isset( $_POST['age'] ) ? sanitize_text_field( wp_unslash( $_POST['age'] ) ) : '', 'price' => isset( $_POST['price'] ) ? sanitize_text_field( wp_unslash( $_POST['price'] ) ) : '', 'paged' => isset( $_POST['paged'] ) ? max( 1, (int) $_POST['paged'] ) : 1, 'posts_per_page' => isset( $_POST['postsPerPage'] ) ? max( 1, min( 100, (int) $_POST['postsPerPage'] ) ) : 12 );
     $query = bubbahub_directory_query( $filters );
     wp_send_json_success( array( 'html' => bubbahub_directory_render_cards( $query ), 'pagination' => bubbahub_directory_render_pagination( $query ), 'count' => (int) $query->found_posts ) );
 }

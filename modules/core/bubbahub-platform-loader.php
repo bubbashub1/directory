@@ -13,6 +13,7 @@ $bubbahub_platform_files = array(
     'bubbahub-getpaid-integration.php',
     'modules/core/bubbahub-schedule-foundation.php',
     'modules/core/bubbahub-schedule-engine.php',
+    'modules/core/bubbahub-subscriptions.php',
     'myhub/myhub-booking-lifecycle.php',
     'myhub/myhub-booking-payment.php',
     'modules/core/bubbahub-ninja-stripe-bridge.php',

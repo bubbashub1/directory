@@ -1,0 +1,87 @@
+name: WordPress Runtime Smoke Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  wordpress-runtime:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, mbstring, curl, zip, dom, fileinfo
+          tools: wp-cli
+
+      - name: Install WordPress
+        run: |
+          mkdir -p /tmp/wp
+          wp core download --path=/tmp/wp --version=latest
+          mkdir -p /tmp/wp/wp-content/plugins/bubbahub-directory
+          rsync -a --exclude='.git' --exclude='node_modules' ./ /tmp/wp/wp-content/plugins/bubbahub-directory/
+
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..30}; do
+            mysqladmin ping -h127.0.0.1 -uroot -proot && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Install WordPress database
+        run: |
+          wp core config --path=/tmp/wp --dbname=wordpress --dbuser=wordpress --dbpass=wordpress --dbhost=127.0.0.1
+          wp core install --path=/tmp/wp --url=http://localhost --title='BubbaHub Runtime Test' --admin_user=admin --admin_password='password123!' --admin_email=test@example.com
+
+      - name: Lint every PHP file
+        run: |
+          set -e
+          find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Activate plugin with debug logging
+        run: |
+          cd /tmp/wp
+          wp plugin activate bubbahub-directory --debug
+
+      - name: WordPress runtime bootstrap
+        run: |
+          cd /tmp/wp
+          wp eval 'echo "PLUGIN_ACTIVE=" . (is_plugin_active("bubbahub-directory/bubbahub-directory.php") ? "yes" : "no") . PHP_EOL; echo "SHORTCODE=" . (shortcode_exists("bubbahub_directory") ? "yes" : "no") . PHP_EOL; echo "GROUP_TEMPLATE=" . (function_exists("bubbahub_directory_shortcode") ? "yes" : "no") . PHP_EOL;'
+
+      - name: Render key shortcodes
+        run: |
+          cd /tmp/wp
+          wp eval '$tests = array("[bubbahub_directory]", "[bubbahub_my_hub]"); foreach ($tests as $shortcode) { echo "TEST=" . $shortcode . PHP_EOL; try { $out = do_shortcode($shortcode); echo "RENDER_OK length=" . strlen((string)$out) . PHP_EOL; } catch (Throwable $e) { fwrite(STDERR, "RENDER_FAIL: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . PHP_EOL); exit(1); } }'
+
+      - name: Fail on PHP fatal/error signatures
+        run: |
+          cd /tmp/wp
+          if [ -f wp-content/debug.log ]; then
+            cat wp-content/debug.log
+            if grep -Eiq 'PHP Fatal error|PHP Parse error|PHP Error|Uncaught (Error|Exception)' wp-content/debug.log; then
+              echo 'Fatal PHP error detected in WordPress debug.log'
+              exit 1
+            fi
+          fi

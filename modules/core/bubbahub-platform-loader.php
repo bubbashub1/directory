@@ -37,6 +37,8 @@ add_action( 'wp_enqueue_scripts', function() {
     if ( ! defined( 'BUBBAHUB_DIRECTORY_URL' ) || ! defined( 'BUBBAHUB_DIRECTORY_VERSION' ) ) return;
     wp_register_style( 'bubbahub-family-support', BUBBAHUB_DIRECTORY_URL . 'assets/family-support.css', array(), BUBBAHUB_DIRECTORY_VERSION );
     if ( is_page() ) wp_enqueue_style( 'bubbahub-family-support' );
+    wp_enqueue_style( 'bubbahub-directory', BUBBAHUB_DIRECTORY_URL . 'assets/directory.css', array(), BUBBAHUB_DIRECTORY_VERSION );
+    wp_register_script( 'bubbahub-directory', BUBBAHUB_DIRECTORY_URL . 'assets/directory.js', array( 'jquery', 'leaflet' ), BUBBAHUB_DIRECTORY_VERSION, true );
 } );
 
 add_action( 'admin_notices', function() {

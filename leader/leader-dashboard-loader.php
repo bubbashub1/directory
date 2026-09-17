@@ -34,6 +34,18 @@ function bubbahub_leader_dashboard_register() {
     remove_shortcode( 'bubbahub_leader_dashboard' ); remove_shortcode( 'bubbahub-leader-dashboard' );
     add_shortcode( 'bubbahub_leader_dashboard', $renderer ); add_shortcode( 'bubbahub-leader-dashboard', $renderer );
 }
+
+add_filter( 'the_content', 'bubbahub_leader_dashboard_schedule_nav', 20 );
+function bubbahub_leader_dashboard_schedule_nav( $content ) {
+    if ( is_admin() || ! is_page('leader') || ! is_user_logged_in() || strpos($content,'bh-leader-nav')===false || strpos($content,'bh-schedule-dashboard-nav')!==false ) return $content;
+    if ( ! function_exists('bubbahub_leader_dashboard_is_allowed') || ! bubbahub_leader_dashboard_is_allowed() || ! function_exists('bubbahub_leader_management_url') ) return $content;
+    $url = esc_url( bubbahub_leader_management_url('schedule') );
+    $link = '<a class="bh-schedule-dashboard-nav" href="'.$url.'"><span>◷</span> My sessions</a>';
+    $needle = '<a href="'.esc_url(function_exists('bubbahub_leader_management_url')?bubbahub_leader_management_url('bookings'):home_url('/leader/bookings/')).'"><span>▣</span> Bookings';
+    if ( strpos($content,$needle)!==false ) return str_replace($needle,$link.$needle,$content);
+    return $content;
+}
+
 add_action( 'wp_enqueue_scripts', 'bubbahub_leader_theme_overrides', 20 );
 function bubbahub_leader_theme_overrides() {
     if ( ! defined( 'BUBBAHUB_LEADER_DASHBOARD_URL' ) || ! defined( 'BUBBAHUB_LEADER_DASHBOARD_VERSION' ) ) return;

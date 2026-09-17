@@ -30,6 +30,12 @@ if ( file_exists( $bh_monitor_file ) ) {
     }
 }
 
+/* Dedicated alert inbox + WordPress dashboard monitor widget. */
+$bh_monitor_alerts_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-monitor-alerts.php';
+if ( file_exists( $bh_monitor_alerts_file ) ) {
+    require_once $bh_monitor_alerts_file;
+}
+
 add_action( 'init', 'bubbahub_leader_dashboard_register', 99 );
 
 function bubbahub_leader_dashboard_register() {

@@ -15,6 +15,8 @@ $bh_schedule_manager = __DIR__ . '/leader-schedule-manager.php';
 if ( file_exists( $bh_schedule_manager ) ) require_once $bh_schedule_manager;
 $bh_schedule_booking_tools = __DIR__ . '/leader-schedule-booking-tools.php';
 if ( file_exists( $bh_schedule_booking_tools ) ) require_once $bh_schedule_booking_tools;
+$bh_schedule_calendar = __DIR__ . '/leader-schedule-calendar.php';
+if ( file_exists( $bh_schedule_calendar ) ) require_once $bh_schedule_calendar;
 $bh_generic_booking_file = dirname( __DIR__ ) . '/modules/bookings/bubbahub-generic-booking-pages.php';
 if ( file_exists( $bh_generic_booking_file ) ) require_once $bh_generic_booking_file;
 $bh_monitor_file = dirname( __DIR__ ) . '/modules/internet-monitor/bubbahub-internet-monitor.php';

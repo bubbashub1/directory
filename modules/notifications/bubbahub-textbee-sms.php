@@ -51,6 +51,7 @@ function bubbahub_textbee_request( $method, $path, $body = null ) {
 
 function bubbahub_textbee_send_sms( $phone, $title, $message, $user_id = 0 ) {
     $settings = bubbahub_textbee_settings();
+    if ( function_exists( 'bubbahub_sms_policy_can_send' ) && ! bubbahub_sms_policy_can_send( $user_id, 'sms', $title ) ) return false;
     if ( empty( $settings['enabled'] ) ) return false;
 
     $recipient = bubbahub_textbee_normalise_phone( $phone );
@@ -76,6 +77,7 @@ function bubbahub_textbee_send_sms( $phone, $title, $message, $user_id = 0 ) {
     $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
     if ( $code >= 200 && $code < 300 ) {
+        if ( function_exists( 'bubbahub_sms_policy_record_success' ) ) bubbahub_sms_policy_record_success( $user_id, 'sms', $title );
         do_action( 'bubbahub_textbee_sms_accepted', $recipient, $data, $user_id );
         return true;
     }
@@ -134,6 +136,18 @@ function bubbahub_textbee_admin_page() {
     }
 
     $settings = bubbahub_textbee_settings();
+
+    if ( function_exists( 'bubbahub_sms_policy_usage' ) ) {
+        $bh_sms_usage = bubbahub_sms_policy_usage();
+        $bh_sms_limits = bubbahub_sms_policy_settings();
+        $bh_sms_daily_left = max( 0, $bh_sms_limits['daily_limit'] - $bh_sms_usage['today'] );
+        $bh_sms_monthly_left = max( 0, $bh_sms_limits['monthly_limit'] - $bh_sms_usage['month'] );
+    }
+    if ( ! empty( $_POST['bh_textbee_notify_leaders'] ) && check_admin_referer( 'bubbahub_textbee_leader_notice', 'bh_textbee_leader_notice_nonce' ) ) {
+        $count = function_exists( 'bubbahub_sms_notify_all_leaders' ) ? bubbahub_sms_notify_all_leaders( true, true ) : 0;
+        $notice = 'SMS emergency-only warning sent to ' . absint( $count ) . ' leader account(s).';
+    }
+
     $devices = array();
     $device_error = '';
     if ( ! empty( $settings['api_key'] ) ) {
@@ -153,10 +167,19 @@ function bubbahub_textbee_admin_page() {
     ?>
     <div class="wrap">
         <h1>Bubba Hub SMS — TextBee</h1>
-        <p>Send optional Bubba Hub reminders through your own Android phone and SIM using TextBee.</p>
+        <p>Send urgent Bubba Hub SMS through your own Android phone and SIM using TextBee. SMS is deliberately restricted by Bubba Hub safety limits.</p>
 
         <?php if ( $notice ) : ?>
             <div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div>
+        <?php endif; ?>
+
+        <?php if ( function_exists( 'bubbahub_sms_policy_usage' ) ) : ?>
+            <div style="max-width:900px;background:#fff8e7;border:1px solid #f0c36d;border-radius:12px;padding:20px;margin-top:20px;">
+                <h2 style="margin-top:0;">SMS safety status</h2>
+                <p><strong><?php echo esc_html( $bh_sms_usage['today'] . '/' . $bh_sms_limits['daily_limit'] ); ?></strong> messages today · <strong><?php echo esc_html( $bh_sms_usage['month'] . '/' . $bh_sms_limits['monthly_limit'] ); ?></strong> this month.</p>
+                <p><?php echo ( $bh_sms_daily_left && $bh_sms_monthly_left ) ? esc_html( 'SMS is reserved for urgent/emergency notifications. ' . $bh_sms_daily_left . ' daily and ' . $bh_sms_monthly_left . ' monthly messages remain.' ) : esc_html( 'SMS has reached its Bubba Hub safety limit. Do not send SMS unless it is an emergency.' ); ?></p>
+                <form method="post"><?php wp_nonce_field( 'bubbahub_textbee_leader_notice', 'bh_textbee_leader_notice_nonce' ); ?><input type="hidden" name="bh_textbee_notify_leaders" value="1"><?php submit_button( 'Notify all leaders: SMS emergency-only', 'secondary', 'submit', false ); ?></form>
+            </div>
         <?php endif; ?>
 
         <div style="max-width:900px;background:#fff;border:1px solid #dcdcde;border-radius:12px;padding:24px;margin-top:20px;">
@@ -209,7 +232,7 @@ function bubbahub_textbee_admin_page() {
             <h2>3. How Bubba Hub uses it</h2>
             <ul>
                 <li>Families opt in to <strong>SMS reminders</strong> in their notification preferences.</li>
-                <li>Bubba Hub sends booking reminders, cancellations and class changes through this provider.</li>
+                <li>Bubba Hub SMS is restricted to urgent/emergency notifications such as cancellations and important class changes.</li>
                 <li>Portal notifications remain available even if SMS is unavailable.</li>
                 <li>TextBee accepts E.164 phone numbers such as <code>+447...</code>.</li>
             </ul>

@@ -275,11 +275,18 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3>About your child</h3><span>Core profile</span></div>
                 <div class="bh-profile-grid two">
+                    <label class="bh-profile-type-field"><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Expecting / Pregnancy</option></select></label>
+                </div>
+                <div class="bh-profile-grid two bh-child-fields">
                     <label><span>Name</span><input name="child_name" value="<?php echo esc_attr( $name ); ?>" required></label>
                     <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="Optional"></label>
                     <label><span>Profile photo URL</span><input name="avatar_url" type="url" value="<?php echo esc_attr( $avatar ); ?>" placeholder="Optional"></label>
-                    <label><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Expecting / Pregnancy</option></select></label>
                     <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>"></label>
+                </div>
+                <div class="bh-profile-grid two bh-expecting-fields">
+                    <label><span>Name</span><input name="child_name_expecting" value="<?php echo esc_attr( $name ); ?>" required></label>
+                    <label><span>Nickname</span><input name="child_nickname_expecting" value="<?php echo esc_attr( $nickname ); ?>" placeholder="Optional"></label>
+                    <label><span>Profile photo URL</span><input name="avatar_url_expecting" type="url" value="<?php echo esc_attr( $avatar ); ?>" placeholder="Optional"></label>
                     <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>"></label>
                 </div>
             </div>

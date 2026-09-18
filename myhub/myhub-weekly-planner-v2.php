@@ -325,9 +325,26 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <?php
             $planner_tax = function_exists( 'bubbahub_stage2_location_taxonomy' ) ? bubbahub_stage2_location_taxonomy() : '';
-            $planner_location_ids = $planner_tax ? wp_get_post_terms( (int) $item['group_id'], $planner_tax, array( 'fields' => 'ids' ) ) : array();
-            if ( $planner_tax && empty( $planner_location_ids ) && ! empty( $item['venue_id'] ) ) $planner_location_ids = wp_get_post_terms( (int) $item['venue_id'], $planner_tax, array( 'fields' => 'ids' ) );
-            if ( is_wp_error( $planner_location_ids ) ) $planner_location_ids = array();
+            /*
+             * Keep the planner's location selector compatible with the archive structure.
+             * Some listings use the dedicated location taxonomy while older/imported listings
+             * use a Region/Area taxonomy (for example /region/wadebridge/).
+             */
+            $planner_location_ids = array();
+            $planner_location_taxonomies = array();
+            foreach ( get_object_taxonomies( 'group', 'objects' ) as $planner_tax_name => $planner_tax_object ) {
+                $planner_tax_haystack = strtolower( $planner_tax_name . ' ' . $planner_tax_object->label . ' ' . $planner_tax_object->name );
+                if ( false !== strpos( $planner_tax_haystack, 'location' ) || false !== strpos( $planner_tax_haystack, 'region' ) || false !== strpos( $planner_tax_haystack, 'area' ) ) {
+                    $planner_location_taxonomies[] = $planner_tax_name;
+                    $planner_terms = wp_get_post_terms( (int) $item['group_id'], $planner_tax_name, array( 'fields' => 'ids' ) );
+                    if ( ! is_wp_error( $planner_terms ) ) $planner_location_ids = array_merge( $planner_location_ids, $planner_terms );
+                    if ( ! is_wp_error( $planner_terms ) && empty( $planner_terms ) && ! empty( $item['venue_id'] ) ) {
+                        $planner_terms = wp_get_post_terms( (int) $item['venue_id'], $planner_tax_name, array( 'fields' => 'ids' ) );
+                        if ( ! is_wp_error( $planner_terms ) ) $planner_location_ids = array_merge( $planner_location_ids, $planner_terms );
+                    }
+                }
+            }
+            $planner_location_ids = array_values( array_unique( array_map( 'absint', $planner_location_ids ) ) );
             $planner_search_parts = array( $item['title'] );
             $planner_search_parts[] = get_post_field( 'post_content', (int) $item['group_id'] );
             foreach ( get_object_taxonomies( get_post_type( (int) $item['group_id'] ) ) as $planner_tax_name ) {

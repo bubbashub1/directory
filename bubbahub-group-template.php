@@ -278,7 +278,7 @@ function bubbahub_group_venue_address( $venue_id ) {
 
     if ( is_array( $address ) ) {
         $parts = array();
-        foreach ( array( 'address', 'street', 'city', 'region', 'postcode', 'zip' ) as $key ) {
+        foreach ( array( 'address', 'street', 'street_address', 'address_line_1', 'address_line_2', 'city', 'town', 'region', 'county', 'postcode', 'zip' ) as $key ) {
             if ( ! empty( $address[$key] ) ) $parts[] = $address[$key];
         }
         $address = implode( ', ', $parts );
@@ -286,7 +286,17 @@ function bubbahub_group_venue_address( $venue_id ) {
 
     if ( is_string( $address ) && trim( $address ) !== '' ) return $address;
 
-    return get_the_title( $venue_id );
+    // Support venues where the address is stored as separate fields rather than
+    // a single ACF/meta "address" field.
+    $parts = array();
+    foreach ( array( 'street_address', 'address_line_1', 'address_line_2', 'street', 'city', 'town', 'region', 'county', 'postcode', 'zip' ) as $field ) {
+        $value = bubbahub_group_get_field( $venue_id, $field, '' );
+        if ( is_scalar( $value ) && trim( (string) $value ) !== '' ) $parts[] = trim( (string) $value );
+    }
+
+    if ( $parts ) return implode( ', ', array_unique( $parts ) );
+
+    return '';
 }
 
 function bubbahub_group_address( $post_id, $venue_id ) {

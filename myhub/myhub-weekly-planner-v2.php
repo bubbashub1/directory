@@ -227,6 +227,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             $gid = get_the_ID();
             $schedule = function_exists( 'bubbahub_myhub_planner_schedule_rows' ) ? bubbahub_myhub_planner_schedule_rows( $gid ) : array();
             if ( ! $schedule ) continue;
+            // Resolve the listing/venue OpenStreetMap coordinates for the radius filter.
+            $fallback_venue_id = function_exists( 'bubbahub_group_venue_id' ) ? bubbahub_group_venue_id( $gid ) : 0;
+            $coords = function_exists( 'bubbahub_group_resolve_map' ) ? bubbahub_group_resolve_map( $gid ) : null;
+            if ( ! $coords && $fallback_venue_id && function_exists( 'bubbahub_group_resolve_map' ) ) {
+                $coords = bubbahub_group_resolve_map( $fallback_venue_id );
+            }
             $age_ok = false;
             foreach ( $children as $child_id ) {
                 if ( function_exists( 'bubbahub_myhub_planner_age_matches' ) && bubbahub_myhub_planner_age_matches( $gid, array( $child_id ) ) ) { $age_ok = true; break; }

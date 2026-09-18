@@ -124,8 +124,18 @@ add_filter( 'ninja_forms_run_action_settings', 'bubbahub_contact_organiser_email
 function bubbahub_contact_organiser_email_action_settings( $action_settings, $form_id, $action_id, $form_settings ) {
     if ( empty( $form_settings['title'] ) || false === stripos( (string) $form_settings['title'], 'contact organiser' ) && false === stripos( (string) $form_settings['title'], 'contact organizer' ) ) return $action_settings;
     if ( isset( $action_settings['type'] ) && 'email' !== $action_settings['type'] ) return $action_settings;
-    if ( isset( $action_settings['email_to'] ) ) $action_settings['email_to'] = '{wp:post_author_email}';
-    if ( isset( $action_settings['to'] ) ) $action_settings['to'] = '{wp:post_author_email}';
+    $group_id = 0;
+    if ( isset( $_COOKIE['bubbahub_contact_group_id'] ) ) $group_id = absint( wp_unslash( $_COOKIE['bubbahub_contact_group_id'] ) );
+    $listing_email = $group_id && 'group' === get_post_type( $group_id ) && function_exists( 'bubbahub_directory_get_field' )
+        ? sanitize_email( bubbahub_directory_get_field( $group_id, 'email', '' ) )
+        : '';
+    if ( $listing_email && is_email( $listing_email ) ) {
+        if ( isset( $action_settings['email_to'] ) ) $action_settings['email_to'] = $listing_email;
+        if ( isset( $action_settings['to'] ) ) $action_settings['to'] = $listing_email;
+    } else {
+        if ( isset( $action_settings['email_to'] ) ) $action_settings['email_to'] = '{wp:post_author_email}';
+        if ( isset( $action_settings['to'] ) ) $action_settings['to'] = '{wp:post_author_email}';
+    }
     return $action_settings;
 }
 

@@ -297,7 +297,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                         <?php elseif ( 'nearly_time' === $antenatal['stage'] ) : ?>
                                             <span>Nearly time! Is your hospital bag packed?</span>
                                         <?php else : ?>
-                                            <span>Your due date has passed. Ready to tell My Hub your baby is here?</span>
+                                            <span>You’re 38 weeks or more. Ready to tell My Hub your baby is here?</span>
                                             <button type="button" class="bh-myhub-button bh-myhub-baby-here" data-bh-baby-here="<?php echo esc_attr( $child->ID ); ?>">👶 Baby is Here</button>
                                         <?php endif; ?>
                                         <span>Due <?php echo esc_html( bubbahub_myhub_v3_date( $due ) ); ?></span>

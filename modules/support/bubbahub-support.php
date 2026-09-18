@@ -209,7 +209,7 @@ function bubbahub_support_public() {
     ob_start(); ?>
     <div class="bh-support-hub">
       <section class="bh-support-hero">
-        <span class="bh-support-kicker">FAMILY HUB &amp; RESOURCE PORTAL</span>
+        <h1>Family Hub &amp; Resource Portal</h1>
         <p>Your trusted central sanctuary for specialist insights, local community directories, recommended apps, and official early years guidance documents.</p>
       </section>
       <section class="bh-support-panel bh-support-question" id="ask-specialist">

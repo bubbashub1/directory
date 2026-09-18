@@ -1,4 +1,13 @@
 (function($){'use strict';
+function removeGroupReadingTime(){
+  if(!document.body.classList.contains('bubbahub-group-page'))return;
+  var candidates=document.querySelectorAll('body *');
+  candidates.forEach(function(el){
+    if(el.closest('.bhg-single'))return;
+    var text=(el.textContent||'').trim();
+    if(/^\\d+\\s*[–-]\\s*\\d+\\s+minutes?$/i.test(text)&&el.children.length===0){el.remove();}
+  });
+}
 function init(){var $root=$('.bhg-single');if(!$root.length)return;
  function key(action){return 'bubbahub_'+action;}
  function read(action){try{return JSON.parse(localStorage.getItem(key(action))||'[]');}catch(e){return[];}}
@@ -27,7 +36,7 @@ function init(){var $root=$('.bhg-single');if(!$root.length)return;
  $root.on('change','.bhg-venue-select',function(){var venue=$(this).val(),$track=$root.find('[data-related-track]');$track.addClass('is-loading');$.ajax({url:BubbaHubGroupPage.ajaxUrl,type:'POST',dataType:'json',data:{action:'bubbahub_group_alternatives',nonce:BubbaHubGroupPage.nonce,post_id:$root.data('post-id'),venue_id:venue}}).done(function(r){if(r&&r.success)$track.html(r.data.html);}).always(function(){$track.removeClass('is-loading');});});
  $root.on('click','[data-carousel-prev]',function(){var t=$root.find('[data-related-track]')[0];if(t)t.scrollBy({left:-320,behavior:'smooth'});});
  $root.on('click','[data-carousel-next]',function(){var t=$root.find('[data-related-track]')[0];if(t)t.scrollBy({left:320,behavior:'smooth'});});
- sync();initGallery();initContactModal();buildMap();
+ sync();initGallery();initContactModal();buildMap();removeGroupReadingTime();
 }
 $(init);
 })(jQuery);

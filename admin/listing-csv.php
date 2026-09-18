@@ -219,8 +219,15 @@ function bubbahub_directory_csv_google_url( $url ) {
     $url = trim( $url );
     if ( ! $url ) return '';
 
-    // Google Sheets published/export URLs are accepted as-is.
+    // Google Sheets published/export URLs are accepted and normalised.
     if ( false !== strpos( $url, 'docs.google.com/spreadsheets' ) ) {
+        // Published-to-web URLs use /d/e/<published-id>/pub and must stay on the
+        // published endpoint; convert them explicitly to CSV output.
+        if ( preg_match( '#/spreadsheets/d/e/([^/]+)/pub#', $url, $published_match ) ) {
+            $gid = '';
+            if ( preg_match( '/[?&#]gid=([0-9]+)/', $url, $gid_match ) ) $gid = $gid_match[1];
+            return 'https://docs.google.com/spreadsheets/d/e/' . rawurlencode( $published_match[1] ) . '/pub?output=csv' . ( $gid ? '&gid=' . rawurlencode( $gid ) : '' );
+        }
         if ( false !== strpos( $url, '/export' ) || false !== strpos( $url, 'format=csv' ) ) return $url;
         if ( preg_match( '#/spreadsheets/d/([a-zA-Z0-9_-]+)#', $url, $match ) ) {
             $gid = '';
@@ -254,12 +261,16 @@ function bubbahub_directory_csv_auto_import() {
     // Reuse the normal importer by providing the saved URL as if it came from the form.
     $_POST['bh_csv_url'] = $saved_url;
     $_FILES = array();
+    $GLOBALS['bubbahub_directory_csv_internal_import'] = true;
     bubbahub_directory_csv_import();
+    unset( $GLOBALS['bubbahub_directory_csv_internal_import'] );
 }
 
 function bubbahub_directory_csv_import() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to import listings.' );
-    check_admin_referer( 'bubbahub_csv_import' );
+    if ( empty( $GLOBALS['bubbahub_directory_csv_internal_import'] ) ) {
+        check_admin_referer( 'bubbahub_csv_import' );
+    }
 
     $csv = '';
     $url = isset( $_POST['bh_csv_url'] ) ? esc_url_raw( wp_unslash( $_POST['bh_csv_url'] ) ) : '';

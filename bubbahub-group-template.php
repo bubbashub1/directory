@@ -165,13 +165,28 @@ function bubbahub_group_image( $post_id ) {
 }
 
 function bubbahub_group_normalise_map( $map ) {
-    // ACF Google Map fields normally return an array containing lat/lng.
-    // Some imports/older listings store the same data as JSON or serialised data,
-    // so accept those formats too.
+    // Bubba Hub uses OpenStreetMap/Leaflet. Accept OSM coordinate formats as
+    // well as ACF-style arrays so the public map can use the exact saved
+    // latitude/longitude without requiring Google Maps.
     if ( is_array( $map ) ) {
-        $lat = isset( $map['lat'] ) ? $map['lat'] : ( isset( $map['latitude'] ) ? $map['latitude'] : '' );
-        $lng = isset( $map['lng'] ) ? $map['lng'] : ( isset( $map['longitude'] ) ? $map['longitude'] : '' );
+        $lat_keys = array( 'lat', 'latitude', 'osm_lat', 'osm_latitude', 'map_lat', 'location_lat', 'venue_lat' );
+        $lng_keys = array( 'lng', 'lon', 'longitude', 'osm_lng', 'osm_lon', 'osm_longitude', 'map_lng', 'location_lng', 'venue_lng' );
+        $lat = $lng = '';
+        foreach ( $lat_keys as $key ) {
+            if ( isset( $map[ $key ] ) && is_numeric( $map[ $key ] ) ) { $lat = $map[ $key ]; break; }
+        }
+        foreach ( $lng_keys as $key ) {
+            if ( isset( $map[ $key ] ) && is_numeric( $map[ $key ] ) ) { $lng = $map[ $key ]; break; }
+        }
         if ( $lat !== '' && $lng !== '' ) return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
+
+        // Some OSM/address fields are nested arrays. Walk the complete
+        // structure instead of assuming the coordinates are at the first level.
+        foreach ( $map as $nested ) {
+            $coords = bubbahub_group_normalise_map( $nested );
+            if ( $coords ) return $coords;
+        }
+        return null;
     }
 
     if ( is_string( $map ) && $map !== '' ) {
@@ -191,10 +206,9 @@ function bubbahub_group_normalise_map( $map ) {
     if ( ! is_string( $map ) || $map === '' ) return null;
 
     $source = '';
-
-    if ( preg_match( '/<iframe[^>]+src=[\"\']([^\"\']+)[\"\']/i', $map, $match ) ) {
+    if ( preg_match( '/<iframe[^>]+src=[\\"\\']([^\\"\\']+)[\\"\\']/i', $map, $match ) ) {
         $source = html_entity_decode( $match[1], ENT_QUOTES, 'UTF-8' );
-    } elseif ( preg_match( '/https?:\/\/[^\s\"\']*openstreetmap\.org[^\s\"\']*/i', $map, $url_match ) ) {
+    } elseif ( preg_match( '/https?:\\/\\/[^\\s\\"\\']*openstreetmap\\.org[^\\s\\"\\']*/i', $map, $url_match ) ) {
         $source = html_entity_decode( $url_match[0], ENT_QUOTES, 'UTF-8' );
     } else {
         $source = $map;
@@ -202,20 +216,16 @@ function bubbahub_group_normalise_map( $map ) {
 
     $decoded = urldecode( $source );
 
-    if ( preg_match( '/(?:[?&]|%3F|%26)marker=([-+]?\d+(?:\.\d+)?)[, ]([-+]?\d+(?:\.\d+)?)/i', $decoded, $m ) ) {
+    if ( preg_match( '/(?:[?&]|%3F|%26)marker=([-+]?\\d+(?:\\.\\d+)?)[, ]([-+]?\\d+(?:\\.\\d+)?)/i', $decoded, $m ) ) {
         return array( 'lat' => (float) $m[1], 'lng' => (float) $m[2] );
     }
 
     $mlat = $mlon = '';
+    if ( preg_match( '/(?:[?&])mlat=([-+]?\\d+(?:\\.\\d+)?)/i', $decoded, $m ) ) $mlat = $m[1];
+    if ( preg_match( '/(?:[?&])mlon=([-+]?\\d+(?:\\.\\d+)?)/i', $decoded, $m ) ) $mlon = $m[1];
+    if ( $mlat !== '' && $mlon !== '' ) return array( 'lat' => (float) $mlat, 'lng' => (float) $mlon );
 
-    if ( preg_match( '/(?:[?&])mlat=([-+]?\d+(?:\.\d+)?)/i', $decoded, $m ) ) $mlat = $m[1];
-    if ( preg_match( '/(?:[?&])mlon=([-+]?\d+(?:\.\d+)?)/i', $decoded, $m ) ) $mlon = $m[1];
-
-    if ( $mlat !== '' && $mlon !== '' ) {
-        return array( 'lat' => (float) $mlat, 'lng' => (float) $mlon );
-    }
-
-    if ( preg_match( '/^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$/', trim( $decoded ), $coords ) ) {
+    if ( preg_match( '/^\\s*([-+]?\\d+(?:\\.\\d+)?)\\s*[, ]\\s*([-+]?\\d+(?:\\.\\d+)?)\\s*$/', trim( $decoded ), $coords ) ) {
         return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
     }
 
@@ -223,18 +233,17 @@ function bubbahub_group_normalise_map( $map ) {
 }
 
 function bubbahub_group_resolve_map( $post_id ) {
-    // Support the primary ACF map field plus common legacy/import field names.
-    $map_fields = array( 'map', 'map_location', 'location_map', 'google_map' );
+    // OpenStreetMap fields commonly used by the directory/importer.
+    $map_fields = array( 'openstreetmap', 'open_street_map', 'osm', 'osm_map', 'osm_location', 'location', 'venue_location', 'map', 'map_location', 'location_map', 'google_map' );
     foreach ( $map_fields as $field_name ) {
         $value = bubbahub_group_get_field( $post_id, $field_name, '' );
         $coords = bubbahub_group_normalise_map( $value );
         if ( $coords ) return $coords;
     }
 
-    // Explicit coordinate fields are also supported by the importer and
-    // older listings. These take precedence over an address-only value.
-    $lat_fields = array( 'latitude', 'lat', 'map_lat' );
-    $lng_fields = array( 'longitude', 'lng', 'map_lng' );
+    // Explicit OSM/import coordinate fields.
+    $lat_fields = array( 'latitude', 'lat', 'osm_lat', 'osm_latitude', 'map_lat', 'location_lat', 'venue_lat' );
+    $lng_fields = array( 'longitude', 'lng', 'lon', 'osm_lng', 'osm_longitude', 'map_lng', 'location_lng', 'venue_lng' );
     $lat = $lng = '';
     foreach ( $lat_fields as $field_name ) {
         $lat = bubbahub_group_get_field( $post_id, $field_name, '' );
@@ -248,30 +257,20 @@ function bubbahub_group_resolve_map( $post_id ) {
         return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
     }
 
+    // Inspect all ACF fields, including deeply nested OSM/address structures.
     if ( function_exists( 'get_fields' ) ) {
         $all_fields = get_fields( $post_id );
         if ( is_array( $all_fields ) ) {
-            foreach ( $all_fields as $field_value ) {
-                $coords = bubbahub_group_normalise_map( $field_value );
-                if ( $coords ) return $coords;
-                if ( is_array( $field_value ) ) {
-                    foreach ( $field_value as $nested_value ) {
-                        $coords = bubbahub_group_normalise_map( $nested_value );
-                        if ( $coords ) return $coords;
-                    }
-                }
-            }
+            $coords = bubbahub_group_normalise_map( $all_fields );
+            if ( $coords ) return $coords;
         }
     }
 
-    foreach ( array( 'latitude', 'lat', 'map_lat', '_latitude' ) as $field_name ) {
-        $raw_lat = get_post_meta( $post_id, $field_name, true );
-        foreach ( array( 'longitude', 'lng', 'map_lng', '_longitude' ) as $lng_name ) {
-            $raw_lng = get_post_meta( $post_id, $lng_name, true );
-            if ( is_numeric( $raw_lat ) && is_numeric( $raw_lng ) ) {
-                return array( 'lat' => (float) $raw_lat, 'lng' => (float) $raw_lng );
-            }
-        }
+    // Inspect raw post meta for imported/serialized OSM coordinates.
+    $all_meta = get_post_meta( $post_id );
+    if ( is_array( $all_meta ) ) {
+        $coords = bubbahub_group_normalise_map( $all_meta );
+        if ( $coords ) return $coords;
     }
 
     return null;

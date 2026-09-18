@@ -225,13 +225,10 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
     $dob = $get( 'child_date_of_birth' );
     $due = $get( 'child_due_date' );
     $avatar = $get( 'avatar_url' );
-    $allergies = $get( 'allergies' );
-    $notes = $get( 'notes' );
     $nap = $get( 'nap_schedule', array() );
 
     $dob = bubbahub_profile_date_value( $dob );
     $due = bubbahub_profile_date_value( $due );
-    $school_deadline = bubbahub_profile_date_value( $school_deadline );
 
     ob_start(); ?>
     <div class="bh-profile-shell">

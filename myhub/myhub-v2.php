@@ -113,6 +113,32 @@ if ( ! function_exists( 'bubbahub_myhub_v3_auto_school_deadline' ) ) {
     }
 }
 
+if ( ! function_exists( 'bubbahub_myhub_v3_antenatal_status' ) ) {
+    function bubbahub_myhub_v3_antenatal_status( $due ) {
+        $due = sanitize_text_field( $due );
+        $date = DateTime::createFromFormat( 'Y-m-d', $due );
+        if ( ! $date || $date->format( 'Y-m-d' ) !== $due ) {
+            return array();
+        }
+
+        $today = new DateTime( 'today' );
+        $class_start = clone $date;
+        $class_start->modify( '-12 weeks' ); /* 28 weeks */
+        $class_end = clone $date;
+        $class_end->modify( '-8 weeks' ); /* 32 weeks */
+
+        if ( $today >= $date ) {
+            return array( 'stage' => 'baby_here', 'class_start' => $class_start, 'class_end' => $class_end );
+        }
+
+        if ( $today >= $class_end ) {
+            return array( 'stage' => 'nearly_time', 'class_start' => $class_start, 'class_end' => $class_end );
+        }
+
+        return array( 'stage' => 'classes', 'class_start' => $class_start, 'class_end' => $class_end );
+    }
+}
+
 if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
     function bubbahub_myhub_v3_school_tracker( $child_id, $status, $dob ) {
         if ( 'expecting' === sanitize_key( $status ) ) {
@@ -184,6 +210,10 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
         wp_enqueue_style( 'bubbahub-myhub' );
         wp_enqueue_style( 'bubbahub-myhub-groups' );
         wp_enqueue_script( 'bubbahub-myhub-groups' );
+        if ( function_exists( 'wp_enqueue_style' ) ) {
+            wp_enqueue_style( 'bubbahub-profile-settings' );
+            wp_enqueue_script( 'bubbahub-profile-settings' );
+        }
 
         $children = get_posts( array(
             'post_type'      => 'bh_child',
@@ -252,12 +282,39 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                     </div>
                                 </div>
 
-                                <?php if ( $is_expecting ) : ?>
-                                    <div class="bh-myhub-tracker pregnancy">
+                                <?php if ( $is_expecting ) :
+                                    $antenatal = bubbahub_myhub_v3_antenatal_status( $due );
+                                    ?>
+                                    <div class="bh-myhub-tracker pregnancy bh-myhub-antenatal-tracker">
                                         <div class="bh-myhub-tracker-title">🤰 Antenatal Groups Hub</div>
                                         <strong>Antenatal support and classes for your pregnancy journey</strong>
+                                        <?php if ( 'classes' === $antenatal['stage'] ) : ?>
+                                            <span>Attend antenatal classes between <?php echo esc_html( wp_date( 'F Y', $antenatal['class_start']->getTimestamp() ) ); ?> and <?php echo esc_html( wp_date( 'F Y', $antenatal['class_end']->getTimestamp() ) ); ?>.</span>
+                                        <?php elseif ( 'nearly_time' === $antenatal['stage'] ) : ?>
+                                            <span>Nearly time! Is your hospital bag packed?</span>
+                                        <?php else : ?>
+                                            <span>Your due date has passed. Ready to tell My Hub your baby is here?</span>
+                                            <button type="button" class="bh-myhub-button bh-myhub-baby-here" data-bh-baby-here="<?php echo esc_attr( $child->ID ); ?>">👶 Baby is Here</button>
+                                        <?php endif; ?>
                                         <span>Due <?php echo esc_html( bubbahub_myhub_v3_date( $due ) ); ?></span>
                                     </div>
+
+                                    <?php if ( 'baby_here' === $antenatal['stage'] && function_exists( 'bubbahub_profile_child_form' ) ) : ?>
+                                        <div class="bh-myhub-baby-modal" id="bh-baby-modal-<?php echo esc_attr( $child->ID ); ?>" aria-hidden="true" hidden>
+                                            <div class="bh-myhub-baby-modal-backdrop" data-bh-close-baby-modal></div>
+                                            <div class="bh-myhub-baby-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bh-baby-modal-title-<?php echo esc_attr( $child->ID ); ?>">
+                                                <button type="button" class="bh-myhub-baby-modal-close" data-bh-close-baby-modal aria-label="Close">×</button>
+                                                <div class="bh-myhub-baby-modal-intro">
+                                                    <span class="bh-myhub-kicker">BABY IS HERE 👶</span>
+                                                    <h2 id="bh-baby-modal-title-<?php echo esc_attr( $child->ID ); ?>">Any changes to make?</h2>
+                                                    <p>Update your baby's <strong>date of birth</strong> and <strong>name</strong> here. We'll convert this pregnancy profile into your child's profile.</p>
+                                                </div>
+                                                <div class="bh-myhub-baby-modal-form">
+                                                    <?php echo bubbahub_profile_child_form( $child->ID ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else : ?>
                                     <?php echo bubbahub_myhub_v3_school_tracker( $child->ID, $status, $dob ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 <?php endif; ?>
@@ -306,6 +363,36 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 <div class="bh-myhub-suggested-more"><a class="bh-myhub-button secondary" href="<?php echo esc_url( home_url( '/my-groups/?group_view=suggested' ) ); ?>">View all suggested groups →</a></div>
             </section>
         </div>
+        <script>
+document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('[data-bh-baby-here]').forEach(function(button){
+        button.addEventListener('click',function(){
+            var id=button.getAttribute('data-bh-baby-here');
+            var modal=document.getElementById('bh-baby-modal-'+id);
+            if(!modal)return;
+            modal.hidden=false;
+            modal.setAttribute('aria-hidden','false');
+            document.body.classList.add('bh-baby-modal-open');
+            var status=modal.querySelector('select[name="child_status"]');
+            if(status){
+                status.value='born';
+                status.dispatchEvent(new Event('change',{bubbles:true}));
+            }
+            var dob=modal.querySelector('input[name="child_date_of_birth"]');
+            if(dob) setTimeout(function(){dob.focus();},50);
+        });
+    });
+    document.querySelectorAll('[data-bh-close-baby-modal]').forEach(function(button){
+        button.addEventListener('click',function(){
+            var modal=button.closest('.bh-myhub-baby-modal');
+            if(!modal)return;
+            modal.hidden=true;
+            modal.setAttribute('aria-hidden','true');
+            document.body.classList.remove('bh-baby-modal-open');
+        });
+    });
+});
+</script>
         <script>window.BubbaHubMyHubSelectedChildren=<?php echo wp_json_encode( $selected_children ); ?>;</script>
         <?php
         return ob_get_clean();

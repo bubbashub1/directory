@@ -277,7 +277,32 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <a class="bh-weekly-planner-preferences" href="<?php echo esc_url( $account_url ); ?>">Update Preferences →</a>
       </div>
 
-      <?php if ( $children ) : ?>
+      <div class="bh-planner-search">
+        <div class="bh-planner-search-row">
+          <label class="bh-planner-search-location"><span>Choose Location</span>
+            <select class="bh-planner-location-select">
+              <option value="">Any location</option>
+              <?php
+              $planner_location_tax = function_exists( 'bubbahub_stage2_location_taxonomy' ) ? bubbahub_stage2_location_taxonomy() : '';
+              if ( $planner_location_tax ) {
+                  $planner_location_terms = get_terms( array( 'taxonomy' => $planner_location_tax, 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
+                  if ( ! is_wp_error( $planner_location_terms ) ) foreach ( $planner_location_terms as $planner_location_term ) :
+              ?>
+                <option value="<?php echo esc_attr( $planner_location_term->term_id ); ?>"><?php echo esc_html( $planner_location_term->name ); ?></option>
+              <?php endforeach; } ?>
+            </select>
+          </label>
+          <label class="bh-planner-search-keywords"><span>Search</span>
+            <input type="search" class="bh-planner-keyword-search" placeholder="Search groups, activities or tags..." autocomplete="off">
+            <div class="bh-planner-search-suggestions" hidden></div>
+          </label>
+          <button type="button" class="bh-planner-search-save">Save</button>
+        </div>
+        <p class="bh-planner-search-hint">Search by activity or tag, such as music, messy play, baby massage or Forest School.</p>
+      </div>
+
+      <?php if ( $children ) :
+        ?>
         <details class="bh-planner-child-filter-mobile">
           <summary>Children <span>All · <?php echo esc_html( count( $children ) ); ?> child<?php echo count( $children ) === 1 ? '' : 'ren'; ?></span></summary>
           <div class="bh-planner-child-options">
@@ -316,6 +341,29 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
       <script>
       document.addEventListener('DOMContentLoaded',function(){
+        document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
+          var location=planner.querySelector('.bh-planner-location-select');
+          var input=planner.querySelector('.bh-planner-keyword-search');
+          var suggestions=planner.querySelector('.bh-planner-search-suggestions');
+          var save=planner.querySelector('.bh-planner-search-save');
+          var tags=[];
+          planner.querySelectorAll('.bh-planner-item-main strong').forEach(function(el){ tags.push(el.textContent.trim()); });
+          var savedKeyword='';
+          var savedLocation='';
+          try { savedKeyword=localStorage.getItem('bh_planner_keyword')||''; savedLocation=localStorage.getItem('bh_planner_location')||''; } catch(e){}
+          if(input) input.value=savedKeyword; if(location) location.value=savedLocation;
+          function renderSuggestions(){
+            if(!suggestions||!input)return;
+            var q=input.value.toLowerCase().trim();
+            if(!q){suggestions.hidden=true;suggestions.innerHTML='';return;}
+            var seen={}; var matches=tags.filter(function(t){var k=t.toLowerCase();return k.indexOf(q)!==-1&&!seen[k]&&(seen[k]=true);}).slice(0,8);
+            suggestions.innerHTML=matches.map(function(t){return '<button type="button" data-suggest="'+t.replace(/"/g,'&quot;')+'">'+t+'</button>';}).join('');
+            suggestions.hidden=!matches.length;
+          }
+          if(input) input.addEventListener('input',renderSuggestions);
+          if(suggestions) suggestions.addEventListener('click',function(e){var b=e.target.closest('[data-suggest]');if(!b)return;input.value=b.getAttribute('data-suggest');suggestions.hidden=true;});
+          if(save) save.addEventListener('click',function(){try{localStorage.setItem('bh_planner_keyword',input?input.value:'');localStorage.setItem('bh_planner_location',location?location.value:'');}catch(e){} save.textContent='Saved';setTimeout(function(){save.textContent='Edit / Save';},1200);});
+        });
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
           planner.querySelectorAll('[data-planner-child-filter]').forEach(function(button){
             button.addEventListener('click',function(){

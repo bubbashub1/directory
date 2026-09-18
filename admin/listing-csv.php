@@ -298,26 +298,45 @@ function bubbahub_directory_csv_import() {
             update_post_meta( $saved_id, 'map', $latitude . ',' . $longitude );
         }
 
+        // Taxonomy imports: create missing terms automatically.
         if ( array_key_exists( 'category', $data ) ) {
             $category_taxonomy = taxonomy_exists( 'group_category' ) ? 'group_category' : ( taxonomy_exists( 'category' ) ? 'category' : '' );
             if ( $category_taxonomy ) {
                 $value = is_array( $data['category'] ) ? implode( ',', $data['category'] ) : (string) $data['category'];
                 $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $value ) ) );
-                wp_set_object_terms( $saved_id, $terms, $category_taxonomy, false );
+                if ( $terms ) wp_set_object_terms( $saved_id, $terms, $category_taxonomy, false );
             }
         }
 
         if ( array_key_exists( 'tags', $data ) && taxonomy_exists( 'post_tag' ) ) {
             $value = is_array( $data['tags'] ) ? implode( ',', $data['tags'] ) : (string) $data['tags'];
             $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $value ) ) );
-            wp_set_object_terms( $saved_id, $terms, 'post_tag', false );
+            if ( $terms ) wp_set_object_terms( $saved_id, $terms, 'post_tag', false );
         }
 
-        if ( array_key_exists( 'region', $data ) ) {
-            $region_value = $data['region'];
-            if ( is_array( $region_value ) ) $region_value = implode( ',', $region_value );
-            $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', (string) $region_value ) ) );
-            if ( taxonomy_exists( 'region' ) ) wp_set_object_terms( $saved_id, $terms, 'region', false );
+        if ( array_key_exists( 'region', $data ) && taxonomy_exists( 'region' ) ) {
+            $region_value = is_array( $data['region'] ) ? implode( ',', $data['region'] ) : (string) $data['region'];
+            $region_terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $region_value ) ) );
+            if ( $region_terms ) wp_set_object_terms( $saved_id, $region_terms, 'region', false );
+
+            // sub_region is a child of the first supplied region term.
+            if ( array_key_exists( 'sub_region', $data ) ) {
+                $sub_value = is_array( $data['sub_region'] ) ? implode( ',', $data['sub_region'] ) : (string) $data['sub_region'];
+                $sub_names = array_filter( array_map( 'trim', preg_split( '/[,|]/', $sub_value ) ) );
+                $parent_term = get_term_by( 'name', $region_terms[0], 'region' );
+                $parent_id = $parent_term ? (int) $parent_term->term_id : 0;
+
+                foreach ( $sub_names as $sub_name ) {
+                    $existing_child = get_term_by( 'name', $sub_name, 'region' );
+                    if ( $existing_child && $parent_id && (int) $existing_child->parent !== $parent_id ) {
+                        wp_update_term( $existing_child->term_id, 'region', array( 'parent' => $parent_id ) );
+                    }
+                    if ( ! $existing_child ) {
+                        $created_child = wp_insert_term( $sub_name, 'region', array( 'parent' => $parent_id ) );
+                        if ( ! is_wp_error( $created_child ) ) $existing_child = get_term( $created_child['term_id'], 'region' );
+                    }
+                }
+            }
         }
 
         $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map' );

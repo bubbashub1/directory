@@ -17,6 +17,12 @@ add_shortcode( 'bubbahub_suggest_group', 'bubbahub_suggest_group_shortcode' );
 add_shortcode( 'bubbahub_report_listing', 'bubbahub_report_listing_shortcode' );
 
 function bubbahub_support_centre_shortcode() {
+    // The Support page historically used this shortcode. Route it through the
+    // current Support Hub renderer so existing pages do not need editing.
+    if ( function_exists( 'bubbahub_support_public' ) ) {
+        return bubbahub_support_public();
+    }
+
     $cards = array(
         array('For Parents','Find groups, save favourites, manage children, bookings and your weekly planner.'),
         array('For Group Leaders','Create and claim listings, manage venues, sessions, bookings and your profile.'),

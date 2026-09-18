@@ -247,8 +247,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         // The old Town/City + radius filter must not remove planner sessions.
         $matching = array();
         foreach ( $children as $index => $child_id ) {
+            // Location and keyword are filtered by the planner search UI.
+            // Do not pre-filter this seven-day feed using older saved preferences.
             if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;
-            if ( -1 === bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_values, $row['venue_id'] ) ) continue;
             $matching[] = $index + 1;
         }
         if ( ! $matching ) continue;

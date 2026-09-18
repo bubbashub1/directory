@@ -127,8 +127,12 @@ if ( ! function_exists( 'bubbahub_myhub_v3_antenatal_status' ) ) {
         $class_end = clone $date;
         $class_end->modify( '-8 weeks' ); /* 32 weeks */
 
-        if ( $today >= $date ) {
-            return array( 'stage' => 'baby_here', 'class_start' => $class_start, 'class_end' => $class_end );
+        /* Only show the "Baby is Here" action from 38 weeks onwards. */
+        $baby_here_start = clone $date;
+        $baby_here_start->modify( '-2 weeks' ); /* 38 weeks */
+
+        if ( $today >= $baby_here_start ) {
+            return array( 'stage' => 'baby_here', 'class_start' => $class_start, 'class_end' => $class_end, 'baby_here_start' => $baby_here_start );
         }
 
         if ( $today >= $class_end ) {

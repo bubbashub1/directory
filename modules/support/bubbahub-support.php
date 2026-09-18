@@ -120,6 +120,11 @@ function bubbahub_support_reply_handler() {
     $history[]=array('leader'=>$leader->ID,'name'=>$leader->display_name,'reply'=>$reply,'time'=>current_time('mysql'));
     update_post_meta($id,'_bh_support_replies',$history);
     wp_mail($email,'BubbaHub support reply from '.$leader->display_name,"A BubbaHub specialist has replied to your question.\n\n".$reply."\n\nYou can reply to this email if you need to continue the conversation.");
+    $request_user = absint( get_post_field( 'post_author', $id ) );
+    if ( function_exists( 'bubbahub_notify_user' ) && $request_user ) {
+        $leader_page_id = absint( get_option( 'bubbahub_support_leader_page_id' ) );
+        bubbahub_notify_user( $request_user, 'support', 'New specialist reply', 'A Bubba Hub specialist has replied to your support question. Check your account to view the reply.', $leader_page_id ? get_permalink( $leader_page_id ) : home_url( '/my-hub/' ), array( 'email' => false, 'sms' => true ) );
+    }
     update_post_meta($id,'_bh_support_status','replied');
     $leader_page_id=absint(get_option('bubbahub_support_leader_page_id'));
     wp_safe_redirect(add_query_arg('bh_support_replied','1',$leader_page_id?get_permalink($leader_page_id):home_url('/leader/')));

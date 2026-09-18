@@ -362,7 +362,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             if ( ! empty( $item['venue_address'] ) ) $planner_search_parts[] = $item['venue_address'];
             $planner_search_text = strtolower( wp_strip_all_tags( implode( ' ', array_map( 'strval', $planner_search_parts ) ) ) );
           ?>
-          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ? data-planner-free="<?php
+          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>" data-planner-free="<?php
               $bh_free = false;
               foreach ( array( 'price', '_price', 'cost', 'session_price' ) as $bh_key ) {
                   $bh_val = strtolower( trim( wp_strip_all_tags( (string) get_post_meta( (int) $item['group_id'], $bh_key, true ) ) ) );

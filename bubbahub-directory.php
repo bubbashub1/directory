@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and a configurable drag-and-drop layout.
- * Version: 1.3.1
+ * Version: 1.3.2
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
@@ -24,7 +24,7 @@ add_filter( 'pre_option_date_format', function( $pre ) {
 // Isolate optional module bootstrap failures and surface them to administrators.
 $bh_runtime_guard = plugin_dir_path( __FILE__ ) . 'modules/core/bubbahub-runtime-guard.php';
 if ( file_exists( $bh_runtime_guard ) ) require_once $bh_runtime_guard;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.1' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.2' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
@@ -75,6 +75,26 @@ if ( is_admin() ) {
 }
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );
+add_action( 'wp_footer', 'bubbahub_directory_uk_date_inputs', 99 );
+
+function bubbahub_directory_uk_date_inputs() {
+    ?>
+    <script>
+    (function(){
+        function setUKDateInputs(){
+            document.querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach(function(input){
+                input.setAttribute('lang','en-GB');
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setUKDateInputs);
+        } else {
+            setUKDateInputs();
+        }
+    })();
+    </script>
+    <?php
+}
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_directory_ajax_filter' );
 add_shortcode( 'bubbahub_directory', 'bubbahub_directory_shortcode' );

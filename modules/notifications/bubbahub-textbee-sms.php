@@ -109,7 +109,14 @@ function bubbahub_textbee_admin_page() {
         update_option( 'bubbahub_textbee_enabled', ! empty( $_POST['enabled'] ) );
         update_option( 'bubbahub_textbee_api_key', sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) ) );
         update_option( 'bubbahub_textbee_device_id', sanitize_text_field( wp_unslash( $_POST['device_id'] ?? '' ) ) );
-        $notice = 'TextBee settings saved.';
+        if ( function_exists( 'bubbahub_sms_policy_defaults' ) ) {
+            $d = bubbahub_sms_policy_defaults();
+            update_option( 'bubbahub_sms_daily_limit', max( 1, min( 49, absint( $_POST['bh_sms_daily_limit'] ?? $d['daily_limit'] ) ) ) );
+            update_option( 'bubbahub_sms_monthly_limit', max( 1, min( 299, absint( $_POST['bh_sms_monthly_limit'] ?? $d['monthly_limit'] ) ) ) );
+            update_option( 'bubbahub_sms_user_daily_limit', max( 1, absint( $_POST['bh_sms_user_daily_limit'] ?? $d['user_daily_limit'] ) ) );
+            update_option( 'bubbahub_sms_user_monthly_limit', max( 1, absint( $_POST['bh_sms_user_monthly_limit'] ?? $d['user_monthly_limit'] ) ) );
+        }
+        $notice = 'TextBee and SMS safety settings saved.';
     }
 
     if ( ! empty( $_POST['bh_textbee_test'] ) && check_admin_referer( 'bubbahub_textbee_test', 'bh_textbee_test_nonce' ) ) {
@@ -213,6 +220,16 @@ function bubbahub_textbee_admin_page() {
                         </td>
                     </tr>
                 </table>
+                <?php if ( function_exists( 'bubbahub_sms_policy_settings' ) ) : $bh_sms_form_limits = bubbahub_sms_policy_settings(); ?>
+                    <h2>SMS safety limits</h2>
+                    <p class="description">Bubba Hub keeps these below TextBee's current free-plan 50/day and 300/month allowance.</p>
+                    <table class="form-table">
+                        <tr><th>Daily Bubba Hub limit</th><td><input type="number" min="1" max="49" name="bh_sms_daily_limit" value="<?php echo esc_attr( $bh_sms_form_limits['daily_limit'] ); ?>"></td></tr>
+                        <tr><th>Monthly Bubba Hub limit</th><td><input type="number" min="1" max="299" name="bh_sms_monthly_limit" value="<?php echo esc_attr( $bh_sms_form_limits['monthly_limit'] ); ?>"></td></tr>
+                        <tr><th>Per-user daily limit</th><td><input type="number" min="1" name="bh_sms_user_daily_limit" value="<?php echo esc_attr( $bh_sms_form_limits['user_daily_limit'] ); ?>"></td></tr>
+                        <tr><th>Per-user 30-day limit</th><td><input type="number" min="1" name="bh_sms_user_monthly_limit" value="<?php echo esc_attr( $bh_sms_form_limits['user_monthly_limit'] ); ?>"></td></tr>
+                    </table>
+                <?php endif; ?>
                 <?php submit_button( 'Save TextBee settings' ); ?>
             </form>
         </div>

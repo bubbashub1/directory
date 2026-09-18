@@ -35,6 +35,10 @@ if ( is_admin() ) {
     require_once plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
 }
 
+// User notification preferences and portal notification feed.
+$bh_notification_preferences = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-notification-preferences.php';
+if ( file_exists( $bh_notification_preferences ) ) require_once $bh_notification_preferences;
+
 // Listing CSV / Google Sheets import and export.
 if ( is_admin() ) {
     $bh_csv_module = plugin_dir_path( __FILE__ ) . 'admin/listing-csv.php';

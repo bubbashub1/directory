@@ -21,3 +21,30 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-myhub-baby-modal-intro h2{font-size:24px}
  .bh-myhub-antenatal-tracker .bh-myhub-button{width:100%}
 }
+
+/* Family children carousel: keep child cards wide and allow horizontal overflow on all screen sizes. */
+.bh-myhub-family-grid{
+ display:flex;
+ gap:18px;
+ overflow-x:auto;
+ overflow-y:hidden;
+ padding:4px 4px 16px;
+ margin:0 -4px;
+ scroll-snap-type:x mandatory;
+ -webkit-overflow-scrolling:touch;
+ scrollbar-width:thin;
+}
+.bh-myhub-family-grid > .bh-myhub-child-card,
+.bh-myhub-family-grid > .bh-myhub-empty-family{
+ flex:0 0 min(430px, calc(100% - 36px));
+ min-width:0;
+ scroll-snap-align:start;
+}
+.bh-myhub-family-grid::-webkit-scrollbar{height:8px}
+.bh-myhub-family-grid::-webkit-scrollbar-thumb{background:#d7dfdb;border-radius:999px}
+.bh-myhub-family-grid::-webkit-scrollbar-track{background:transparent}
+@media(max-width:620px){
+ .bh-myhub-family-grid{gap:12px;padding-bottom:12px}
+ .bh-myhub-family-grid > .bh-myhub-child-card,
+ .bh-myhub-family-grid > .bh-myhub-empty-family{flex-basis:88vw}
+}

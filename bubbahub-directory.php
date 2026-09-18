@@ -2,12 +2,12 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and a configurable drag-and-drop layout.
- * Version: 1.2.6
+ * Version: 1.3.0
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.2.6' );
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.0' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';
@@ -25,6 +25,12 @@ require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php
 
 if ( is_admin() ) {
     require_once plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
+}
+
+// Listing CSV / Google Sheets import and export.
+if ( is_admin() ) {
+    $bh_csv_module = plugin_dir_path( __FILE__ ) . 'admin/listing-csv.php';
+    if ( file_exists( $bh_csv_module ) ) require_once $bh_csv_module;
 }
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );

@@ -371,7 +371,11 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 <div class="bh-myhub-group-widget bh-myhub-suggested-widget" data-myhub-group-widget data-group-type="suggested" data-view-more="1"><div class="bh-myhub-groups-loading">Building your suggestions…</div></div>
                 <div class="bh-myhub-suggested-more"><a class="bh-myhub-button secondary" href="<?php echo esc_url( home_url( '/my-groups/?group_view=suggested' ) ); ?>">View all suggested groups →</a></div>
             </section>
-        </div>
+
+
+            <?php if ( function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' ) ) : ?>
+                <?php echo bubbahub_myhub_weekly_planner_v2_shortcode(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <?php endif; ?>        </div>
         <script>
 document.addEventListener('DOMContentLoaded',function(){
     document.querySelectorAll('[data-bh-baby-here]').forEach(function(button){

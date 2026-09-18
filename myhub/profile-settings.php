@@ -292,8 +292,8 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                 </div>
             </div>
 
-            <div class="bh-profile-card bh-profile-pro-feature">
-                <div class="bh-profile-card-heading"><h3>Nap schedule <span class="bh-pro-badge">PRO</span></h3><span><a href="#" class="bh-pro-link" data-bh-pro-link="BubbaHub Parent Pro">BubbaHub Parent Pro</a></span></div>
+            <div class="bh-profile-card">
+                <div class="bh-profile-card-heading"><h3>Nap schedule</h3><span>Saved per day</span></div>
                 <div class="bh-nap-grid">
                     <?php foreach ( array( 'Mon','Tue','Wed','Thu','Fri','Sat','Sun' ) as $day ) : $row = isset( $nap[ $day ] ) && is_array( $nap[ $day ] ) ? $nap[ $day ] : array(); ?>
                         <div class="bh-nap-row">

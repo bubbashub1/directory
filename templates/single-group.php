@@ -23,6 +23,20 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $venues        = bubbahub_group_get_organiser_venues( $organiser_id );
     $related       = bubbahub_group_related_query( $group_id, $organiser_id, $venue_id );
     $tags          = bubbahub_group_tags( $group_id );
+    $contact_email  = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'email', '' ) );
+    $contact_website = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'website', '' ) );
+    $contact_facebook = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'facebook', '' ) );
+    $contact_instagram = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'instagram', '' ) );
+    $contact_form_id = 0;
+    if ( function_exists( 'Ninja_Forms' ) ) {
+        foreach ( Ninja_Forms()->form()->get_forms() as $bh_contact_form ) {
+            $bh_form_title = strtolower( trim( (string) $bh_contact_form->get_setting( 'title' ) ) );
+            if ( false !== strpos( $bh_form_title, 'contact organiser' ) || false !== strpos( $bh_form_title, 'contact organizer' ) ) {
+                $contact_form_id = absint( $bh_contact_form->get_id() );
+                break;
+            }
+        }
+    }
     ?>
     <main class="bhg-single" data-post-id="<?php echo esc_attr( $group_id ); ?>" data-lat="<?php echo $map ? esc_attr( $map['lat'] ) : ''; ?>" data-lng="<?php echo $map ? esc_attr( $map['lng'] ) : ''; ?>">
         <div class="bhg-shell">
@@ -59,9 +73,29 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
                     <section class="bhg-sidebar-card"><h2>Tags</h2><?php if ( $tags ) : ?><div class="bhg-tags"><?php foreach ( $tags as $tag ) : ?><a href="<?php echo esc_url( get_term_link( $tag ) ); ?>"><?php echo esc_html( $tag->name ); ?></a><?php endforeach; ?></div><?php else : ?><p class="bhg-muted">No tags added.</p><?php endif; ?></section>
                     <section class="bhg-sidebar-card"><h2>Schedule</h2><div class="bhg-schedule"><?php echo $schedule !== '' ? wp_kses_post( nl2br( esc_html( $schedule ) ) ) : '<span class="bhg-muted">Schedule not added yet.</span>'; ?></div></section>
                     <section class="bhg-sidebar-card"><h2>Schedule notes</h2><div class="bhg-schedule-notes"><?php echo $schedule_note !== '' ? wp_kses_post( nl2br( esc_html( $schedule_note ) ) ) : '<span class="bhg-muted">No additional notes.</span>'; ?></div></section>
+                    <section class="bhg-sidebar-card bhg-contact-card">
+                        <h2>Contact</h2>
+                        <div class="bhg-contact-links">
+                            <?php if ( $contact_website && filter_var( $contact_website, FILTER_VALIDATE_URL ) ) : ?><a href="<?php echo esc_url( $contact_website ); ?>" target="_blank" rel="noopener"><span>↗</span> Website</a><?php endif; ?>
+                            <?php if ( $contact_email && is_email( $contact_email ) ) : ?><a href="mailto:<?php echo esc_attr( antispambot( $contact_email ) ); ?>"><span>✉</span> Email</a><?php endif; ?>
+                            <?php if ( $contact_facebook && filter_var( $contact_facebook, FILTER_VALIDATE_URL ) ) : ?><a href="<?php echo esc_url( $contact_facebook ); ?>" target="_blank" rel="noopener"><span>f</span> Facebook</a><?php endif; ?>
+                            <?php if ( $contact_instagram && filter_var( $contact_instagram, FILTER_VALIDATE_URL ) ) : ?><a href="<?php echo esc_url( $contact_instagram ); ?>" target="_blank" rel="noopener"><span>◎</span> Instagram</a><?php endif; ?>
+                        </div>
+                        <?php if ( $contact_form_id ) : ?><button type="button" class="bhg-contact-button" data-contact-open>Contact Organiser <span>→</span></button><?php elseif ( $contact_email && is_email( $contact_email ) ) : ?><a class="bhg-contact-button" href="mailto:<?php echo esc_attr( antispambot( $contact_email ) ); ?>">Contact Organiser <span>→</span></a><?php endif; ?>
+                    </section>
                     <section class="bhg-sidebar-card bhg-ready"><?php if ( $booking_sessions ) : ?><div class="bhg-ready-icon" aria-hidden="true">✓</div><h2>Ready to Join?</h2><p>Secure your spot for this group right away.</p><a href="#bh-booking" class="bhg-book-button" data-booking-open>Book My Space Now <span>→</span></a><?php else : ?><div class="bhg-ready-icon" aria-hidden="true">ℹ</div><h2>No Bookings Available</h2><p>Sorry, no bookings are currently available. Please check the organiser's website for more information.</p><?php endif; ?></section>
                 </aside>
             </div>
+            <?php if ( $contact_form_id ) : ?>
+            <div id="bh-contact-modal" class="bh-contact-modal" hidden aria-hidden="true">
+                <div class="bh-contact-modal-backdrop" data-contact-close></div>
+                <div class="bh-contact-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="bh-contact-title">
+                    <button type="button" class="bh-contact-modal-close" data-contact-close aria-label="Close contact form">×</button>
+                    <div class="bh-contact-modal-heading"><span class="bh-contact-eyebrow">CONTACT ORGANISER</span><h2 id="bh-contact-title">Contact <?php echo $organiser ? esc_html( $organiser->display_name ) : 'the organiser'; ?></h2><p>Your message will be sent directly to the organiser's listing email.</p></div>
+                    <div class="bh-contact-form"><?php echo do_shortcode( '[ninja_form id="' . absint( $contact_form_id ) . '"]' ); ?></div>
+                </div>
+            </div>
+            <?php endif; ?>
             <?php if ( function_exists( 'bubbahub_booking_render_group_widget' ) ) : ?><?php bubbahub_booking_render_group_widget( $group_id ); ?><?php endif; ?>
         </div>
     </main>

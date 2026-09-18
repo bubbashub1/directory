@@ -7,7 +7,8 @@ while ( have_posts() ) : the_post();
     $organiser_id  = (int) get_post_field( 'post_author', $group_id );
     $organiser     = get_userdata( $organiser_id );
     $category      = bubbahub_group_category( $group_id );
-    $image         = bubbahub_group_image( $group_id );
+    $images        = bubbahub_group_images( $group_id );
+    $image         = ! empty( $images[0]['url'] ) ? $images[0]['url'] : '';
     $term_time     = bubbahub_group_term_time( $group_id );
     $venue_id      = bubbahub_group_venue_id( $group_id );
     $address       = bubbahub_group_address( $group_id, $venue_id );
@@ -31,7 +32,20 @@ while ( have_posts() ) : the_post();
                 <?php if ( bubbahub_group_can_edit( $group_id ) ) : ?><a class="bhg-button bhg-button-accent" href="<?php echo esc_url( get_edit_post_link( $group_id ) ); ?>">Edit Listing</a><?php endif; ?>
             </div>
             <header class="bhg-hero">
-                <?php if ( $image ) : ?><div class="bhg-hero-image"><img src="<?php echo esc_url( $image ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>"></div><?php endif; ?>
+                <?php if ( $images ) : ?>
+                    <div class="bhg-hero-image bhg-hero-gallery" data-gallery>
+                        <?php foreach ( $images as $index => $gallery_image ) : ?>
+                            <img class="bhg-gallery-slide<?php echo 0 === $index ? ' is-active' : ''; ?>" src="<?php echo esc_url( $gallery_image['url'] ); ?>" alt="<?php echo esc_attr( get_the_title() . ' image ' . ( $index + 1 ) ); ?>" <?php echo 0 === $index ? '' : 'loading="lazy"'; ?>>
+                        <?php endforeach; ?>
+                        <?php if ( count( $images ) > 1 ) : ?>
+                            <button type="button" class="bhg-gallery-arrow bhg-gallery-prev" data-gallery-prev aria-label="Previous image">‹</button>
+                            <button type="button" class="bhg-gallery-arrow bhg-gallery-next" data-gallery-next aria-label="Next image">›</button>
+                            <div class="bhg-gallery-dots" aria-label="Gallery images">
+                                <?php foreach ( $images as $index => $gallery_image ) : ?><button type="button" class="bhg-gallery-dot<?php echo 0 === $index ? ' is-active' : ''; ?>" data-gallery-dot="<?php echo esc_attr( $index ); ?>" aria-label="Show image <?php echo esc_attr( $index + 1 ); ?>"></button><?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
                 <div class="bhg-hero-content">
                     <?php if ( $category ) : ?><div class="bhg-category"><?php echo esc_html( $category ); ?></div><?php endif; ?>
                     <h1><?php the_title(); ?></h1>

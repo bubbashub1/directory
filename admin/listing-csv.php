@@ -105,6 +105,7 @@ function bubbahub_directory_csv_admin_page() {
             $leaders = array();
             foreach ( $leader_ids as $leader_id ) {
                 $leader = get_userdata( (int) $leader_id );
+                // Only users who own at least one Bubba Hub Group listing are treated as leaders.
                 if ( $leader && is_email( $leader->user_email ) ) $leaders[ $leader->ID ] = $leader;
             }
             if ( $leaders ) : ?>
@@ -152,6 +153,13 @@ function bubbahub_directory_resend_welcome_email() {
     if ( ! $user || ! is_email( $user->user_email ) ) {
         bubbahub_directory_csv_import_redirect( 'error', 'The selected leader does not have a valid email address.' );
     }
+
+    // Restrict resend to Bubba Hub leaders: users who own at least one Group listing.
+    $leader_listing_count = count_user_posts( $user_id, 'group', true );
+    if ( ! $leader_listing_count ) {
+        bubbahub_directory_csv_import_redirect( 'error', 'Welcome emails can only be resent to Bubba Hub leader users.' );
+    }
+
     delete_user_meta( $user_id, '_bubbahub_welcome_sent' );
     if ( function_exists( 'bubbahub_directory_send_new_leader_welcome' ) ) {
         bubbahub_directory_send_new_leader_welcome( $user_id );

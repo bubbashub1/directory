@@ -249,7 +249,8 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     <strong>Find activities that fit your family</strong>
                     <p>Your saved preferences help Bubba Hub personalise your group suggestions.</p>
                 </div>
-            </section>
+                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-next" aria-label="Next child" aria-controls="bh-myhub-children">›</button>
+                </div>            </section>
 
             <section class="bh-myhub-section">
                 <div class="bh-myhub-section-heading">
@@ -261,7 +262,9 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     <a class="bh-myhub-button" href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1', get_permalink() ) ); ?>">＋ Add child</a>
                 </div>
 
-                <div class="bh-myhub-family-grid">
+                <div class="bh-myhub-family-carousel">
+                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-prev" aria-label="Previous child" aria-controls="bh-myhub-children">‹</button>
+                    <div class="bh-myhub-family-grid" id="bh-myhub-children">
                     <?php if ( $children ) : ?>
                         <?php foreach ( $children as $child ) :
                             $name   = bubbahub_myhub_v3_child_field( $child->ID, 'child_name', $child->post_title );

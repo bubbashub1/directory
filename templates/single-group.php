@@ -81,5 +81,3 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
         </div>
     </main>
     <?php
-endwhile;
-get_footer();

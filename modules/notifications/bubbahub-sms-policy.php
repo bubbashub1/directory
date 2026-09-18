@@ -75,7 +75,7 @@ function bubbahub_sms_policy_user_usage( $user_id ) {
 function bubbahub_sms_policy_is_critical( $type, $title, $options = array() ) {
     if ( ! empty( $options['sms_emergency'] ) ) return true;
     $haystack = strtolower( $type . ' ' . $title );
-    foreach ( array( 'cancel', 'cancelled', 'cancellation', 'emergency', 'venue changed', 'time changed', 'date changed', 'session changed', 'class change', 'class changed' ) as $needle ) {
+    foreach ( array( 'cancel', 'cancelled', 'cancellation', 'emergency', 'venue changed', 'time changed', 'date changed', 'session changed', 'update to your booked class', 'class change', 'class changed' ) as $needle ) {
         if ( false !== strpos( $haystack, $needle ) ) return true;
     }
     return false;

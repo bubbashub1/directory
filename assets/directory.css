@@ -56,3 +56,57 @@
 .bh-advanced-search .bh-acf-filter{display:flex;flex-direction:column;gap:6px;}
 .bh-advanced-search .bh-filter-title{display:block;font-weight:700;line-height:1.25;}
 .bh-advanced-search .screen-reader-text{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
+
+
+/* BubbaHub soft, uniform Advanced Search finish */
+.bh-directory .bh-search-form{color:var(--bh-text)}
+.bh-directory .bh-search-main input,.bh-directory .bh-search-location input,.bh-directory .bh-search-form select,.bh-directory .bh-use-location{
+  border:1px solid #dfe8e5;
+  background:#fbfdfc;
+  border-radius:14px;
+  box-shadow:0 2px 8px rgba(39,48,58,.035);
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.bh-directory .bh-search-main input:focus,.bh-directory .bh-search-location input:focus,.bh-directory .bh-search-form select:focus,.bh-directory .bh-use-location:focus{
+  outline:0;
+  border-color:#9bc8bf;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(105,171,160,.14);
+}
+.bh-directory .bh-advanced-search{
+  padding:18px;
+  border:1px solid #e1ebe8;
+  border-radius:18px;
+  background:linear-gradient(180deg,#f8fbfa 0%,#f5f9f7 100%);
+  box-shadow:0 4px 18px rgba(39,48,58,.045);
+}
+.bh-directory .bh-advanced-search .bh-filter-option,
+.bh-directory .bh-advanced-search .bh-acf-filter{gap:0}
+.bh-directory .bh-advanced-search select{
+  height:48px;
+  min-height:48px;
+  padding:10px 38px 10px 14px;
+  border:1px solid #dfe8e5;
+  border-radius:13px;
+  background-color:#fff;
+  box-shadow:0 2px 7px rgba(39,48,58,.025);
+}
+.bh-directory .bh-advanced-search select:hover{border-color:#cbdcd7;background:#fff}
+.bh-directory .bh-search-actions{gap:9px}
+.bh-directory .bh-search-actions button{
+  border-radius:14px;
+  box-shadow:0 3px 10px rgba(39,48,58,.07);
+}
+.bh-directory .bh-search-actions .bh-advanced-toggle{
+  background:#eef5f2;
+  border:1px solid #d9e7e2;
+}
+.bh-directory .bh-search-actions .bh-advanced-toggle:hover{background:#e7f1ed}
+.bh-directory .bh-use-location{
+  flex:0 0 50px;
+  color:var(--bh-text);
+}
+.bh-directory .bh-search-form .screen-reader-text{clip:rect(0 0 0 0)}
+@media(max-width:600px){
+  .bh-directory .bh-advanced-search{margin-left:0;margin-right:0;border-radius:16px}
+}

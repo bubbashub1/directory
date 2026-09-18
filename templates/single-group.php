@@ -27,16 +27,9 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $contact_website = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'website', '' ) );
     $contact_facebook = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'facebook', '' ) );
     $contact_instagram = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'instagram', '' ) );
-    $contact_form_id = 0;
-    if ( function_exists( 'Ninja_Forms' ) ) {
-        foreach ( Ninja_Forms()->form()->get_forms() as $bh_contact_form ) {
-            $bh_form_title = strtolower( trim( (string) $bh_contact_form->get_setting( 'title' ) ) );
-            if ( false !== strpos( $bh_form_title, 'contact organiser' ) || false !== strpos( $bh_form_title, 'contact organizer' ) ) {
-                $contact_form_id = absint( $bh_contact_form->get_id() );
-                break;
-            }
-        }
-    }
+    // Bubba Hub Contact Organiser form — explicitly linked to Ninja Form ID 5.
+    $contact_form_id = 5;
+    if ( ! function_exists( 'Ninja_Forms' ) ) $contact_form_id = 0;
     ?>
     <main class="bhg-single" data-post-id="<?php echo esc_attr( $group_id ); ?>" data-lat="<?php echo $map ? esc_attr( $map['lat'] ) : ''; ?>" data-lng="<?php echo $map ? esc_attr( $map['lng'] ) : ''; ?>">
         <div class="bhg-shell">

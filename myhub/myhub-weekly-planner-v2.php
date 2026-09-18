@@ -221,9 +221,13 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         foreach ( $schedule as $weekday => $hours ) {
             if ( ! isset( $day_map[ $weekday ] ) ) continue;
             $current_dow = (int) wp_date( 'w', $today_ts );
-            $offset = ( $day_map[ $weekday ] - $current_dow + 7 ) % 7;
-            $date_ts = strtotime( '+' . $offset . ' days', $today_ts );
-            foreach ( $hours as $hour ) {
+            /* Check each day in the planner window so today's weekday and the
+             * following occurrence are both available when appropriate. */
+            for ( $day_offset = 0; $day_offset <= 7; $day_offset++ ) {
+                $candidate_ts = strtotime( '+' . $day_offset . ' days', $today_ts );
+                if ( (int) wp_date( 'w', $candidate_ts ) !== $day_map[ $weekday ] ) continue;
+                $date_ts = $candidate_ts;
+                foreach ( $hours as $hour ) {
                 $start = ''; $end_time = '';
                 if ( preg_match( '/(\\d{1,2}:\\d{2})\\s*(?:[-–—to]+)\\s*(\\d{1,2}:\\d{2})/i', (string) $hour, $m ) ) { $start = $m[1]; $end_time = $m[2]; }
                 elseif ( preg_match( '/(\\d{1,2}:\\d{2})/i', (string) $hour, $m ) ) $start = $m[1];
@@ -247,6 +251,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
                 $existing_session_keys[ $key ] = true;
             }
         }
+    }
     }
     wp_reset_postdata();
     $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
@@ -411,7 +416,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
 <style>
 .bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}.bh-planner-search-row{display:flex;gap:12px;align-items:end}.bh-planner-search-row label{flex:1;display:flex;flex-direction:column;gap:6px}.bh-planner-search-row label span{font-weight:700;font-size:13px}.bh-planner-search-row select,.bh-planner-search-row input{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}.bh-planner-search-save{min-height:44px;padding:0 20px;border:0;border-radius:10px;cursor:pointer}.bh-planner-search-save.is-saved{opacity:.8}.bh-planner-search-suggestions{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:10px;margin-top:72px;box-shadow:0 5px 20px rgba(0,0,0,.08);overflow:hidden}.bh-planner-search-suggestions button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:#fff;cursor:pointer}.bh-planner-search-hint{margin:8px 0 0;font-size:12px;opacity:.7}@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-row label{margin-bottom:10px}.bh-planner-search-save{width:100%}.bh-planner-search-suggestions{position:relative;margin-top:-5px;width:100%}}
-.bh-planner-search-filter{flex:0 0 auto;display:flex;flex-direction:column;gap:6px}.bh-planner-toggle{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-weight:600;white-space:nowrap}.bh-planner-toggle input{width:18px;height:18px}</style>
+.bh-planner-search-filter{flex:0 0 auto;display:flex;flex-direction:column;gap:6px}.bh-planner-toggle{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-weight:600;white-space:nowrap}.bh-planner-toggle input{width:18px;height:18px}.bh-planner-search-row select,.bh-planner-search-row input,.bh-planner-toggle,.bh-planner-search-save{touch-action:manipulation}@media(max-width:700px){.bh-planner-search-row label{width:100%}.bh-planner-search-filter{width:100%}.bh-planner-toggle{width:100%;box-sizing:border-box}.bh-planner-search-save{display:block;min-height:48px;font-size:16px}}</style>
       <script>
       document.addEventListener('DOMContentLoaded',function(){
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
@@ -468,9 +473,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           }
 
           function lockSearch(){
-            if(input) input.disabled=true;
-            if(location) location.disabled=true;
-            if(save){save.textContent='Edit';save.classList.add('is-saved');}
+            if(input) input.disabled=false;
+            if(location) location.disabled=false;
+            if(save){save.textContent='Saved';save.classList.add('is-saved');}
           }
           function editSearch(){
             if(input) input.disabled=false;

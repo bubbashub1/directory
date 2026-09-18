@@ -21,8 +21,7 @@
 .bh-weekly-planner-v2 .bh-planner-all .bh-planner-child-indicator{background:#d8ece3;color:#376653}
 .bh-weekly-planner-v2 .bh-planner-child-1 .bh-planner-child-indicator{background:#dfe9f5;color:#3d5f86}
 .bh-weekly-planner-v2 .bh-planner-child-2 .bh-planner-child-indicator{background:#f0dfE8;color:#7b4965}
-.bh-weekly-planner-v2 .bh-planner-calendar{display:inline-flex;margin:5px 10px 2px 69px;padding:5px 9px;border-radius:9px;text-decoration:none;font-size:11px;font-weight:800;color:#5b756d;background:#eef4f1}
-.bh-weekly-planner-v2 .bh-planner-calendar:hover{text-decoration:underline}
+.bh-weekly-planner-v2 .bh-planner-calendar-wrap{margin:5px 10px 4px 69px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bh-weekly-planner-v2 .bh-planner-calendar{display:inline-flex;padding:5px 9px;border-radius:9px;text-decoration:none;font-size:11px;font-weight:800;color:#5b756d;background:#eef4f1}.bh-weekly-planner-v2 .bh-planner-calendar:hover{text-decoration:underline}.bh-weekly-planner-v2 .bh-planner-calendar-note{font-size:11px;color:#71807a}
 .bh-weekly-planner-v2 .bh-planner-item-wrap[hidden]{display:none}
 @media(max-width:600px){
  .bh-weekly-planner-v2 .bh-myhub-section-heading{align-items:flex-start}
@@ -37,5 +36,5 @@
  .bh-weekly-planner-v2 .bh-planner-child-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 15px 14px}
  .bh-weekly-planner-v2 .bh-planner-item{align-items:flex-start}
  .bh-weekly-planner-v2 .bh-planner-child-indicator{margin-left:auto}
- .bh-weekly-planner-v2 .bh-planner-calendar{margin-left:64px}
+ .bh-weekly-planner-v2 .bh-planner-calendar-wrap{margin-left:64px;align-items:flex-start;flex-direction:column;gap:3px}
 }

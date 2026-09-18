@@ -244,6 +244,9 @@ function bubbahub_directory_csv_import() {
         }
 
         if ( $code < 200 || $code >= 300 || '' === trim( $csv ) ) {
+            if ( 404 === (int) $code && false !== strpos( $csv_url, 'docs.google.com/spreadsheets' ) ) {
+                bubbahub_directory_csv_import_redirect( 'error', 'Google returned HTTP 404. The spreadsheet or selected sheet tab is not currently published to the web as CSV. In Google Sheets use File → Share → Publish to web, select the correct sheet/tab and choose Comma-separated values (.csv), then republish and paste the new URL here.' );
+            }
             bubbahub_directory_csv_import_redirect( 'error', 'The CSV URL did not return usable CSV data (HTTP ' . (int) $code . '). Make sure the Google Sheet is published to the web and the URL ends with output=csv.' );
         }
     } else {

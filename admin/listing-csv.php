@@ -13,6 +13,7 @@ add_action( 'admin_post_bubbahub_directory_csv_import', 'bubbahub_directory_csv_
 add_action( 'admin_post_bubbahub_directory_csv_template', 'bubbahub_directory_csv_template' );
 add_action( 'admin_post_bubbahub_directory_csv_save_url', 'bubbahub_directory_csv_save_url' );
 add_action( 'admin_post_bubbahub_directory_csv_auto_import', 'bubbahub_directory_csv_auto_import' );
+add_action( 'admin_post_bubbahub_directory_resend_welcome_email', 'bubbahub_directory_resend_welcome_email' );
 
 function bubbahub_directory_csv_admin_menu() {
     add_submenu_page(
@@ -90,12 +91,74 @@ function bubbahub_directory_csv_admin_page() {
         </div>
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
+            <h2>Leader Welcome Emails</h2>
+            <p>Resend the branded Bubba Hub welcome email to any leader. A fresh secure password-reset link is generated each time.</p>
+            <?php
+            $leader_ids = get_posts( array(
+                'post_type' => 'group',
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+                'no_found_rows' => true,
+            ) );
+            $leader_ids = array_values( array_unique( array_filter( array_map( 'get_post_field', $leader_ids, array_fill( 0, count( $leader_ids ), 'post_author' ) ) ) ) );
+            $leaders = array();
+            foreach ( $leader_ids as $leader_id ) {
+                $leader = get_userdata( (int) $leader_id );
+                if ( $leader && is_email( $leader->user_email ) ) $leaders[ $leader->ID ] = $leader;
+            }
+            if ( $leaders ) : ?>
+                <table class="widefat striped" style="max-width:850px;">
+                    <thead><tr><th>Leader</th><th>Email</th><th>Welcome sent</th><th>Action</th></tr></thead>
+                    <tbody>
+                    <?php foreach ( $leaders as $leader ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $leader->display_name ? $leader->display_name : $leader->user_login ); ?><br><small><?php echo esc_html( $leader->user_login ); ?></small></td>
+                            <td><?php echo esc_html( $leader->user_email ); ?></td>
+                            <td><?php $sent_at = get_user_meta( $leader->ID, '_bubbahub_welcome_sent', true ); echo $sent_at ? esc_html( $sent_at ) : 'Not recorded'; ?></td>
+                            <td>
+                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                                    <input type="hidden" name="action" value="bubbahub_directory_resend_welcome_email">
+                                    <input type="hidden" name="user_id" value="<?php echo esc_attr( $leader->ID ); ?>">
+                                    <?php wp_nonce_field( 'bubbahub_resend_welcome_' . $leader->ID ); ?>
+                                    <?php submit_button( 'Resend Welcome Email', 'secondary', 'submit', false ); ?>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else : ?>
+                <p>No leaders with email addresses were found.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Recommended Google Sheets columns</h2>
             <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, sub_region, address, postcode, price, age_range, session_length, business_hours, email, phone, website, facebook, instagram, latitude, longitude, map, term_time, image_url</code></p>
             <p>Any additional column is treated as a listing post-meta field, so the importer can carry new BubbaHub fields without changing this feature.</p>
         </div>
     </div>
     <?php
+}
+
+
+function bubbahub_directory_resend_welcome_email() {
+    if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to resend welcome emails.' );
+    $user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+    if ( ! $user_id ) wp_die( 'Invalid user.' );
+    check_admin_referer( 'bubbahub_resend_welcome_' . $user_id );
+    $user = get_userdata( $user_id );
+    if ( ! $user || ! is_email( $user->user_email ) ) {
+        bubbahub_directory_csv_import_redirect( 'error', 'The selected leader does not have a valid email address.' );
+    }
+    delete_user_meta( $user_id, '_bubbahub_welcome_sent' );
+    if ( function_exists( 'bubbahub_directory_send_new_leader_welcome' ) ) {
+        bubbahub_directory_send_new_leader_welcome( $user_id );
+        $sent = get_user_meta( $user_id, '_bubbahub_welcome_sent', true );
+        bubbahub_directory_csv_import_redirect( $sent ? 'success' : 'error', $sent ? 'Welcome email resent to ' . $user->user_email . '.' : 'The welcome email could not be sent to ' . $user->user_email . '.' );
+    }
+    bubbahub_directory_csv_import_redirect( 'error', 'The Bubba Hub welcome email function is not available.' );
 }
 
 function bubbahub_directory_csv_value_encode( $value ) {

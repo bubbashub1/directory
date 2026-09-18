@@ -438,11 +438,19 @@ function bubbahub_directory_csv_import() {
         if ( $author_username && ! is_numeric( $author_username ) ) {
             $author_user = get_user_by( 'login', $author_username );
             if ( ! $author_user && $author_email && is_email( $author_email ) && ! email_exists( $author_email ) ) {
-                $new_user_id = wp_create_user( $author_username, wp_generate_password( 32, true, true ), $author_email );
+                // CSV-created accounts are leaders, so create them with the leader role
+                // before user_register fires. This ensures they receive the leader welcome email,
+                // rather than the parent/family welcome email.
+                $new_user_id = wp_insert_user( array(
+                    'user_login'    => $author_username,
+                    'user_pass'     => wp_generate_password( 32, true, true ),
+                    'user_email'    => $author_email,
+                    'display_name'  => $author_username,
+                    'role'          => 'leader',
+                ) );
                 if ( ! is_wp_error( $new_user_id ) ) {
                     $author_user = get_user_by( 'id', $new_user_id );
                     $new_user_created = true;
-                    wp_update_user( array( 'ID' => $new_user_id, 'display_name' => $author_username ) );
                 }
             }
         }

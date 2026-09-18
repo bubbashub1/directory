@@ -19,6 +19,7 @@ $bubbahub_platform_files = array(
     'myhub/myhub-booking-lifecycle.php',
     'myhub/myhub-booking-payment.php',
     'modules/core/bubbahub-ninja-stripe-bridge.php',
+    'modules/notifications/bubbahub-sms-coming-soon.php',
 );
 
 foreach ( $bubbahub_platform_files as $bubbahub_platform_file ) {

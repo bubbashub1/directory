@@ -465,3 +465,5 @@ function bubbahub_support_assets() {
 CSS
     );
 }
+
+add_action( 'wp_enqueue_scripts', 'bubbahub_support_assets', 20 );

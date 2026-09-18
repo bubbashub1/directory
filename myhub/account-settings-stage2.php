@@ -93,6 +93,26 @@ function bubbahub_stage2_taxonomy_terms() {
     return is_wp_error( $terms ) ? array() : $terms;
 }
 
+function bubbahub_stage2_location_taxonomy() {
+    $preferred = array( 'location', 'locations', 'region', 'regions', 'area', 'areas', 'group_location', 'group_locations' );
+    foreach ( $preferred as $taxonomy ) {
+        if ( taxonomy_exists( $taxonomy ) && is_object_in_taxonomy( 'group', $taxonomy ) ) return $taxonomy;
+    }
+    $taxonomies = get_object_taxonomies( 'group', 'objects' );
+    foreach ( $taxonomies as $taxonomy => $object ) {
+        $haystack = strtolower( $taxonomy . ' ' . $object->label . ' ' . $object->name );
+        if ( false !== strpos( $haystack, 'location' ) || false !== strpos( $haystack, 'region' ) || false !== strpos( $haystack, 'area' ) ) return $taxonomy;
+    }
+    return '';
+}
+
+function bubbahub_stage2_location_terms() {
+    $taxonomy = bubbahub_stage2_location_taxonomy();
+    if ( ! $taxonomy ) return array();
+    $terms = get_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
+    return is_wp_error( $terms ) ? array() : $terms;
+}
+
 /* -------------------------------------------------------------------------
  * Save account profile
  * ---------------------------------------------------------------------- */
@@ -186,6 +206,15 @@ function bubbahub_stage2_handle_interests() {
     bubbahub_stage2_update_meta( 'bubbahub_interest_taxonomy', $taxonomy );
     bubbahub_stage2_update_meta( 'bubbahub_interest_term_ids', $term_ids );
 
+    $location_taxonomy = bubbahub_stage2_location_taxonomy();
+    $location_term_id = isset( $_POST['planner_location'] ) ? absint( $_POST['planner_location'] ) : 0;
+    if ( $location_term_id && ( ! $location_taxonomy || ! term_exists( $location_term_id, $location_taxonomy ) ) ) $location_term_id = 0;
+    bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
+    bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $location_term_id );
+    $keyword = isset( $_POST['planner_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['planner_keyword'] ) ) : '';
+    bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', $keyword );
+    bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', '1' );
+
     $custom_groups = array();
     if ( ! empty( $_POST['custom_groups'] ) && is_array( $_POST['custom_groups'] ) ) {
         foreach ( $_POST['custom_groups'] as $group ) {
@@ -269,14 +298,38 @@ function bubbahub_stage2_render_interests() {
     $custom = (array) bubbahub_stage2_user_meta('bubbahub_custom_group_lists',array());
     $is_pro = bubbahub_stage2_is_pro();
     $taxonomy = bubbahub_stage2_taxonomy();
+    $location_taxonomy = bubbahub_stage2_location_taxonomy();
+    $location_terms = bubbahub_stage2_location_terms();
+    $location_id = absint( bubbahub_stage2_user_meta('bubbahub_planner_location_term_id',0) );
+    $keyword = (string) bubbahub_stage2_user_meta('bubbahub_planner_keyword','');
+    $saved = '1' === (string) bubbahub_stage2_user_meta('bubbahub_planner_preferences_saved','0');
     ob_start(); ?>
-    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My interests & groups</h3><span><?php echo $taxonomy ? 'Using existing website tags' : 'No group interest taxonomy detected'; ?></span></div>
-    <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="interests">
-    <?php if($terms): ?><div class="bh-interest-tags"><?php foreach($terms as $term): ?><label><input type="checkbox" name="interest_terms[]" value="<?php echo esc_attr($term->term_id); ?>" <?php checked(in_array((int)$term->term_id,array_map('intval',$selected),true)); ?>><span><?php echo esc_html($term->name); ?></span></label><?php endforeach; ?></div><?php else: ?><p class="bh-muted">Create or assign an interest/tag taxonomy to the <strong>group</strong> listings and it will appear here automatically.</p><?php endif; ?>
-    <div class="bh-profile-card-heading" style="margin-top:20px"><h3>Custom group lists</h3><span><?php echo $is_pro ? 'Unlimited Pro' : count($custom).' / 5 on Free'; ?></span></div>
-    <div class="bh-custom-groups"><?php foreach($custom as $index=>$group): ?><label><input type="hidden" name="custom_groups[]" value="<?php echo esc_attr($group); ?>"><span><?php echo esc_html($group); ?></span></label><?php endforeach; ?></div>
-    <p class="bh-muted">Custom group lists are stored with your account. Existing website taxonomy tags remain the source for selectable interests.</p>
-    <div class="bh-profile-actions"><button type="submit">Save interests & groups</button></div></form></div><?php return ob_get_clean();
+    <div class="bh-profile-card">
+      <div class="bh-profile-card-heading"><h3>Weekly Planner Preferences</h3><span><?php echo $saved ? 'Saved' : 'Not saved'; ?></span></div>
+      <?php if ( $saved ) : ?>
+        <div class="bh-pro-status"><strong>Your planner preferences are locked in.</strong><p><?php echo $location_id ? 'Location: ' . esc_html( get_term_field( 'name', $location_id, $location_taxonomy ) ) : 'Location: Any'; ?><?php echo $keyword ? ' · Keyword: ' . esc_html($keyword) : ' · Keyword: Any'; ?></p></div>
+        <div class="bh-profile-actions"><button type="button" class="bh-planner-pref-edit" onclick="this.closest('.bh-profile-card').querySelector('.bh-planner-pref-form').hidden=false;this.closest('.bh-profile-card').querySelector('.bh-planner-pref-summary').hidden=true;this.hidden=true;">Edit preferences</button></div>
+        <div class="bh-planner-pref-summary" hidden></div>
+      <?php endif; ?>
+      <form method="post" class="bh-stage2-form bh-planner-pref-form" <?php echo $saved ? 'hidden' : ''; ?>>
+        <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="interests">
+        <div class="bh-profile-grid two">
+          <label><span>Location</span><select name="planner_location"><option value="0">Any location</option><?php foreach($location_terms as $term): ?><option value="<?php echo esc_attr($term->term_id); ?>" <?php selected($location_id,(int)$term->term_id); ?>><?php echo esc_html($term->name); ?></option><?php endforeach; ?></select></label>
+          <label><span>Keyword search</span><input type="search" name="planner_keyword" value="<?php echo esc_attr($keyword); ?>" placeholder="e.g. music, messy play, baby"></label>
+        </div>
+        <p class="bh-muted">Choose a saved location and/or enter a keyword. Your Weekly Planner will use these preferences to find matching groups.</p>
+        <div class="bh-profile-actions"><button type="submit"><?php echo $saved ? 'Save changes' : 'Save preferences'; ?></button></div>
+      </form>
+    </div>
+    <div class="bh-profile-card">
+      <div class="bh-profile-card-heading"><h3>My interests & groups</h3><span><?php echo $taxonomy ? 'Using existing website tags' : 'No group interest taxonomy detected'; ?></span></div>
+      <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="interests">
+      <?php if($terms): ?><div class="bh-interest-tags"><?php foreach($terms as $term): ?><label><input type="checkbox" name="interest_terms[]" value="<?php echo esc_attr($term->term_id); ?>" <?php checked(in_array((int)$term->term_id,array_map('intval',$selected),true)); ?>><span><?php echo esc_html($term->name); ?></span></label><?php endforeach; ?></div><?php else: ?><p class="bh-muted">No interest/tag taxonomy is currently available.</p><?php endif; ?>
+      <div class="bh-profile-card-heading" style="margin-top:20px"><h3>Custom group lists</h3><span><?php echo $is_pro ? 'Unlimited Pro' : count($custom).' / 5 on Free'; ?></span></div>
+      <div class="bh-custom-groups"><?php foreach($custom as $group): ?><label><input type="hidden" name="custom_groups[]" value="<?php echo esc_attr($group); ?>"><span><?php echo esc_html($group); ?></span></label><?php endforeach; ?></div>
+      <div class="bh-profile-actions"><button type="submit">Save interests & groups</button></div></form>
+    </div>
+    <?php return ob_get_clean();
 }
 
 function bubbahub_stage2_render_pro() {

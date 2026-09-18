@@ -11,6 +11,8 @@ add_action( 'admin_menu', 'bubbahub_directory_csv_admin_menu' );
 add_action( 'admin_post_bubbahub_directory_csv_export', 'bubbahub_directory_csv_export' );
 add_action( 'admin_post_bubbahub_directory_csv_import', 'bubbahub_directory_csv_import' );
 add_action( 'admin_post_bubbahub_directory_csv_template', 'bubbahub_directory_csv_template' );
+add_action( 'admin_post_bubbahub_directory_csv_save_url', 'bubbahub_directory_csv_save_url' );
+add_action( 'admin_post_bubbahub_directory_csv_auto_import', 'bubbahub_directory_csv_auto_import' );
 
 function bubbahub_directory_csv_admin_menu() {
     add_submenu_page(
@@ -27,6 +29,7 @@ function bubbahub_directory_csv_admin_page() {
     if ( ! current_user_can( 'manage_options' ) ) return;
     $notice = isset( $_GET['bh_csv_notice'] ) ? sanitize_text_field( wp_unslash( $_GET['bh_csv_notice'] ) ) : '';
     $type   = isset( $_GET['bh_csv_type'] ) ? sanitize_key( $_GET['bh_csv_type'] ) : 'success';
+    $saved_url = get_option( 'bubbahub_directory_csv_connected_url', '' );
     ?>
     <div class="wrap">
         <h1>BubbaHub Listing CSV / Google Sheets</h1>
@@ -64,6 +67,26 @@ function bubbahub_directory_csv_admin_page() {
                 </table>
                 <?php submit_button( 'Import / Update Listings', 'primary' ); ?>
             </form>
+        </div>
+
+        <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
+            <h2>Connected Google Sheet</h2>
+            <p>Save your published CSV URL once. You can then import the latest version with one click without pasting the URL again.</p>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="bubbahub_directory_csv_save_url">
+                <?php wp_nonce_field( 'bubbahub_csv_save_url' ); ?>
+                <input name="bh_connected_csv_url" type="url" class="regular-text code" style="width:100%;max-width:700px;" value="<?php echo esc_attr( $saved_url ); ?>" placeholder="Paste your published Google Sheets CSV URL">
+                <?php submit_button( 'Save / Connect CSV URL', 'secondary', 'submit', false ); ?>
+            </form>
+            <?php if ( $saved_url ) : ?>
+                <p style="margin-top:15px;"><strong>Connected:</strong> <?php echo esc_html( $saved_url ); ?></p>
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:8px;">
+                    <input type="hidden" name="action" value="bubbahub_directory_csv_auto_import">
+                    <?php wp_nonce_field( 'bubbahub_csv_auto_import' ); ?>
+                    <?php submit_button( 'Import Latest CSV Now', 'primary', 'submit', false ); ?>
+                </form>
+                <p class="description">This button always downloads the latest data from the connected Google Sheet and creates new listings or updates existing listings using the <code>id</code> column.</p>
+            <?php endif; ?>
         </div>
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
@@ -206,6 +229,30 @@ function bubbahub_directory_csv_google_url( $url ) {
         }
     }
     return $url;
+}
+
+function bubbahub_directory_csv_save_url() {
+    if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to save the CSV URL.' );
+    check_admin_referer( 'bubbahub_csv_save_url' );
+    $url = isset( $_POST['bh_connected_csv_url'] ) ? esc_url_raw( wp_unslash( $_POST['bh_connected_csv_url'] ) ) : '';
+    if ( ! $url ) {
+        delete_option( 'bubbahub_directory_csv_connected_url' );
+        bubbahub_directory_csv_import_redirect( 'success', 'Connected CSV URL removed.' );
+    }
+    update_option( 'bubbahub_directory_csv_connected_url', $url, false );
+    bubbahub_directory_csv_import_redirect( 'success', 'CSV URL connected and saved. You can now use Import Latest CSV Now.' );
+}
+
+function bubbahub_directory_csv_auto_import() {
+    if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to import listings.' );
+    check_admin_referer( 'bubbahub_csv_auto_import' );
+    $saved_url = get_option( 'bubbahub_directory_csv_connected_url', '' );
+    if ( ! $saved_url ) bubbahub_directory_csv_import_redirect( 'error', 'No connected CSV URL has been saved.' );
+
+    // Reuse the normal importer by providing the saved URL as if it came from the form.
+    $_POST['bh_csv_url'] = $saved_url;
+    $_FILES = array();
+    bubbahub_directory_csv_import();
 }
 
 function bubbahub_directory_csv_import() {

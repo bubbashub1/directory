@@ -189,3 +189,8 @@ body.bh-baby-modal-open{overflow:hidden}
 .bh-myhub-carousel-arrow::before{content:'';width:10px;height:10px;border-top:2px solid currentColor;border-right:2px solid currentColor;display:block;}
 .bh-myhub-carousel-prev::before{transform:rotate(-135deg);}
 .bh-myhub-carousel-next::before{transform:rotate(45deg);}
+
+/* Keep child-profile UI icons tiny and unobtrusive. */
+.bh-myhub-child-card .bh-icon{width:12px;height:12px;stroke-width:2;flex:0 0 12px;}
+.bh-myhub-child-card .bh-myhub-tracker-title .bh-icon{width:12px;height:12px;}
+.bh-myhub-child-card .bh-myhub-child-actions .bh-icon{width:12px;height:12px;}

@@ -19,7 +19,7 @@ function init(){var $root=$('.bhg-single');if(!$root.length)return;
  }
  function initContactModal(){
   var $m=$root.find('#bh-contact-modal'); if(!$m.length)return;
-  $root.on('click','[data-contact-open]',function(e){e.preventDefault();$m.removeAttr('hidden').attr('aria-hidden','false').addClass('is-open');$('body').addClass('bh-modal-open');});
+  $root.on('click','[data-contact-open]',function(e){e.preventDefault();var groupId=$root.data('post-id');if(groupId){document.cookie='bubbahub_contact_group_id='+encodeURIComponent(String(groupId))+'; path=/; SameSite=Lax';}$m.removeAttr('hidden').attr('aria-hidden','false').addClass('is-open');$('body').addClass('bh-modal-open');});
   $root.on('click','[data-contact-close]',function(){$m.attr('hidden',true).attr('aria-hidden','true').removeClass('is-open');$('body').removeClass('bh-modal-open');});
   $(document).on('keydown.bhContact',function(e){if(e.key==='Escape'&&$m.hasClass('is-open')){$m.attr('hidden',true).attr('aria-hidden','true').removeClass('is-open');$('body').removeClass('bh-modal-open');}});
  }

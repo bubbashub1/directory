@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'init', 'bubbahub_profile_settings_register', 35 );
 add_action( 'wp_enqueue_scripts', 'bubbahub_profile_settings_assets' );
+add_action( 'init', 'bubbahub_profile_handle_child_post', 1 );
 
 function bubbahub_profile_settings_register() {
     add_shortcode( 'bubbahub_account_settings', 'bubbahub_account_settings_shortcode' );
@@ -98,6 +99,27 @@ function bubbahub_profile_um_url() {
 function bubbahub_profile_payment_url() {
     $url = apply_filters( 'bubbahub_getpaid_account_url', '' );
     return $url ? esc_url_raw( $url ) : home_url( '/my-bookings/' );
+}
+
+/* -------------------------------------------------------------------------
+ * Front-end child form POST bootstrap
+ * ---------------------------------------------------------------------- */
+function bubbahub_profile_handle_child_post() {
+    if ( ! is_user_logged_in() || empty( $_POST['bh_profile_child_action'] ) ) return;
+    $result = bubbahub_profile_handle_child_action();
+    if ( empty( $result ) ) return;
+
+    $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
+    if ( ! $return_to ) $return_to = home_url( '/my-hub/' );
+
+    $return_to = remove_query_arg( array( 'child_saved', 'child_error' ), $return_to );
+    if ( ! empty( $result['success'] ) ) {
+        $return_to = add_query_arg( 'child_saved', '1', $return_to );
+    } elseif ( ! empty( $result['error'] ) ) {
+        $return_to = add_query_arg( 'child_error', rawurlencode( $result['error'] ), $return_to );
+    }
+    wp_safe_redirect( $return_to );
+    exit;
 }
 
 /* -------------------------------------------------------------------------
@@ -248,6 +270,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <?php wp_nonce_field( 'bh_profile_child_save', 'bh_profile_child_nonce' ); ?>
             <input type="hidden" name="bh_profile_child_action" value="save">
             <input type="hidden" name="child_id" value="<?php echo esc_attr( $child_id ); ?>">
+            <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( wp_unslash( wp_get_referer() ? wp_get_referer() : home_url( '/my-hub/' ) ) ); ?>">
 
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3>About your child</h3><span>Core profile</span></div>

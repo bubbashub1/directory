@@ -170,7 +170,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
         ?>
         <div class="bh-myhub-tracker bh-myhub-school-tracker <?php echo esc_attr( $tracker_class ); ?>">
             <div class="bh-myhub-school-tracker-head">
-                <div class="bh-myhub-tracker-title"><?php echo $has_school ? '<svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-5 9 5-9 5-9-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M21 10v6"/></svg><span>' : '<svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-5 9 5-9 5-9-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M21 10v6"/></svg><span>'; ?><?php echo esc_html( $title ); ?></span></div>
+                <div class="bh-myhub-tracker-title"><?php echo $has_school ? '🏫<span>' : '🏫<span>'; ?><?php echo esc_html( $title ); ?></span></div>
                 <span class="bh-myhub-school-status <?php echo esc_attr( sanitize_html_class( $school_status ) ); ?>"><?php echo esc_html( $status_label ); ?></span>
             </div>
             <?php if ( $has_school ) : ?>

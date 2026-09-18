@@ -297,6 +297,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             <input type="search" class="bh-planner-keyword-search" placeholder="Search groups, activities or tags..." autocomplete="off">
             <div class="bh-planner-search-suggestions" hidden></div>
           </label>
+          <label class="bh-planner-search-filter"><span>Filter</span>
+            <span class="bh-planner-toggle"><input type="checkbox" class="bh-planner-free-groups"> Free Groups</span>
+          </label>
+          <label class="bh-planner-search-filter"><span>&nbsp;</span>
+            <span class="bh-planner-toggle"><input type="checkbox" class="bh-planner-term-time"> Term Time</span>
+          </label>
           <button type="button" class="bh-planner-search-save">Save</button>
         </div>
         <p class="bh-planner-search-hint">Search by activity or tag, such as music, messy play, baby massage or Forest School.</p>
@@ -356,7 +362,23 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             if ( ! empty( $item['venue_address'] ) ) $planner_search_parts[] = $item['venue_address'];
             $planner_search_text = strtolower( wp_strip_all_tags( implode( ' ', array_map( 'strval', $planner_search_parts ) ) ) );
           ?>
-          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
+          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ? data-planner-free="<?php
+              $bh_free = false;
+              foreach ( array( 'price', '_price', 'cost', 'session_price' ) as $bh_key ) {
+                  $bh_val = strtolower( trim( wp_strip_all_tags( (string) get_post_meta( (int) $item['group_id'], $bh_key, true ) ) ) );
+                  if ( '' === $bh_val || in_array( $bh_val, array( '0', '0.00', 'free', '£0', '£0.00', 'from £0' ), true ) ) { $bh_free = true; break; }
+              }
+              echo $bh_free ? '1' : '0';
+          ?>" data-planner-term-time="<?php
+              $bh_term = false;
+              foreach ( array( 'term_time', '_term_time', 'term-time', 'school_term_time', 'term_time_only' ) as $bh_key ) {
+                  $bh_val = get_post_meta( (int) $item['group_id'], $bh_key, true );
+                  if ( is_array( $bh_val ) ) $bh_val = implode( ' ', $bh_val );
+                  $bh_val = strtolower( trim( wp_strip_all_tags( (string) $bh_val ) ) );
+                  if ( in_array( $bh_val, array( '1', 'yes', 'true', 'on', 'term time', 'term-time' ), true ) ) { $bh_term = true; break; }
+              }
+              echo $bh_term ? '1' : '0';
+          ?>">" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
             <div class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>">
               <a class="bh-planner-listing-link" href="<?php echo esc_url( $item['url'] ); ?>">
               <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
@@ -375,7 +397,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
 <style>
 .bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}.bh-planner-search-row{display:flex;gap:12px;align-items:end}.bh-planner-search-row label{flex:1;display:flex;flex-direction:column;gap:6px}.bh-planner-search-row label span{font-weight:700;font-size:13px}.bh-planner-search-row select,.bh-planner-search-row input{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}.bh-planner-search-save{min-height:44px;padding:0 20px;border:0;border-radius:10px;cursor:pointer}.bh-planner-search-save.is-saved{opacity:.8}.bh-planner-search-suggestions{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:10px;margin-top:72px;box-shadow:0 5px 20px rgba(0,0,0,.08);overflow:hidden}.bh-planner-search-suggestions button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:#fff;cursor:pointer}.bh-planner-search-hint{margin:8px 0 0;font-size:12px;opacity:.7}@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-row label{margin-bottom:10px}.bh-planner-search-save{width:100%}.bh-planner-search-suggestions{position:relative;margin-top:-5px;width:100%}}
-</style>
+.bh-planner-search-filter{flex:0 0 auto;display:flex;flex-direction:column;gap:6px}.bh-planner-toggle{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-weight:600;white-space:nowrap}.bh-planner-toggle input{width:18px;height:18px}</style>
       <script>
       document.addEventListener('DOMContentLoaded',function(){
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
@@ -385,6 +407,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           var save=planner.querySelector('.bh-planner-search-save');
           var tags=[];
           planner.querySelectorAll('.bh-planner-item-main strong').forEach(function(el){ tags.push(el.textContent.trim()); });
+          var freeGroups=planner.querySelector('.bh-planner-free-groups'), termTime=planner.querySelector('.bh-planner-term-time');
           var selectedChild='all', savedKeyword='', savedLocation='';
           try { savedKeyword=localStorage.getItem('bh_planner_keyword')||''; savedLocation=localStorage.getItem('bh_planner_location')||''; } catch(e){}
           if(input) input.value=savedKeyword;
@@ -403,6 +426,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             var loc=location?location.value:'';
             var q=input?input.value.toLowerCase().trim():'';
             var words=q?q.split(/\s+/).filter(Boolean):[];
+            var freeOnly=!!(freeGroups&&freeGroups.checked), termOnly=!!(termTime&&termTime.checked);
             planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
               var kids=(item.getAttribute('data-planner-children')||'').split(',').filter(Boolean);
               var locs=(item.getAttribute('data-planner-location-ids')||'').split(',').filter(Boolean);
@@ -410,7 +434,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
               var childOk=selectedChild==='all'||kids.indexOf(selectedChild)!==-1;
               var locationOk=!loc||locs.indexOf(String(loc))!==-1;
               var keywordOk=!words.length||words.every(function(word){return text.indexOf(word)!==-1;});
-              item.hidden=!(childOk&&locationOk&&keywordOk);
+              var freeOk=!freeOnly||item.getAttribute('data-planner-free')==='1';
+              var termOk=!termOnly||item.getAttribute('data-planner-term-time')==='1';
+              item.hidden=!(childOk&&locationOk&&keywordOk&&freeOk&&termOk);
             });
             planner.querySelectorAll('.bh-planner-day').forEach(function(day){
               var items=day.querySelectorAll('.bh-planner-item-wrap');
@@ -441,6 +467,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
           if(input) input.addEventListener('input',function(){renderSuggestions();applyFilters();});
           if(location) location.addEventListener('change',applyFilters);
+          if(freeGroups) freeGroups.addEventListener('change',applyFilters);
+          if(termTime) termTime.addEventListener('change',applyFilters);
           if(suggestions) suggestions.addEventListener('click',function(e){
             var b=e.target.closest('[data-suggest]');
             if(!b)return;

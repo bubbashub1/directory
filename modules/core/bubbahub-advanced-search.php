@@ -27,6 +27,8 @@ function bubbahub_advanced_search_register_options() {
         'redirect'   => false,
     ) );
 
+    $acf_choices = bubbahub_advanced_search_discover_acf_choices();
+
     acf_add_local_field_group( array(
         'key' => 'group_bubbahub_advanced_search_controls',
         'title' => 'Advanced Search Filters',
@@ -39,6 +41,7 @@ function bubbahub_advanced_search_register_options() {
             array('key'=>'field_bh_search_term_time','label'=>'Term Time','name'=>'advanced_search_term_time','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
             array('key'=>'field_bh_search_location','label'=>'Location','name'=>'advanced_search_location','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
             array('key'=>'field_bh_search_price','label'=>'Price','name'=>'advanced_search_price','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_acf_fields','label'=>'ACF Fields to Import into Advanced Search','name'=>'advanced_search_acf_fields','type'=>'checkbox','choices'=>$acf_choices,'layout'=>'vertical','instructions'=>'Select the ACF fields you want to import as Advanced Search filters. Choices and labels are taken directly from your Group ACF fields.'),
         ),
         'location' => array(array(array('param'=>'options_page','operator'=>'==','value'=>'bubbahub-search-settings'))),
         'position' => 'normal',
@@ -52,6 +55,23 @@ function bubbahub_advanced_search_builtin_enabled( $key ) {
     );
     $option = get_field( 'advanced_search_' . $key, 'option' );
     return array_key_exists( $key, $defaults ) ? ( false === $option ? $defaults[$key] : (bool) $option ) : true;
+}
+
+function bubbahub_advanced_search_discover_acf_choices() {
+    $choices = array();
+    if ( ! function_exists( 'acf_get_field_groups' ) || ! function_exists( 'acf_get_fields' ) ) return $choices;
+    foreach ( acf_get_field_groups( array( 'post_type' => 'group' ) ) as $group ) {
+        foreach ( (array) acf_get_fields( $group ) as $field ) {
+            if ( empty( $field['name'] ) ) continue;
+            if ( in_array( $field['name'], array( 'term_time','age_range','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
+            if ( ! in_array( $field['type'], array( 'select','radio','checkbox','button_group','true_false' ), true ) ) continue;
+            if ( empty( $field['choices'] ) && 'true_false' !== $field['type'] ) continue;
+            $label = ! empty( $field['label'] ) ? $field['label'] : ucwords( str_replace( '_', ' ', $field['name'] ) );
+            $group_label = ! empty( $group['title'] ) ? ' — ' . $group['title'] : '';
+            $choices[ $field['name'] ] = $label . $group_label;
+        }
+    }
+    return $choices;
 }
 
 add_action( 'acf/render_field_settings', 'bubbahub_advanced_search_acf_field_setting' );
@@ -72,12 +92,16 @@ function bubbahub_advanced_search_acf_field_setting( $field ) {
 function bubbahub_advanced_search_acf_fields() {
     $fields = array();
     if ( ! function_exists( 'acf_get_field_groups' ) || ! function_exists( 'acf_get_fields' ) ) return $fields;
+    $imported = get_field( 'advanced_search_acf_fields', 'option' );
+    $imported = is_array( $imported ) ? array_map( 'sanitize_key', $imported ) : array();
     foreach ( acf_get_field_groups( array( 'post_type' => 'group' ) ) as $group ) {
         foreach ( (array) acf_get_fields( $group ) as $field ) {
             if ( empty( $field['name'] ) || in_array( $field['name'], array( 'term_time','age_range','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
             if ( ! in_array( $field['type'], array( 'select','radio','checkbox','button_group','true_false' ), true ) ) continue;
-            if ( empty( $field['bubbahub_advanced_search'] ) ) continue;
             if ( empty( $field['choices'] ) && 'true_false' !== $field['type'] ) continue;
+            $legacy_enabled = ! empty( $field['bubbahub_advanced_search'] );
+            if ( $imported && ! in_array( sanitize_key( $field['name'] ), $imported, true ) && ! $legacy_enabled ) continue;
+            if ( ! $imported && ! $legacy_enabled ) continue;
             $fields[ $field['name'] ] = $field;
         }
     }
@@ -195,7 +219,7 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
           <?php if ( bubbahub_advanced_search_builtin_enabled( 'term_time' ) ) : ?><div class="bh-filter-option"><label class="screen-reader-text" for="bh-term-time">Choose when the group runs</label><select id="bh-term-time" name="bh_term_time"><option value="">Term Time</option><option value="yes" <?php selected($f['term_time'],'yes');?>>Term time only</option><option value="no" <?php selected($f['term_time'],'no');?>>Not term time only</option></select></div><?php endif; ?>
           <?php if ( bubbahub_advanced_search_builtin_enabled( 'age_range' ) ) : ?><div class="bh-filter-option"><label class="screen-reader-text" for="bh-age">Age range</label><select id="bh-age" name="bh_age"><option value="">Age Range</option><?php foreach((array)bubbahub_directory_age_values() as $v):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['age'],$v);?>><?php echo esc_html($v);?></option><?php endforeach;?></select></div><?php endif; ?>
           <?php if ( bubbahub_advanced_search_builtin_enabled( 'price' ) ) : ?><div class="bh-filter-option"><label class="screen-reader-text" for="bh-price">Choose a price</label><select id="bh-price" name="bh_price"><option value="">Price</option><option value="free" <?php selected($f['price'],'free');?>>Free</option><option value="paid" <?php selected($f['price'],'paid');?>>Paid</option></select></div><?php endif; ?>
-          <?php foreach($acf as $name=>$field):$choices=bubbahub_advanced_search_acf_fields()[$name]['choices']??array();if('true_false'===$field['type'])$choices=array('1'=>'Yes','0'=>'No');?><div class="bh-acf-filter"><span class="bh-filter-title"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></span><label class="screen-reader-text" for="bh-acf-<?php echo esc_attr($name);?>"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></label><select id="bh-acf-<?php echo esc_attr($name);?>" name="bh_acf[<?php echo esc_attr($name);?>]"><option value=""><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></option><?php foreach((array)$choices as $v=>$label):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['acf'][$name]??'',$v);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></div><?php endforeach;?>
+          <?php foreach($acf as $name=>$field):$choices=$field['choices']??array();if('true_false'===$field['type'])$choices=array('1'=>'Yes','0'=>'No');?><div class="bh-acf-filter"><span class="bh-filter-title"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></span><label class="screen-reader-text" for="bh-acf-<?php echo esc_attr($name);?>"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></label><select id="bh-acf-<?php echo esc_attr($name);?>" name="bh_acf[<?php echo esc_attr($name);?>]"><option value=""><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></option><?php foreach((array)$choices as $v=>$label):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['acf'][$name]??'',$v);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></div><?php endforeach;?>
           <div class="bh-filter-option"><label class="screen-reader-text" for="bh-radius">Choose your search radius</label><select id="bh-radius" name="bh_radius"><option value="5">5 miles</option><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></div>
         </div>
         <input type="hidden" name="bh_lat" value=""><input type="hidden" name="bh_lng" value="">

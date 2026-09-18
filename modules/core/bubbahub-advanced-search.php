@@ -12,6 +12,48 @@ add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_advanced_searc
 
 // Add a per-field ACF setting so administrators can choose which supported
 // ACF fields appear in BubbaHub's Advanced Search.
+
+// Advanced Search controls for the built-in filters. These are stored as ACF
+// options so the administrator can turn each built-in filter on or off.
+add_action( 'acf/init', 'bubbahub_advanced_search_register_options' );
+function bubbahub_advanced_search_register_options() {
+    if ( ! function_exists( 'acf_add_options_page' ) || ! function_exists( 'acf_add_local_field_group' ) ) return;
+
+    acf_add_options_page( array(
+        'page_title' => 'BubbaHub Search Settings',
+        'menu_title' => 'Search Settings',
+        'menu_slug'  => 'bubbahub-search-settings',
+        'capability' => 'manage_options',
+        'redirect'   => false,
+    ) );
+
+    acf_add_local_field_group( array(
+        'key' => 'group_bubbahub_advanced_search_controls',
+        'title' => 'Advanced Search Filters',
+        'fields' => array(
+            array('key'=>'field_bh_search_age','label'=>'Age Range','name'=>'advanced_search_age_range','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_region','label'=>'Region','name'=>'advanced_search_region','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_town','label'=>'Town','name'=>'advanced_search_town','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_category','label'=>'Category','name'=>'advanced_search_category','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_day','label'=>'Day','name'=>'advanced_search_day','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_term_time','label'=>'Term Time','name'=>'advanced_search_term_time','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_location','label'=>'Location','name'=>'advanced_search_location','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+            array('key'=>'field_bh_search_price','label'=>'Price','name'=>'advanced_search_price','type'=>'true_false','ui'=>1,'default_value'=>1,'ui_on_text'=>'Shown','ui_off_text'=>'Hidden'),
+        ),
+        'location' => array(array(array('param'=>'options_page','operator'=>'==','value'=>'bubbahub-search-settings'))),
+        'position' => 'normal',
+        'style' => 'default',
+    ) );
+}
+function bubbahub_advanced_search_builtin_enabled( $key ) {
+    $defaults = array(
+        'age_range'=>1,'region'=>1,'town'=>1,'category'=>1,'day'=>1,
+        'term_time'=>1,'location'=>1,'price'=>1,
+    );
+    $option = get_field( 'advanced_search_' . $key, 'option' );
+    return array_key_exists( $key, $defaults ) ? ( false === $option ? $defaults[$key] : (bool) $option ) : true;
+}
+
 add_action( 'acf/render_field_settings', 'bubbahub_advanced_search_acf_field_setting' );
 function bubbahub_advanced_search_acf_field_setting( $field ) {
     $supported = array( 'select','radio','checkbox','button_group','true_false' );
@@ -143,16 +185,16 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
     <div class="bh-directory" data-ajax-url="<?php echo esc_url(admin_url('admin-ajax.php'));?>" data-nonce="<?php echo esc_attr($nonce);?>">
       <form class="bh-search-form" method="get">
         <div class="bh-search-main"><label for="bh-search">Search groups</label><input id="bh-search" name="bh_search" type="search" value="<?php echo esc_attr($f['search']);?>" placeholder="Search by group, class or area"></div>
-        <div class="bh-search-location"><label for="bh-location">Location</label><div class="bh-location-control"><input id="bh-location" name="bh_location" type="search" value="<?php echo esc_attr($f['location']);?>" placeholder="Town, postcode or area"><button type="button" class="bh-use-location" aria-label="Use my location" title="Use my location">⌖</button></div></div>
+        <?php if ( bubbahub_advanced_search_builtin_enabled( 'location' ) ) : ?><div class="bh-search-location"><label for="bh-location">Location</label><div class="bh-location-control"><input id="bh-location" name="bh_location" type="search" value="<?php echo esc_attr($f['location']);?>" placeholder="Town, postcode or area"><button type="button" class="bh-use-location" aria-label="Use my location" title="Use my location">⌖</button></div></div>
         <div class="bh-search-actions"><button type="submit">Search</button><button type="button" class="bh-advanced-toggle" aria-expanded="false">Advanced search <span aria-hidden="true">⌄</span></button></div>
         <div class="bh-advanced-search" hidden>
-          <div class="bh-filter-option"><span class="bh-filter-title">Region</span><label class="screen-reader-text" for="bh-region">Region</label><select id="bh-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($regions))foreach($regions as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['region'],$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div>
-          <div class="bh-filter-option"><span class="bh-filter-title">Town</span><label class="screen-reader-text" for="bh-town">Town</label><select id="bh-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($towns))foreach($towns as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['town']??'',$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div>
-          <div class="bh-filter-option"><span class="bh-filter-title">Choose a category</span><label class="screen-reader-text" for="bh-category">Choose a category</label><select id="bh-category" name="bh_category"><option value="">All categories</option><?php foreach((array)$categories as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['category'],$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div>
-          <div class="bh-filter-option"><span class="bh-filter-title">Choose a day</span><label class="screen-reader-text" for="bh-day">Choose a day</label><select id="bh-day" name="bh_day"><option value="">Any day</option><?php foreach($days as $v=>$label):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['day'],$v);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></div>
-          <div class="bh-filter-option"><span class="bh-filter-title">Choose when the group runs</span><label class="screen-reader-text" for="bh-term-time">Choose when the group runs</label><select id="bh-term-time" name="bh_term_time"><option value="">Any time of year</option><option value="yes" <?php selected($f['term_time'],'yes');?>>Term time only</option><option value="no" <?php selected($f['term_time'],'no');?>>Not term time only</option></select></div>
-          <div class="bh-filter-option"><label class="screen-reader-text" for="bh-age">Age range</label><select id="bh-age" name="bh_age"><option value="">All ages</option><?php foreach((array)bubbahub_directory_age_values() as $v):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['age'],$v);?>><?php echo esc_html($v);?></option><?php endforeach;?></select></div>
-          <div class="bh-filter-option"><span class="bh-filter-title">Choose a price</span><label class="screen-reader-text" for="bh-price">Choose a price</label><select id="bh-price" name="bh_price"><option value="">Any price</option><option value="free" <?php selected($f['price'],'free');?>>Free</option><option value="paid" <?php selected($f['price'],'paid');?>>Paid</option></select></div>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'region' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Region</span><label class="screen-reader-text" for="bh-region">Region</label><select id="bh-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($regions))foreach($regions as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['region'],$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'town' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Town</span><label class="screen-reader-text" for="bh-town">Town</label><select id="bh-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($towns))foreach($towns as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['town']??'',$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'category' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Choose a category</span><label class="screen-reader-text" for="bh-category">Choose a category</label><select id="bh-category" name="bh_category"><option value="">All categories</option><?php foreach((array)$categories as $t):?><option value="<?php echo esc_attr($t->slug);?>" <?php selected($f['category'],$t->slug);?>><?php echo esc_html($t->name);?></option><?php endforeach;?></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'day' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Choose a day</span><label class="screen-reader-text" for="bh-day">Choose a day</label><select id="bh-day" name="bh_day"><option value="">Any day</option><?php foreach($days as $v=>$label):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['day'],$v);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'term_time' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Choose when the group runs</span><label class="screen-reader-text" for="bh-term-time">Choose when the group runs</label><select id="bh-term-time" name="bh_term_time"><option value="">Any time of year</option><option value="yes" <?php selected($f['term_time'],'yes');?>>Term time only</option><option value="no" <?php selected($f['term_time'],'no');?>>Not term time only</option></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'age_range' ) ) : ?><div class="bh-filter-option"><label class="screen-reader-text" for="bh-age">Age range</label><select id="bh-age" name="bh_age"><option value="">All ages</option><?php foreach((array)bubbahub_directory_age_values() as $v):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['age'],$v);?>><?php echo esc_html($v);?></option><?php endforeach;?></select></div><?php endif; ?>
+          <?php if ( bubbahub_advanced_search_builtin_enabled( 'price' ) ) : ?><div class="bh-filter-option"><span class="bh-filter-title">Choose a price</span><label class="screen-reader-text" for="bh-price">Choose a price</label><select id="bh-price" name="bh_price"><option value="">Any price</option><option value="free" <?php selected($f['price'],'free');?>>Free</option><option value="paid" <?php selected($f['price'],'paid');?>>Paid</option></select></div><?php endif; ?>
           <?php foreach($acf as $name=>$field):$choices=bubbahub_advanced_search_acf_fields()[$name]['choices']??array();if('true_false'===$field['type'])$choices=array('1'=>'Yes','0'=>'No');?><div class="bh-acf-filter"><span class="bh-filter-title"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></span><label class="screen-reader-text" for="bh-acf-<?php echo esc_attr($name);?>"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name)));?></label><select id="bh-acf-<?php echo esc_attr($name);?>" name="bh_acf[<?php echo esc_attr($name);?>]"><option value="">Any</option><?php foreach((array)$choices as $v=>$label):?><option value="<?php echo esc_attr($v);?>" <?php selected($f['acf'][$name]??'',$v);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></div><?php endforeach;?>
           <div class="bh-filter-option"><span class="bh-filter-title">Choose your search radius</span><label class="screen-reader-text" for="bh-radius">Choose your search radius</label><select id="bh-radius" name="bh_radius"><option value="5">5 miles</option><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></div>
         </div>

@@ -113,13 +113,13 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <summary>Children <span>All · <?php echo esc_html( count( $children ) ); ?> child<?php echo count( $children ) === 1 ? '' : 'ren'; ?></span></summary>
           <div class="bh-planner-child-options">
             <button type="button" class="active" data-planner-child-filter="all">All</button>
-            <?php foreach ( $children as $index => $child_id ) : ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>">Child <?php echo esc_html( $index + 1 ); ?></button><?php endforeach; ?>
+            <?php foreach ( $children as $index => $child_id ) : ?><?php $child_name = bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_name' ); $child_label = $child_name ? $child_name : 'Child ' . ( $index + 1 ); ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>"><?php echo esc_html( $child_label ); ?></button><?php endforeach; ?>
           </div>
         </details>
         <div class="bh-planner-child-filter-desktop">
           <strong>Show</strong>
           <button type="button" class="active" data-planner-child-filter="all">All</button>
-          <?php foreach ( $children as $index => $child_id ) : ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>">Child <?php echo esc_html( $index + 1 ); ?></button><?php endforeach; ?>
+          <?php foreach ( $children as $index => $child_id ) : ?><?php $child_name = bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_name' ); $child_label = $child_name ? $child_name : 'Child ' . ( $index + 1 ); ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>"><?php echo esc_html( $child_label ); ?></button><?php endforeach; ?>
         </div>
       <?php endif; ?>
 

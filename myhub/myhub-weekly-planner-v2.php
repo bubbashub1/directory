@@ -32,7 +32,8 @@ function bubbahub_myhub_planner_v2_session_rows( $days_ahead = 7 ) {
     $now=current_time('timestamp'); $from=wp_date('Y-m-d',$now); $to=wp_date('Y-m-d',strtotime('+'.max(1,(int)$days_ahead).' days',$now));
     $q=new WP_Query(array('post_type'=>'bh_session','post_status'=>'publish','posts_per_page'=>250,'meta_query'=>array(array('key'=>'_bh_date','value'=>array($from,$to),'compare'=>'BETWEEN','type'=>'DATE')),'orderby'=>'meta_value','meta_key'=>'_bh_date','order'=>'ASC','no_found_rows'=>true));
     $rows=array();
-    while($q->have_posts()){$q->the_post();$sid=get_the_ID();$gid=absint(get_post_meta($sid,'_bh_group_id',true));if(!$gid||'group'!==get_post_type($gid))continue;$date=get_post_meta($sid,'_bh_date',true);$start=get_post_meta($sid,'_bh_start_time',true);$end=get_post_meta($sid,'_bh_end_time',true);$vid=absint(get_post_meta($sid,'_bh_venue_id',true));$rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date,'start'=>$start,'end'=>$end,'title'=>get_the_title($gid),'url'=>get_permalink($gid),'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'venue'=>$vid?get_the_title($vid):'');}
+    while($q->have_posts()){$q->the_post();$sid=get_the_ID();$gid=absint(get_post_meta($sid,'_bh_group_id',true));if(!$gid||'group'!==get_post_type($gid))continue;$date=get_post_meta($sid,'_bh_date',true);$start=get_post_meta($sid,'_bh_start_time',true);$end=get_post_meta($sid,'_bh_end_time',true);$vid=absint(get_post_meta($sid,'_bh_venue_id',true));$venue_address=$vid?(get_post_meta($vid,'address',true)?:get_post_meta($vid,'street_address',true)):'';
+$rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date,'start'=>$start,'end'=>$end,'title'=>get_the_title($gid),'url'=>get_permalink($gid),'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'venue'=>$vid?get_the_title($vid):'','venue_address'=>$venue_address);}
     wp_reset_postdata(); return $rows;
 }
 
@@ -41,6 +42,31 @@ function bubbahub_myhub_planner_v2_match( $group_id, $interest_ids, $location_id
     if($interest_ids&&taxonomy_exists('user-interests')) { $terms=wp_get_post_terms($group_id,'user-interests',array('fields'=>'ids')); if(!is_wp_error($terms)&&array_intersect(array_map('absint',$terms),$interest_ids))$score+=4; else return -1; }
     if($location_ids) { $matched=false; foreach(array('preferred-location','preferred_location','location','region') as $tax){if(!taxonomy_exists($tax))continue;$terms=wp_get_post_terms($group_id,$tax,array('fields'=>'ids'));if(!is_wp_error($terms)&&array_intersect(array_map('absint',$terms),$location_ids)){$matched=true;$score+=3;break;}} if(!$matched)return -1; }
     return $score;
+}
+
+function bubbahub_myhub_planner_v2_user_child_field( $id, $field ) {
+    if ( function_exists( 'get_field' ) ) { $v = get_field( $field, $id, false ); if ( null !== $v && false !== $v && '' !== $v ) return $v; }
+    return get_post_meta( $id, $field, true );
+}
+
+function bubbahub_myhub_planner_v2_child_age_token( $id ) {
+    $status = bubbahub_myhub_planner_v2_user_child_field( $id, 'child_status' );
+    if ( 'expecting' === sanitize_key( $status ) ) return array( 'pregnancy', 'antenatal', 'postnatal' );
+    $dob = bubbahub_myhub_planner_v2_user_child_field( $id, 'child_date_of_birth' );
+    if ( ! $dob ) return array();
+    try { $birth = new DateTime( $dob ); $today = new DateTime( 'today' ); } catch ( Exception $e ) { return array(); }
+    if ( $birth > $today ) return array();
+    $months = (int) $birth->diff( $today )->y * 12 + (int) $birth->diff( $today )->m;
+    if ( $months < 3 ) return array( '0-3' ); if ( $months < 6 ) return array( '3-6' ); if ( $months < 9 ) return array( '6-9' ); if ( $months < 12 ) return array( '9-12' ); if ( $months < 24 ) return array( '1-3' ); if ( $months < 36 ) return array( '2-4' ); if ( $months < 60 ) return array( '3-5' ); return array( '5-plus' );
+}
+
+function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
+    $tokens = bubbahub_myhub_planner_v2_child_age_token( $child_id ); if ( ! $tokens ) return false;
+    $value = bubbahub_myhub_planner_v2_user_child_field( $group_id, 'age_range' );
+    $hay = strtolower( is_array( $value ) ? implode( ' ', array_map( 'strval', $value ) ) : (string) $value );
+    if ( ! $hay ) return false;
+    foreach ( $tokens as $token ) if ( false !== strpos( $hay, strtolower( $token ) ) ) return true;
+    return false;
 }
 
 function bubbahub_myhub_weekly_planner_v2_shortcode() {

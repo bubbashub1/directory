@@ -199,7 +199,6 @@ function bubbahub_support_admin_page() {
             $s['links']=array();
         foreach((array)($_POST['link_title']??array()) as $i=>$title){$url=esc_url_raw($_POST['link_url'][$i]??'');if($title&&$url)$s['links'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['link_description'][$i]??''),'keywords'=>sanitize_text_field($_POST['link_keywords'][$i]??''));}
             }
-        }
         if (array_key_exists('app_title', $_POST)) {
             $s['apps']=array();
             foreach((array)$_POST['app_title'] as $i=>$title){$url=esc_url_raw($_POST['app_url'][$i]??'');if($title&&$url)$s['apps'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['app_description'][$i]??''),'keywords'=>sanitize_text_field($_POST['app_keywords'][$i]??''));}

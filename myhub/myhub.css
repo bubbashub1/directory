@@ -62,3 +62,49 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-myhub-family-carousel .bh-myhub-family-grid>.bh-myhub-child-card,.bh-myhub-family-carousel .bh-myhub-family-grid>.bh-myhub-empty-family{flex-basis:calc(100vw - 90px);max-width:calc(100vw - 90px);}
 }
 .bh-myhub-family-carousel,.bh-myhub-family-carousel *{box-sizing:border-box;}
+
+
+/* Weekly Planner: desktop timetable, mobile day accordions. */
+.bh-weekly-planner-v2{margin-top:0!important;margin-bottom:50px!important;padding-bottom:0!important;}
+.bh-weekly-planner-v2 .bh-planner-results{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:start;}
+.bh-weekly-planner-v2 .bh-planner-day{min-width:0;background:#fff;border:1px solid var(--bh-line);border-radius:16px;overflow:hidden;}
+.bh-weekly-planner-v2 .bh-planner-day-accordion{display:block;}
+.bh-weekly-planner-v2 .bh-planner-day-title{font-weight:800;font-size:13px;padding:13px 10px;background:#f3f7f4;border-bottom:1px solid var(--bh-line);}
+.bh-weekly-planner-v2 .bh-planner-day-chevron{display:none;}
+.bh-weekly-planner-v2 .bh-planner-day-items{padding:8px;min-height:90px;display:flex;flex-direction:column;gap:7px;}
+.bh-weekly-planner-v2 .bh-planner-item-wrap{min-width:0;}
+.bh-weekly-planner-v2 .bh-planner-item{display:flex;flex-direction:column;gap:6px;padding:9px;border:1px solid #e6ebe8;border-radius:11px;background:#fff;text-decoration:none;min-width:0;}
+.bh-weekly-planner-v2 .bh-planner-thumb{width:100%;height:62px;overflow:hidden;border-radius:8px;background:#eef3f0;display:block;}
+.bh-weekly-planner-v2 .bh-planner-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.bh-weekly-planner-v2 .bh-planner-item-main{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.bh-weekly-planner-v2 .bh-planner-item-main strong{font-size:11px;line-height:1.25;overflow-wrap:anywhere;}
+.bh-weekly-planner-v2 .bh-planner-location{font-size:9px;color:var(--bh-muted);line-height:1.25;}
+.bh-weekly-planner-v2 .bh-planner-child-indicator{font-size:9px;font-weight:800;color:#5f9183;}
+.bh-weekly-planner-v2 .bh-planner-calendar-wrap{display:flex;flex-direction:column;gap:2px;}
+.bh-weekly-planner-v2 .bh-planner-calendar{font-size:9px;font-weight:800;color:#527e70;text-decoration:none;}
+.bh-weekly-planner-v2 .bh-planner-calendar-note{font-size:8px;color:var(--bh-muted);line-height:1.2;}
+.bh-weekly-planner-v2 .bh-planner-empty{font-size:10px;color:var(--bh-muted);padding:7px;}
+.bh-weekly-planner-v2 .bh-planner-child-filter-desktop{display:flex;gap:7px;align-items:center;margin-bottom:14px;}
+.bh-weekly-planner-v2 .bh-planner-child-filter-desktop button,.bh-weekly-planner-v2 .bh-planner-child-options button{border:1px solid var(--bh-line);background:#fff;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;}
+.bh-weekly-planner-v2 .bh-planner-child-filter-desktop button.active,.bh-weekly-planner-v2 .bh-planner-child-options button.active{background:#5f9183;color:#fff;border-color:#5f9183;}
+.bh-weekly-planner-v2 .bh-planner-child-filter-mobile{display:none;}
+@media(max-width:900px){.bh-weekly-planner-v2 .bh-planner-results{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:620px){
+ .bh-weekly-planner-v2{margin-bottom:50px!important;}
+ .bh-weekly-planner-v2 .bh-planner-results{display:block;}
+ .bh-weekly-planner-v2 .bh-planner-day{margin-bottom:8px;border-radius:14px;}
+ .bh-weekly-planner-v2 .bh-planner-day-accordion{width:100%;}
+ .bh-weekly-planner-v2 .bh-planner-day-title{display:flex;align-items:center;justify-content:space-between;padding:14px 15px;border:0;background:#f3f7f4;cursor:pointer;list-style:none;}
+ .bh-weekly-planner-v2 .bh-planner-day-title::-webkit-details-marker{display:none;}
+ .bh-weekly-planner-v2 .bh-planner-day-chevron{display:block;font-size:18px;line-height:1;transition:transform .2s ease;}
+ .bh-weekly-planner-v2 .bh-planner-day-accordion[open] .bh-planner-day-chevron{transform:rotate(180deg);}
+ .bh-weekly-planner-v2 .bh-planner-day-items{min-height:0;padding:10px;}
+ .bh-weekly-planner-v2 .bh-planner-item{display:grid;grid-template-columns:64px minmax(0,1fr);gap:9px;align-items:center;}
+ .bh-weekly-planner-v2 .bh-planner-thumb{width:64px;height:64px;grid-row:1 / span 3;}
+ .bh-weekly-planner-v2 .bh-planner-calendar-wrap{grid-column:2;}
+ .bh-weekly-planner-v2 .bh-planner-child-indicator{grid-column:2;}
+ .bh-weekly-planner-v2 .bh-planner-child-filter-desktop{display:none;}
+ .bh-weekly-planner-v2 .bh-planner-child-filter-mobile{display:block;margin-bottom:12px;border:1px solid var(--bh-line);border-radius:12px;background:#fff;}
+ .bh-weekly-planner-v2 .bh-planner-child-filter-mobile summary{padding:11px 13px;font-weight:800;font-size:12px;cursor:pointer;}
+ .bh-weekly-planner-v2 .bh-planner-child-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 12px 12px;}
+}

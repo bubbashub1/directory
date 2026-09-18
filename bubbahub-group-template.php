@@ -197,24 +197,24 @@ function bubbahub_group_normalise_map( $map ) {
         }
 
         $source = $trimmed;
-        if ( preg_match( "/<iframe[^>]+src=[\\\"']([^\\\"']+)[\\\"']/i", $trimmed, $match ) ) {
+        if ( preg_match( '#<iframe[^>]+src=["\x27]([^"\x27]+)["\x27]#i', $trimmed, $match ) ) {
             $source = html_entity_decode( $match[1], ENT_QUOTES, 'UTF-8' );
-        } elseif ( preg_match( "/https?:\\/\\/[^\\s\\\"']*openstreetmap\\.org[^\\s\\\"']*/i", $trimmed, $url_match ) ) {
+        } elseif ( preg_match( '#https?://[^\s"\x27]*openstreetmap\.org[^\s"\x27]*#i', $trimmed, $url_match ) ) {
             $source = html_entity_decode( $url_match[0], ENT_QUOTES, 'UTF-8' );
         }
 
         $decoded = urldecode( $source );
 
-        if ( preg_match( "/(?:[?&]|%3F|%26)marker=([-+]?\\d+(?:\\.\\d+)?)[, ]([-+]?\\d+(?:\\.\\d+)?)/i", $decoded, $m ) ) {
+        if ( preg_match( '#(?:[?&]|%3F|%26)marker=([-+]?\d+(?:\.\d+)?)[, ]([-+]?\d+(?:\.\d+)?)#i', $decoded, $m ) ) {
             return array( 'lat' => (float) $m[1], 'lng' => (float) $m[2] );
         }
 
         $mlat = $mlon = '';
-        if ( preg_match( "/(?:[?&])mlat=([-+]?\\d+(?:\\.\\d+)?)/i", $decoded, $m ) ) $mlat = $m[1];
-        if ( preg_match( "/(?:[?&])mlon=([-+]?\\d+(?:\\.\\d+)?)/i", $decoded, $m ) ) $mlon = $m[1];
+        if ( preg_match( '#(?:[?&])mlat=([-+]?\d+(?:\.\d+)?)#i', $decoded, $m ) ) $mlat = $m[1];
+        if ( preg_match( '#(?:[?&])mlon=([-+]?\d+(?:\.\d+)?)#i', $decoded, $m ) ) $mlon = $m[1];
         if ( $mlat !== '' && $mlon !== '' ) return array( 'lat' => (float) $mlat, 'lng' => (float) $mlon );
 
-        if ( preg_match( "/^\\s*([-+]?\\d+(?:\\.\\d+)?)\\s*[, ]\\s*([-+]?\\d+(?:\\.\\d+)?)\\s*$/", $decoded, $coords ) ) {
+        if ( preg_match( '#^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$#', $decoded, $coords ) ) {
             return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
         }
     }

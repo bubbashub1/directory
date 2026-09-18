@@ -68,7 +68,7 @@ function bubbahub_directory_csv_admin_page() {
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Recommended Google Sheets columns</h2>
-            <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, latitude, longitude, map, term_time</code></p>
+            <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, latitude, longitude, map, term_time, image_url</code></p>
             <p>Any additional column is treated as a listing post-meta field, so the importer can carry new BubbaHub fields without changing this feature.</p>
         </div>
     </div>
@@ -337,15 +337,25 @@ function bubbahub_directory_csv_import() {
             if ( $terms ) wp_set_object_terms( $saved_id, $terms, 'post_tag', false );
         }
 
-        // Optional listing image import. Accept a direct image URL in image_url.
+        // Listing image gallery import. image_url accepts multiple URLs separated by comma, | or new lines.
+        // The first successfully imported image becomes the featured image.
         if ( array_key_exists( 'image_url', $data ) ) {
-            $image_url = trim( (string) $data['image_url'] );
-            if ( '' !== $image_url && filter_var( $image_url, FILTER_VALIDATE_URL ) ) {
+            $image_value = is_array( $data['image_url'] ) ? implode( "\n", $data['image_url'] ) : (string) $data['image_url'];
+            $image_urls = array_filter( array_map( 'trim', preg_split( '/[,|\\r\\n]+/', $image_value ) ) );
+            if ( $image_urls ) {
                 require_once ABSPATH . 'wp-admin/includes/file.php';
                 require_once ABSPATH . 'wp-admin/includes/media.php';
                 require_once ABSPATH . 'wp-admin/includes/image.php';
-                $attachment_id = media_sideload_image( esc_url_raw( $image_url ), $saved_id, null, 'id' );
-                if ( ! is_wp_error( $attachment_id ) ) set_post_thumbnail( $saved_id, $attachment_id );
+                $gallery_ids = array();
+                foreach ( $image_urls as $image_url ) {
+                    if ( ! filter_var( $image_url, FILTER_VALIDATE_URL ) ) continue;
+                    $attachment_id = media_sideload_image( esc_url_raw( $image_url ), $saved_id, null, 'id' );
+                    if ( ! is_wp_error( $attachment_id ) ) $gallery_ids[] = (int) $attachment_id;
+                }
+                if ( $gallery_ids ) {
+                    update_post_meta( $saved_id, '_bubbahub_gallery_ids', $gallery_ids );
+                    set_post_thumbnail( $saved_id, $gallery_ids[0] );
+                }
             }
         }
 

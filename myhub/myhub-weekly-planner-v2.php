@@ -180,6 +180,9 @@ function bubbahub_myhub_planner_v2_child_age_token( $id ) {
 }
 
 function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
+    if ( function_exists( 'bubbahub_myhub_planner_age_matches' ) ) {
+        return (bool) bubbahub_myhub_planner_age_matches( $group_id, array( $child_id ) );
+    }
     $tokens = bubbahub_myhub_planner_v2_child_age_token( $child_id ); if ( ! $tokens ) return false;
     $value = bubbahub_myhub_planner_v2_user_child_field( $group_id, 'age_range' );
     $hay = strtolower( is_array( $value ) ? implode( ' ', array_map( 'strval', $value ) ) : (string) $value );

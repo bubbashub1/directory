@@ -224,8 +224,12 @@ function bubbahub_directory_csv_import() {
             $parts = wp_parse_url( $csv_url );
             $query = array();
             if ( ! empty( $parts['query'] ) ) parse_str( $parts['query'], $query );
-            $fallback = 'https://docs.google.com/spreadsheets/d/e/' . basename( dirname( $parts['path'] ) ) . '/pub?output=csv';
-            if ( ! empty( $query['gid'] ) ) $fallback .= '&gid=' . rawurlencode( $query['gid'] );
+            $published_id = '';
+            if ( ! empty( $parts['path'] ) && preg_match( '#/spreadsheets/d/e/([^/]+)/pub#', $parts['path'], $published_match ) ) {
+                $published_id = $published_match[1];
+            }
+            $fallback = $published_id ? 'https://docs.google.com/spreadsheets/d/e/' . rawurlencode( $published_id ) . '/pub?output=csv' : $csv_url;
+            if ( ! empty( $query['gid'] ) ) $fallback .= ( false === strpos( $fallback, '?' ) ? '?' : '&' ) . 'gid=' . rawurlencode( $query['gid'] );
             $remote = wp_safe_remote_get( $fallback, array( 'timeout' => 30, 'redirection' => 5, 'headers' => array( 'Accept' => 'text/csv,text/plain,*/*' ) ) );
             if ( ! is_wp_error( $remote ) ) {
                 $code = wp_remote_retrieve_response_code( $remote );

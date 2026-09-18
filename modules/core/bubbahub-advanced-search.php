@@ -10,13 +10,31 @@ add_filter( 'pre_do_shortcode_tag', 'bubbahub_advanced_search_shortcode', 10, 4 
 add_action( 'wp_ajax_bubbahub_directory_filter', 'bubbahub_advanced_search_ajax', 1 );
 add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_advanced_search_ajax', 1 );
 
+// Add a per-field ACF setting so administrators can choose which supported
+// ACF fields appear in BubbaHub's Advanced Search.
+add_action( 'acf/render_field_settings', 'bubbahub_advanced_search_acf_field_setting' );
+function bubbahub_advanced_search_acf_field_setting( $field ) {
+    $supported = array( 'select','radio','checkbox','button_group','true_false' );
+    if ( ! in_array( $field['type'], $supported, true ) ) return;
+    acf_render_field_setting( $field, array(
+        'label'        => 'BubbaHub Advanced Search',
+        'instructions' => 'Show this ACF field as a filter in the BubbaHub Advanced Search.',
+        'name'         => 'bubbahub_advanced_search',
+        'type'         => 'true_false',
+        'ui'           => 1,
+        'ui_on_text'   => 'Included',
+        'ui_off_text'  => 'Excluded',
+    ), true );
+}
+
 function bubbahub_advanced_search_acf_fields() {
     $fields = array();
     if ( ! function_exists( 'acf_get_field_groups' ) || ! function_exists( 'acf_get_fields' ) ) return $fields;
     foreach ( acf_get_field_groups( array( 'post_type' => 'group' ) ) as $group ) {
         foreach ( (array) acf_get_fields( $group ) as $field ) {
-            if ( empty( $field['name'] ) || in_array( $field['name'], array( 'term_time','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
+            if ( empty( $field['name'] ) || in_array( $field['name'], array( 'term_time','age_range','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
             if ( ! in_array( $field['type'], array( 'select','radio','checkbox','button_group','true_false' ), true ) ) continue;
+            if ( empty( $field['bubbahub_advanced_search'] ) ) continue;
             if ( empty( $field['choices'] ) && 'true_false' !== $field['type'] ) continue;
             $fields[ $field['name'] ] = $field;
         }

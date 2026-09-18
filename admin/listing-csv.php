@@ -343,7 +343,7 @@ function bubbahub_directory_csv_import() {
 
     if ( ! in_array( 'id', $headers, true ) ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV must contain an id column. It is the primary key for updates.' );
 
-    $created = 0; $updated = 0; $skipped = 0; $errors = array();
+    $created = 0; $updated = 0; $skipped = 0; $new_users = 0; $errors = array();
 
     foreach ( $rows as $row_number => $values ) {
         $data = array();
@@ -358,6 +358,31 @@ function bubbahub_directory_csv_import() {
             continue;
         }
 
+        // Resolve the CSV post_author to a WordPress user. If a username does not exist,
+        // create the leader account from post_author + email and send a one-time welcome email.
+        $author_username = isset( $data['post_author'] ) ? sanitize_user( trim( (string) $data['post_author'] ), true ) : '';
+        $author_email    = isset( $data['email'] ) ? sanitize_email( trim( (string) $data['email'] ) ) : '';
+        $author_user     = null;
+        $new_user_created = false;
+        if ( $author_username && ! is_numeric( $author_username ) ) {
+            $author_user = get_user_by( 'login', $author_username );
+            if ( ! $author_user && $author_email && is_email( $author_email ) && ! email_exists( $author_email ) ) {
+                $random_password = wp_generate_password( 20, true, true );
+                $new_user_id = wp_create_user( $author_username, $random_password, $author_email );
+                if ( ! is_wp_error( $new_user_id ) ) {
+                    $author_user = get_user_by( 'id', $new_user_id );
+                    $new_user_created = true;
+                    wp_update_user( array( 'ID' => $new_user_id, 'display_name' => $author_username ) );
+                    update_user_meta( $new_user_id, '_bubbahub_welcome_sent', current_time( 'mysql' ) );
+                    $login_url = wp_login_url();
+                    $reset_url = wp_lostpassword_url();
+                    $subject = 'Welcome to Bubba Hub';
+                    $message = "Hi {$author_username},\\n\\nWelcome to Bubba Hub! Your leader account has been created and your listing has been added to the Bubba Hub directory.\\n\\nUsername: {$author_username}\\n\\nTo set your password and access your account, use the WordPress password reset page:\\n{$reset_url}\\n\\nYou can then log in here:\\n{$login_url}\\n\\nOnce logged in, you can manage your Bubba Hub listing and access the leader features available to you.\\n\\nIf you have any questions, please contact Bubba Hub.\\n\\nBubba Hub";
+                    wp_mail( $author_email, $subject, $message, array( 'Content-Type: text/plain; charset=UTF-8' ) );
+                }
+            }
+        }
+
         $postarr = array( 'post_type' => 'group' );
         foreach ( array( 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date' ) as $field ) {
             if ( array_key_exists( $field, $data ) && '' !== (string) $data[ $field ] ) $postarr[ $field ] = $data[ $field ];
@@ -369,7 +394,6 @@ function bubbahub_directory_csv_import() {
             if ( is_numeric( $author_value ) ) {
                 $author_id = absint( $author_value );
             } else {
-                $author_user = get_user_by( 'login', $author_value );
                 $author_id = $author_user ? (int) $author_user->ID : 0;
             }
             if ( $author_id ) {
@@ -390,6 +414,7 @@ function bubbahub_directory_csv_import() {
 
         $saved_id = absint( $saved_id );
         if ( $existing ) $updated++; else $created++;
+        if ( $new_user_created ) $new_users++;
 
         // Keep the map coordinates consistent. Prefer explicit latitude/longitude, but accept the legacy map="lat,long" format.
         $latitude = isset( $data['latitude'] ) ? trim( (string) $data['latitude'] ) : '';
@@ -477,7 +502,7 @@ function bubbahub_directory_csv_import() {
             }
         }
 
-        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map', 'business_hours', 'image_url', 'term_time' );
+        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map', 'business_hours', 'image_url', 'term_time', 'welcome_email' );
         foreach ( $data as $key => $value ) {
             if ( in_array( $key, $core, true ) || '' === $key ) continue;
             if ( is_string( $value ) && '' === trim( $value ) ) {
@@ -488,7 +513,7 @@ function bubbahub_directory_csv_import() {
         }
     }
 
-    $message = sprintf( 'Import complete: %d created, %d updated, %d skipped.', $created, $updated, $skipped );
+    $message = sprintf( 'Import complete: %d created, %d updated, %d skipped, %d new leader accounts created.', $created, $updated, $skipped, $new_users );
     if ( $errors ) $message .= ' First error: ' . $errors[0];
     bubbahub_directory_csv_import_redirect( $errors ? 'warning' : 'success', $message );
 }

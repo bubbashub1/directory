@@ -343,6 +343,8 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                         </div>
                     <?php endif; ?>
                 </div>
+                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-next" aria-label="Next child" aria-controls="bh-myhub-children">›</button>
+                </div>
             </section>
 
             <section class="bh-myhub-section">

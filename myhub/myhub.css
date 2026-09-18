@@ -177,20 +177,3 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-weekly-planner-v2 .bh-planner-child-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 12px 12px;}
 }
 
-/* Modern Bubba Hub icon treatment */
-.bh-myhub .bh-icon,.bh-planner-calendar-icon{width:18px;height:18px;display:inline-block;vertical-align:middle;flex:0 0 auto;}
-.bh-myhub-button{gap:7px;}
-.bh-myhub-tracker-title{display:flex;align-items:center;gap:7px;}
-.bh-myhub-empty-icon{display:grid;place-items:center;}
-.bh-myhub-empty-icon .bh-icon{width:34px;height:34px;}
-.bh-planner-calendar{display:inline-flex;align-items:center;gap:5px;}
-.bh-planner-calendar-icon{width:14px;height:14px;}
-.bh-myhub-carousel-arrow{font-size:0;}
-.bh-myhub-carousel-arrow::before{content:'';width:10px;height:10px;border-top:2px solid currentColor;border-right:2px solid currentColor;display:block;}
-.bh-myhub-carousel-prev::before{transform:rotate(-135deg);}
-.bh-myhub-carousel-next::before{transform:rotate(45deg);}
-
-/* Keep child-profile UI icons tiny and unobtrusive. */
-.bh-myhub-child-card .bh-icon{width:12px;height:12px;stroke-width:2;flex:0 0 12px;}
-.bh-myhub-child-card .bh-myhub-tracker-title .bh-icon{width:12px;height:12px;}
-.bh-myhub-child-card .bh-myhub-child-actions .bh-icon{width:12px;height:12px;}

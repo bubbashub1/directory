@@ -212,11 +212,30 @@ function bubbahub_directory_csv_import() {
     if ( ! empty( $_FILES['bh_csv_file']['tmp_name'] ) && UPLOAD_ERR_OK === (int) $_FILES['bh_csv_file']['error'] ) {
         $csv = file_get_contents( $_FILES['bh_csv_file']['tmp_name'] );
     } elseif ( $url ) {
-        $remote = wp_safe_remote_get( bubbahub_directory_csv_google_url( $url ), array( 'timeout' => 30, 'redirection' => 3 ) );
+        $csv_url = bubbahub_directory_csv_google_url( $url );
+        $remote = wp_safe_remote_get( $csv_url, array( 'timeout' => 30, 'redirection' => 5, 'headers' => array( 'Accept' => 'text/csv,text/plain,*/*' ) ) );
         if ( is_wp_error( $remote ) ) bubbahub_directory_csv_import_redirect( 'error', 'Could not download the CSV: ' . $remote->get_error_message() );
         $code = wp_remote_retrieve_response_code( $remote );
         $csv = wp_remote_retrieve_body( $remote );
-        if ( $code < 200 || $code >= 300 || '' === trim( $csv ) ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV URL did not return usable CSV data.' );
+
+        // Published Google Sheets URLs can occasionally return a redirect/HTML wrapper.
+        // Retry published /pub URLs using Google's explicit CSV endpoint.
+        if ( ( $code < 200 || $code >= 300 || '' === trim( $csv ) || false === strpos( ltrim( (string) $csv ), ',' ) ) && false !== strpos( $csv_url, 'docs.google.com/spreadsheets/d/e/' ) && false !== strpos( $csv_url, '/pub' ) ) {
+            $parts = wp_parse_url( $csv_url );
+            $query = array();
+            if ( ! empty( $parts['query'] ) ) parse_str( $parts['query'], $query );
+            $fallback = 'https://docs.google.com/spreadsheets/d/e/' . basename( dirname( $parts['path'] ) ) . '/pub?output=csv';
+            if ( ! empty( $query['gid'] ) ) $fallback .= '&gid=' . rawurlencode( $query['gid'] );
+            $remote = wp_safe_remote_get( $fallback, array( 'timeout' => 30, 'redirection' => 5, 'headers' => array( 'Accept' => 'text/csv,text/plain,*/*' ) ) );
+            if ( ! is_wp_error( $remote ) ) {
+                $code = wp_remote_retrieve_response_code( $remote );
+                $csv = wp_remote_retrieve_body( $remote );
+            }
+        }
+
+        if ( $code < 200 || $code >= 300 || '' === trim( $csv ) ) {
+            bubbahub_directory_csv_import_redirect( 'error', 'The CSV URL did not return usable CSV data (HTTP ' . (int) $code . '). Make sure the Google Sheet is published to the web and the URL ends with output=csv.' );
+        }
     } else {
         bubbahub_directory_csv_import_redirect( 'error', 'Choose a CSV file or enter a Google Sheets / CSV URL.' );
     }

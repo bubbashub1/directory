@@ -359,44 +359,36 @@ function bubbahub_directory_csv_import() {
         }
 
         // Resolve the CSV post_author to a WordPress user. If a username does not exist,
-        // create the leader account from post_author + email and send a one-time welcome email.
-        $author_username = isset( $data['post_author'] ) ? sanitize_user( trim( (string) $data['post_author'] ), true ) : '';
-        $author_email    = isset( $data['email'] ) ? sanitize_email( trim( (string) $data['email'] ) ) : '';
-        $author_user     = null;
+        // create the leader account from post_author + email. The welcome email is sent only
+        // after the listing has been successfully saved, so its listing link is always valid.
+        $author_username  = isset( $data['post_author'] ) ? sanitize_user( trim( (string) $data['post_author'] ), true ) : '';
+        $author_email     = isset( $data['email'] ) ? sanitize_email( trim( (string) $data['email'] ) ) : '';
+        $author_user      = null;
         $new_user_created = false;
+        $welcome_user_id  = 0;
+
         if ( $author_username && ! is_numeric( $author_username ) ) {
             $author_user = get_user_by( 'login', $author_username );
             if ( ! $author_user && $author_email && is_email( $author_email ) && ! email_exists( $author_email ) ) {
-                $random_password = wp_generate_password( 20, true, true );
-                $new_user_id = wp_create_user( $author_username, $random_password, $author_email );
+                // Prevent WordPress/core or another plugin from sending its generic
+                // "Your username and password" email. Bubba Hub sends the branded
+                // welcome email below instead.
+                $suppress_user_email = function( $send, $user ) use ( $author_email ) {
+                    if ( $user instanceof WP_User && $user->user_email === $author_email ) return false;
+                    return $send;
+                };
+                add_filter( 'wp_send_new_user_notification_to_user', $suppress_user_email, 10, 2 );
+
+                $new_user_id = wp_create_user( $author_username, wp_generate_password( 32, true, true ), $author_email );
+
+                remove_filter( 'wp_send_new_user_notification_to_user', $suppress_user_email, 10 );
+
                 if ( ! is_wp_error( $new_user_id ) ) {
                     $author_user = get_user_by( 'id', $new_user_id );
                     $new_user_created = true;
+                    $welcome_user_id = (int) $new_user_id;
                     wp_update_user( array( 'ID' => $new_user_id, 'display_name' => $author_username ) );
-                    update_user_meta( $new_user_id, '_bubbahub_welcome_sent', current_time( 'mysql' ) );
-                    $reset_key = get_password_reset_key( $author_user );
-                    $reset_url = ! is_wp_error( $reset_key ) ? network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $reset_key ) . '&login=' . rawurlencode( $author_username ), 'login' ) : wp_lostpassword_url();
-                    $listing_url = get_permalink( $saved_id );
-                    $portal_url = home_url( '/leader-portal/' );
-                    $support_url = home_url( '/support/' );
-                    $subject = '🎉 Welcome to Bubba Hub! Your groups & classes are live!';
-                    $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
-                    $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div>';
-                    $body .= '<div style="padding:30px;">';
-                    $body .= '<p>Hey there! 👋</p><h2>Welcome to Bubba Hub! 🎉</h2>';
-                    $body .= '<p>We’re so excited to have you on board. Your groups and classes have now been added to the Bubba Hub directory.</p>';
-                    $body .= '<p><strong>Username:</strong> ' . esc_html( $author_username ) . '</p>';
-                    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $listing_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">View Your Listings</a></p>';
-                    $body .= '<p>Before you log in for the first time, set your password using the secure button below.</p>';
-                    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $reset_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#8bc6c9;color:#fff;text-decoration:none;font-weight:bold;">Set Your Password & Access Your Account</a></p>';
-                    $body .= '<h3>🌟 What can you do next?</h3><ul><li>Manage and update your listings</li><li>Keep your classes and schedules up to date</li><li>Manage bookings and reservations</li><li>Connect with local families</li><li>Keep your venues and locations up to date</li><li>Stay connected with the Bubba Hub community</li></ul>';
-                    $body .= '<h3>🌈 Let’s build this together</h3><p>Bubba Hub is more than just a directory — we’re building a community that brings families, group leaders, businesses and local specialists together.</p>';
-                    $body .= '<p><a href="' . esc_url( $support_url ) . '">Visit the Bubba Hub Support Centre</a></p>';
-                    $body .= '<p>If you need anything at all, just reply to this email — we’re always happy to help.</p>';
-                    $body .= '<p>Warmly,<br><strong>The Bubba Hub Team</strong> 💛</p>';
-                    $body .= '<p style="font-size:13px;color:#777;">bubbahub.co.uk · @bubbahubsw on Facebook & Instagram</p>';
-                    $body .= '</div></div>';
-                    wp_mail( $author_email, $subject, $body, array( 'Content-Type: text/html; charset=UTF-8' ) );                }
+                }
             }
         }
 
@@ -432,6 +424,45 @@ function bubbahub_directory_csv_import() {
         $saved_id = absint( $saved_id );
         if ( $existing ) $updated++; else $created++;
         if ( $new_user_created ) $new_users++;
+
+        // Send the branded Bubba Hub welcome email after the listing exists.
+        if ( $new_user_created && $welcome_user_id ) {
+            $welcome_user = get_user_by( 'id', $welcome_user_id );
+            if ( $welcome_user ) {
+                $reset_key = get_password_reset_key( $welcome_user );
+                $reset_url = ! is_wp_error( $reset_key ) ? network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $reset_key ) . '&login=' . rawurlencode( $author_username ), 'login' ) : wp_lostpassword_url();
+                $listing_url = get_permalink( $saved_id );
+                $portal_url = home_url( '/leader-portal/' );
+                $support_url = home_url( '/support/' );
+                $subject = '🎉 Welcome to Bubba Hub! Your groups & classes are live!';
+                $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
+                $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div>';
+                $body .= '<div style="padding:30px;">';
+                $body .= '<p>Hey there! 👋</p><h2>Welcome to Bubba Hub! 🎉</h2>';
+                $body .= '<p>We’re so excited to have you on board. Your groups and classes have now been added to the Bubba Hub directory.</p>';
+                $body .= '<p><strong>Username:</strong> ' . esc_html( $author_username ) . '</p>';
+                $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $listing_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">View Your Listings</a></p>';
+                $body .= '<p>Before you log in for the first time, set your password using the secure button below.</p>';
+                $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $reset_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#8bc6c9;color:#fff;text-decoration:none;font-weight:bold;">Set Your Password & Access Your Account</a></p>';
+                $body .= '<h3>🌟 What can you do next?</h3><ul><li>Manage and update your listings</li><li>Keep your classes and schedules up to date</li><li>Manage bookings and reservations</li><li>Connect with local families</li><li>Keep your venues and locations up to date</li></ul>';
+                $body .= '<h3>🌈 Let’s build this together</h3><p>Bubba Hub is more than just a directory — we’re building a community that brings families, group leaders, businesses and local specialists together.</p>';
+                $body .= '<p><a href="' . esc_url( $portal_url ) . '">Visit your Bubba Hub Leader Portal</a></p>';
+                $body .= '<p><a href="' . esc_url( $support_url ) . '">Visit the Bubba Hub Support Centre</a></p>';
+                $body .= '<p>If you need anything at all, just reply to this email — we’re always happy to help.</p>';
+                $body .= '<p>Warmly,<br><strong>The Bubba Hub Team</strong> 💛</p>';
+                $body .= '<p style="font-size:13px;color:#777;">Bubba Hub · bubbahub.co.uk · @bubbahubsw on Facebook & Instagram</p>';
+                $body .= '</div></div>';
+
+                $from_name = function() { return 'Bubba Hub'; };
+                $from_email = function() { return 'contact@bubbahub.co.uk'; };
+                add_filter( 'wp_mail_from_name', $from_name );
+                add_filter( 'wp_mail_from', $from_email );
+                wp_mail( $author_email, $subject, $body, array( 'Content-Type: text/html; charset=UTF-8' ) );
+                remove_filter( 'wp_mail_from_name', $from_name );
+                remove_filter( 'wp_mail_from', $from_email );
+                update_user_meta( $welcome_user_id, '_bubbahub_welcome_sent', current_time( 'mysql' ) );
+            }
+        }
 
         // Keep the map coordinates consistent. Prefer explicit latitude/longitude, but accept the legacy map="lat,long" format.
         $latitude = isset( $data['latitude'] ) ? trim( (string) $data['latitude'] ) : '';

@@ -32,3 +32,17 @@
 .bh-card-details dt{font-size:10px;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;color:var(--bh-muted);font-weight:700;margin:0 0 2px}
 .bh-card-details dd{font-size:13px;line-height:1.3;color:var(--bh-text);margin:0;overflow-wrap:anywhere}
 @media(max-width:600px){.bh-card-details{grid-template-columns:1fr 1fr}.bh-card-simple .bh-card-body{padding:12px}}
+
+/* What's On compact listing cards */
+.bh-directory-results{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.bh-directory-results .bh-card{border-radius:12px}
+.bh-card-image{aspect-ratio:16/8}
+.bh-card-body{padding:12px}
+.bh-card h2{font-size:16px;line-height:1.25;margin-bottom:6px}
+.bh-builder-element{margin-bottom:7px;font-size:12px;line-height:1.35}
+.bh-builder-description{font-size:12px}
+.bh-builder-location,.bh-builder-contact,.bh-builder-social,.bh-builder-schedule{font-size:12px}
+.bh-builder-price span,.bh-builder-meta span{padding:4px 7px;font-size:11px;margin-right:3px;margin-bottom:3px}
+@media(max-width:1100px){.bh-directory-results{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}}
+@media(max-width:800px){.bh-directory-results{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.bh-card-image{aspect-ratio:16/9}}
+@media(max-width:600px){.bh-directory-results{grid-template-columns:1fr;gap:14px}.bh-card-body{padding:12px}}

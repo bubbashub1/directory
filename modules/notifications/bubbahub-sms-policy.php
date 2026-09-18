@@ -60,8 +60,8 @@ function bubbahub_sms_policy_user_usage( $user_id ) {
     $user_id = absint( $user_id );
     $log = bubbahub_sms_policy_prune_log();
     $now = current_time( 'timestamp' );
-    $day_start = strtotime( wp_date( 'Y-m-d 00:00:00', $now ) );
-    $month_start = strtotime( wp_date( 'Y-m-d 00:00:00', $now ) ) - ( 30 * DAY_IN_SECONDS );
+    $day_start = $now - DAY_IN_SECONDS;
+    $month_start = $now - ( 30 * DAY_IN_SECONDS );
     $today = 0; $month = 0;
     foreach ( $log as $row ) {
         if ( absint( $row['user_id'] ?? 0 ) !== $user_id ) continue;

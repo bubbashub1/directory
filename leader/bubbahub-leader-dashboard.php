@@ -93,7 +93,7 @@ function bubbahub_leader_dashboard_shortcode() {
             <a class="is-active" href="<?php echo esc_url($dashboard_url); ?>"><span>⌂</span> Home</a>
             <a href="<?php echo esc_url($listings_url); ?>"><span>▦</span> My listings</a>
             <a href="<?php echo esc_url($venues_url); ?>"><span>⌖</span> My venues</a>
-            <a href="<?php echo esc_url($bookings_url); ?>"><span>▣</span> Bookings<?php if ( $booking_ids ) : ?><b><?php echo esc_html( count($booking_ids) ); ?></b><?php endif; ?></a>
+            <a href="<?php echo esc_url($bookings_url); ?>"><span>▣</span> My bookings<?php if ( $booking_ids ) : ?><b><?php echo esc_html( count($booking_ids) ); ?></b><?php endif; ?></a>
           </nav>
           <div class="bh-leader-nav-divider"></div>
           <nav class="bh-leader-nav bh-leader-nav-secondary" aria-label="Account">

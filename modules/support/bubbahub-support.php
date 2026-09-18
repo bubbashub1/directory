@@ -1,11 +1,11 @@
 <?php
 /**
  * BubbaHub Support Hub
- * Questions -> matched leaders, specialist articles, useful links and app discovery.
+ * Questions -> matched leaders, specialist articles, useful links, apps and community resource recommendations.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_SUPPORT_VERSION', '1.1.0' );
+define( 'BUBBAHUB_SUPPORT_VERSION', '1.2.0' );
 
 function bubbahub_support_is_leader() {
     if ( ! is_user_logged_in() ) return false;
@@ -22,6 +22,10 @@ function bubbahub_support_register_cpt() {
         'labels' => array( 'name'=>'Support Articles', 'singular_name'=>'Support Article', 'add_new_item'=>'Add Specialist Article', 'edit_item'=>'Edit Specialist Article' ),
         'public'=>true, 'show_in_rest'=>true, 'has_archive'=>true,
         'rewrite'=>array('slug'=>'support/articles'), 'supports'=>array('title','editor','excerpt','thumbnail','author'),
+    ) );
+    register_post_type( 'bh_support_resource', array(
+        'labels' => array( 'name'=>'Recommended Resources', 'singular_name'=>'Recommended Resource', 'add_new_item'=>'Add Recommended Resource', 'edit_item'=>'Edit Recommended Resource' ),
+        'public'=>false, 'show_ui'=>true, 'show_in_menu'=>false, 'supports'=>array('title','editor','author'),
     ) );
 }
 add_action( 'init', 'bubbahub_support_register_cpt' );
@@ -152,7 +156,9 @@ function bubbahub_support_public() {
       <section class="bh-support-question bh-support-card"><div><span class="bh-support-kicker">Ask a question</span><h2>Not sure who can help?</h2><p>Tell us what you need and we'll send your question to relevant BubbaHub leaders.</p></div>
       <form method="post"><input type="hidden" name="bh_support_action" value="ask"><?php wp_nonce_field('bh_support_question','bh_support_question_nonce'); ?><div class="bh-support-form-grid"><p><label>Your name</label><input name="support_name" required></p><p><label>Email</label><input type="email" name="support_email" required></p><p><label>What do you need help with?</label><input name="support_topic" placeholder="e.g. sleep, feeding, SEND" required></p><p><label>Your area</label><input name="support_region" placeholder="e.g. Torbay, Exeter, Cornwall"></p></div><p><label>Your question</label><textarea name="support_question" rows="6" required></textarea></p><button class="bh-support-button">Ask for support</button></form></section>
       <section class="bh-support-section"><div class="bh-support-section-head"><div><span class="bh-support-kicker">Specialist advice</span><h2>From our specialists</h2></div></div><div class="bh-support-article-grid"><?php $q=new WP_Query(array('post_type'=>'bh_support_article','post_status'=>'publish','posts_per_page'=>6)); while($q->have_posts()):$q->the_post(); ?><article class="bh-support-article"><span>Specialist advice</span><h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3><p><?php echo esc_html(wp_trim_words(wp_strip_all_tags(get_the_content()),28)); ?></p><a href="<?php the_permalink(); ?>">Read article →</a></article><?php endwhile; wp_reset_postdata(); ?></div></section>
+      <?php echo bubbahub_support_recommended_resources(); ?>
       <?php echo bubbahub_support_useful_links(); ?>
+      <?php echo bubbahub_support_resource_form(); ?>
       <?php echo bubbahub_support_apps(); ?>
     </div><?php return ob_get_clean();
 }
@@ -182,6 +188,58 @@ function bubbahub_support_apps($topic='') {
     if($topic){$stores=array('App Store'=>'https://apps.apple.com/gb/search?term='.rawurlencode($topic),'Google Play'=>'https://play.google.com/store/search?q='.rawurlencode($topic).'&c=apps'); foreach($stores as $name=>$url)$html.='<a class="bh-support-link" href="'.esc_url($url).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($topic)).'</strong><span>Find apps on '.esc_html($name).' ↗</span></a>';} else {foreach(array_slice($s['keywords'],0,6) as $keyword){$html.='<a class="bh-support-link" href="'.esc_url('https://apps.apple.com/gb/search?term='.rawurlencode($keyword)).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Search apps on the App Store ↗</span></a>';}}
     return $html.'</div></section>';
 }
+
+
+function bubbahub_support_resource_form() {
+    $s=bubbahub_support_defaults();
+    $sent=false;
+    if(!empty($_POST['bh_support_resource_action']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['bh_support_resource_nonce']??'')),'bh_support_resource')){
+        $title=sanitize_text_field(wp_unslash($_POST['resource_title']??''));
+        $url=esc_url_raw(wp_unslash($_POST['resource_url']??''));
+        $description=sanitize_textarea_field(wp_unslash($_POST['resource_description']??''));
+        $topic=sanitize_text_field(wp_unslash($_POST['resource_topic']??''));
+        if($title && $url && wp_http_validate_url($url)){
+            $id=wp_insert_post(array('post_type'=>'bh_support_resource','post_status'=>'pending','post_title'=>$title,'post_content'=>$description,'post_author'=>get_current_user_id()),true);
+            if(!is_wp_error($id)){
+                update_post_meta($id,'_bh_support_resource_url',$url);
+                update_post_meta($id,'_bh_support_resource_description',$description);
+                update_post_meta($id,'_bh_support_resource_keywords',$topic);
+                $sent=true;
+            }
+        }
+    }
+    ob_start(); ?>
+    <div class="bh-support-card bh-support-resource-form">
+      <span class="bh-support-kicker">Community powered</span>
+      <h2>Recommend a useful resource</h2>
+      <p>Know a website, service or resource that could help other families? Send it to BubbaHub for review.</p>
+      <?php if($sent): ?><div class="bh-support-empty">Thank you — your recommendation has been sent for review.</div><?php endif; ?>
+      <form method="post"><?php wp_nonce_field('bh_support_resource','bh_support_resource_nonce'); ?>
+        <input type="hidden" name="bh_support_resource_action" value="1">
+        <div class="bh-support-form-grid">
+          <p><label>Resource name</label><input name="resource_title" required></p>
+          <p><label>Website or resource link</label><input type="url" name="resource_url" placeholder="https://" required></p>
+          <p><label>Topic</label><select name="resource_topic"><option value="">General family support</option><?php foreach($s['keywords'] as $keyword): ?><option value="<?php echo esc_attr($keyword); ?>"><?php echo esc_html(ucwords($keyword)); ?></option><?php endforeach; ?></select></p>
+          <p><label>Why recommend it?</label><input name="resource_description" required></p>
+        </div>
+        <button class="bh-support-button">Submit recommendation</button>
+      </form>
+    </div>
+    <?php return ob_get_clean();
+}
+add_shortcode('bubbahub_support_resource_form','bubbahub_support_resource_form');
+
+function bubbahub_support_recommended_resources($topic=''){
+    if(!$topic && !empty($_GET['support_topic'])) $topic=sanitize_text_field(wp_unslash($_GET['support_topic']));
+    $q=new WP_Query(array('post_type'=>'bh_support_resource','post_status'=>'publish','posts_per_page'=>6,'orderby'=>'date','order'=>'DESC'));
+    $html='<section class="bh-support-section"><div class="bh-support-section-head"><span class="bh-support-kicker">Community recommendations</span><h2>Resources recommended by families</h2><p>Helpful resources shared by the BubbaHub community and reviewed before publication.</p></div><div class="bh-support-link-grid">';
+    $shown=0;
+    while($q->have_posts()){ $q->the_post(); $keywords=get_post_meta(get_the_ID(),'_bh_support_resource_keywords',true); if($topic&&!bubbahub_support_resource_matches($keywords,$topic)) continue; $url=get_post_meta(get_the_ID(),'_bh_support_resource_url',true); $description=get_post_meta(get_the_ID(),'_bh_support_resource_description',true); if(!$url) continue; $shown++; $html.='<a class="bh-support-link" href="'.esc_url($url).'" target="_blank" rel="noopener"><strong>'.esc_html(get_the_title()).'</strong><span>'.esc_html($description?:wp_trim_words(wp_strip_all_tags(get_the_content()),20)).' ↗</span></a>'; }
+    wp_reset_postdata();
+    if(!$shown) $html.='<div class="bh-support-empty">No community recommendations have been published for this topic yet.</div>';
+    return $html.'</div></section>';
+}
+add_shortcode('bubbahub_support_recommended_resources','bubbahub_support_recommended_resources');
 
 function bubbahub_support_admin_menu() {
     add_submenu_page('edit.php?post_type=group','Support Hub','Support Hub','manage_options','bubbahub-support','bubbahub_support_admin_page');
@@ -216,6 +274,7 @@ function bubbahub_support_admin_page() {
       <a class="nav-tab <?php echo $tab==='leaders'?'nav-tab-active':''; ?>" href="<?php echo esc_url(admin_url('edit.php?post_type=group&page=bubbahub-support&tab=leaders')); ?>">Leader specialisms</a>
       <a class="nav-tab" href="<?php echo esc_url(admin_url('edit.php?post_type=bh_support_article')); ?>">Specialist articles</a>
       <a class="nav-tab" href="<?php echo esc_url(admin_url('edit.php?post_type=bh_support_request')); ?>">Questions</a>
+      <a class="nav-tab" href="<?php echo esc_url(admin_url('edit.php?post_type=bh_support_resource')); ?>">Recommended resources</a>
     </nav>
     <form method="post"><?php wp_nonce_field('bh_support_admin'); ?>
     <?php if($tab==='topics'): ?>
@@ -253,5 +312,5 @@ add_action('template_redirect','bubbahub_support_process_question');
 function bubbahub_support_assets() {
     if(!is_singular() && !is_page('support') && !is_page('leader')) return;
     wp_register_style('bubbahub-support',false,array(),BUBBAHUB_SUPPORT_VERSION); wp_enqueue_style('bubbahub-support');
-    wp_add_inline_style('bubbahub-support','.bh-support-hub{max-width:1180px;margin:0 auto;padding:30px 18px;color:#263238}.bh-support-hero{padding:45px 30px;border-radius:24px;background:linear-gradient(135deg,#fff4e8,#eef8ff);margin-bottom:25px}.bh-support-hero h1{font-size:clamp(32px,5vw,52px);margin:8px 0}.bh-support-card,.bh-support-section{margin:25px 0}.bh-support-card{padding:28px;border:1px solid #e5e7eb;border-radius:20px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.05)}.bh-support-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bh-support-hub label,.bh-support-article-form label{display:block;font-weight:700;margin-bottom:6px}.bh-support-hub input,.bh-support-hub textarea{width:100%;padding:12px 14px;border:1px solid #d9dde3;border-radius:12px;box-sizing:border-box}.bh-support-button{border:0;border-radius:12px;padding:13px 20px;background:#333;color:#fff;font-weight:700;cursor:pointer}.bh-support-section-head{margin-bottom:16px}.bh-support-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.7}.bh-support-article-grid,.bh-support-link-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.bh-support-article,.bh-support-link{padding:20px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;text-decoration:none;color:inherit}.bh-support-article h3{margin:8px 0}.bh-support-link{display:flex;flex-direction:column;gap:7px}.bh-support-link span{font-size:14px;opacity:.75}.bh-support-request{padding:20px 0;border-bottom:1px solid #ddd}.bh-support-request textarea{width:100%;box-sizing:border-box}.bh-support-inbox{max-width:900px;margin:30px auto}.bh-support-empty{padding:30px;background:#f7f7f7;border-radius:16px}@media(max-width:800px){.bh-support-form-grid,.bh-support-article-grid,.bh-support-link-grid{grid-template-columns:1fr}}');
+    wp_add_inline_style('bubbahub-support','.bh-support-hub{max-width:1180px;margin:0 auto;padding:30px 18px;color:#263238}.bh-support-hero{padding:45px 30px;border-radius:24px;background:linear-gradient(135deg,#fff4e8,#eef8ff);margin-bottom:25px}.bh-support-hero h1{font-size:clamp(32px,5vw,52px);margin:8px 0}.bh-support-card,.bh-support-section{margin:25px 0}.bh-support-card{padding:28px;border:1px solid #e5e7eb;border-radius:20px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.05)}.bh-support-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bh-support-hub label,.bh-support-article-form label{display:block;font-weight:700;margin-bottom:6px}.bh-support-hub input,.bh-support-hub textarea,.bh-support-hub select{width:100%;padding:12px 14px;border:1px solid #d9dde3;border-radius:12px;box-sizing:border-box}.bh-support-button{border:0;border-radius:12px;padding:13px 20px;background:#333;color:#fff;font-weight:700;cursor:pointer}.bh-support-section-head{margin-bottom:16px}.bh-support-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.7}.bh-support-article-grid,.bh-support-link-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.bh-support-article,.bh-support-link{padding:20px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;text-decoration:none;color:inherit}.bh-support-article h3{margin:8px 0}.bh-support-link{display:flex;flex-direction:column;gap:7px}.bh-support-link span{font-size:14px;opacity:.75}.bh-support-request{padding:20px 0;border-bottom:1px solid #ddd}.bh-support-request textarea{width:100%;box-sizing:border-box}.bh-support-inbox{max-width:900px;margin:30px auto}.bh-support-empty{padding:30px;background:#f7f7f7;border-radius:16px}@media(max-width:800px){.bh-support-form-grid,.bh-support-article-grid,.bh-support-link-grid{grid-template-columns:1fr}}');
 }

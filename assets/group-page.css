@@ -56,3 +56,10 @@
 .bhg-ready{overflow:hidden;box-sizing:border-box}
 .bhg-ready-content{width:100%;box-sizing:border-box}
 .bhg-ready .bhg-ready-icon-text{width:100%;height:auto;min-height:44px;border-radius:12px;padding:10px 14px;box-sizing:border-box;margin-bottom:14px;text-align:center;line-height:1.25}
+
+/* The theme's post title/meta container duplicates the custom Group Listing header. */
+.bubbahub-group-page .wp-block-post-title,
+.bubbahub-group-page .entry-header,
+.bubbahub-group-page .post-header,
+.bubbahub-group-page .wp-block-post-header,
+.bubbahub-group-page .entry-meta{display:none!important}

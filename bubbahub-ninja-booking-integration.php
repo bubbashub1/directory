@@ -120,6 +120,15 @@ function bubbahub_getpaid_auto_seller_id( $value ) {
 }
 add_filter( 'option_bubbahub_getpaid_seller_id', 'bubbahub_getpaid_auto_seller_id', 10, 1 );
 
+add_filter( 'ninja_forms_run_action_settings', 'bubbahub_contact_organiser_email_action_settings', 20, 4 );
+function bubbahub_contact_organiser_email_action_settings( $action_settings, $form_id, $action_id, $form_settings ) {
+    if ( empty( $form_settings['title'] ) || false === stripos( (string) $form_settings['title'], 'contact organiser' ) && false === stripos( (string) $form_settings['title'], 'contact organizer' ) ) return $action_settings;
+    if ( isset( $action_settings['type'] ) && 'email' !== $action_settings['type'] ) return $action_settings;
+    if ( isset( $action_settings['email_to'] ) ) $action_settings['email_to'] = '{wp:post_author_email}';
+    if ( isset( $action_settings['to'] ) ) $action_settings['to'] = '{wp:post_author_email}';
+    return $action_settings;
+}
+
 function bubbahub_ninja_booking_field_value( $form_data, $key ) {
     if ( empty( $form_data['fields'] ) || ! is_array( $form_data['fields'] ) ) return '';
     foreach ( $form_data['fields'] as $field ) {

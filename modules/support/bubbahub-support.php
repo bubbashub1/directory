@@ -45,11 +45,15 @@ function bubbahub_support_match_leaders( $question, $topic, $region='' ) {
     $leaders = get_users( array( 'role__in'=>array('leader','leaderpro'), 'fields'=>array('ID','user_email','display_name','first_name') ) );
     $matches = array();
     foreach ( $leaders as $leader ) {
+        $leader_specialisms = strtolower( (string) get_user_meta( $leader->ID, 'bh_support_specialisms', true ) );
         $groups = get_posts( array( 'post_type'=>'group','post_status'=>array('publish','draft','pending','private'), 'author'=>$leader->ID, 'posts_per_page'=>-1, 'fields'=>'ids', 'no_found_rows'=>true ) );
         if ( ! $groups ) continue;
         $score=0; $matched=array();
         foreach ( $groups as $gid ) {
             $hay = strtolower( get_the_title($gid).' '.wp_strip_all_tags(get_post_field('post_content',$gid)).' '.implode(' ', wp_get_post_terms($gid,'region',array('fields'=>'names'))) );
+            if ( $leader_specialisms ) {
+                foreach ( $terms as $term ) { if ( strlen( $term ) >= 4 && strpos( $leader_specialisms, $term ) !== false ) $score += 4; }
+            }
             foreach ( $settings['keywords'] as $keyword ) {
                 $keyword=strtolower(trim($keyword)); if($keyword==='' ) continue;
                 if ( strpos($hay,$keyword)!==false ) { $score+=2; $matched[]=$keyword; }
@@ -175,9 +179,35 @@ function bubbahub_support_admin_page() {
         foreach((array)($_POST['link_title']??array()) as $i=>$title){$url=esc_url_raw($_POST['link_url'][$i]??'');if($title&&$url)$s['links'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['link_description'][$i]??''),'keywords'=>sanitize_text_field($_POST['link_keywords'][$i]??''));}
         $s['apps']=array();
         foreach((array)($_POST['app_title']??array()) as $i=>$title){$url=esc_url_raw($_POST['app_url'][$i]??'');if($title&&$url)$s['apps'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['app_description'][$i]??''));}
-        update_option('bubbahub_support_settings',$s); echo '<div class="notice notice-success"><p>Support settings saved.</p></div>';
+        update_option('bubbahub_support_settings',$s);
+        foreach((array)($_POST['leader_specialisms']??array()) as $uid=>$specialisms) update_user_meta(absint($uid),'bh_support_specialisms',sanitize_text_field($specialisms));
+        echo '<div class="notice notice-success"><p>Support Hub settings saved.</p></div>';
     }
-    ?><div class="wrap"><h1>BubbaHub Support Hub</h1><p>Configure the topics used to match questions to leaders and populate useful-link and app searches.</p><form method="post"><?php wp_nonce_field('bh_support_admin'); ?><h2>Support keywords</h2><p>One keyword or phrase per line. These are matched against leader listings and also create Google Maps and app-store searches.</p><textarea name="keywords" style="width:100%;max-width:900px;height:220px"><?php echo esc_textarea(implode("\n",$s['keywords'])); ?></textarea><h2>Vetted useful links</h2><table class="widefat"><thead><tr><th>Title</th><th>URL</th><th>Description</th><th>Keywords</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['links']));$i++):$l=$s['links'][$i]??array(); ?><tr><td><input name="link_title[]" value="<?php echo esc_attr($l['title']??''); ?>"></td><td><input class="widefat" name="link_url[]" value="<?php echo esc_attr($l['url']??''); ?>"></td><td><input class="widefat" name="link_description[]" value="<?php echo esc_attr($l['description']??''); ?>"></td><td><input name="link_keywords[]" value="<?php echo esc_attr($l['keywords']??''); ?>"></td></tr><?php endfor; ?></tbody></table><h2>Curated apps</h2><table class="widefat"><thead><tr><th>App</th><th>URL</th><th>Description</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['apps']));$i++):$a=$s['apps'][$i]??array(); ?><tr><td><input name="app_title[]" value="<?php echo esc_attr($a['title']??''); ?>"></td><td><input class="widefat" name="app_url[]" value="<?php echo esc_attr($a['url']??''); ?>"></td><td><input class="widefat" name="app_description[]" value="<?php echo esc_attr($a['description']??''); ?>"></td></tr><?php endfor; ?></tbody></table><p><button class="button button-primary" name="bh_support_admin_save" value="1">Save Support Hub</button></p></form></div><?php
+    $tab=sanitize_key($_GET['tab']??'topics');
+    ?><div class="wrap"><h1>BubbaHub Support Hub</h1>
+    <nav class="nav-tab-wrapper">
+      <a class="nav-tab <?php echo $tab==='topics'?'nav-tab-active':''; ?>" href="<?php echo esc_url(admin_url('edit.php?post_type=group&page=bubbahub-support&tab=topics')); ?>">Topics &amp; matching</a>
+      <a class="nav-tab <?php echo $tab==='links'?'nav-tab-active':''; ?>" href="<?php echo esc_url(admin_url('edit.php?post_type=group&page=bubbahub-support&tab=links')); ?>">Useful links</a>
+      <a class="nav-tab <?php echo $tab==='apps'?'nav-tab-active':''; ?>" href="<?php echo esc_url(admin_url('edit.php?post_type=group&page=bubbahub-support&tab=apps')); ?>">Apps</a>
+      <a class="nav-tab <?php echo $tab==='leaders'?'nav-tab-active':''; ?>" href="<?php echo esc_url(admin_url('edit.php?post_type=group&page=bubbahub-support&tab=leaders')); ?>">Leader specialisms</a>
+      <a class="nav-tab" href="<?php echo esc_url(admin_url('edit.php?post_type=bh_support_article')); ?>">Specialist articles</a>
+      <a class="nav-tab" href="<?php echo esc_url(admin_url('edit.php?post_type=bh_support_request')); ?>">Questions</a>
+    </nav>
+    <form method="post"><?php wp_nonce_field('bh_support_admin'); ?>
+    <?php if($tab==='topics'): ?>
+      <h2>Support keywords</h2><p>One topic per line. These power leader matching, local Google Maps discovery and app searches.</p>
+      <textarea name="keywords" style="width:100%;max-width:900px;height:220px"><?php echo esc_textarea(implode("\n",$s['keywords'])); ?></textarea>
+    <?php elseif($tab==='links'): ?>
+      <h2>Useful links</h2><p>Add trusted resources. Keywords are retained so we can later filter links by the family's question.</p>
+      <table class="widefat"><thead><tr><th>Title</th><th>URL</th><th>Description</th><th>Keywords</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['links']));$i++):$l=$s['links'][$i]??array(); ?><tr><td><input name="link_title[]" value="<?php echo esc_attr($l['title']??''); ?>"></td><td><input class="widefat" name="link_url[]" value="<?php echo esc_attr($l['url']??''); ?>"></td><td><input class="widefat" name="link_description[]" value="<?php echo esc_attr($l['description']??''); ?>"></td><td><input name="link_keywords[]" value="<?php echo esc_attr($l['keywords']??''); ?>"></td></tr><?php endfor; ?></tbody></table>
+    <?php elseif($tab==='apps'): ?>
+      <h2>Curated apps</h2><p>Add recommended apps alongside the automatic App Store and Google Play searches.</p>
+      <table class="widefat"><thead><tr><th>App</th><th>URL</th><th>Description</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['apps']));$i++):$a=$s['apps'][$i]??array(); ?><tr><td><input name="app_title[]" value="<?php echo esc_attr($a['title']??''); ?>"></td><td><input class="widefat" name="app_url[]" value="<?php echo esc_attr($a['url']??''); ?>"></td><td><input class="widefat" name="app_description[]" value="<?php echo esc_attr($a['description']??''); ?>"></td></tr><?php endfor; ?></tbody></table>
+    <?php elseif($tab==='leaders'): ?>
+      <h2>Leader specialisms</h2><p>Optional extra matching terms for each approved leader. Example: <code>sleep, breastfeeding, baby massage</code>.</p>
+      <table class="widefat"><thead><tr><th>Leader</th><th>Email</th><th>Specialisms</th></tr></thead><tbody><?php foreach(get_users(array('role__in'=>array('leader','leaderpro'))) as $leader): ?><tr><td><?php echo esc_html($leader->display_name); ?></td><td><?php echo esc_html($leader->user_email); ?></td><td><input class="widefat" name="leader_specialisms[<?php echo esc_attr($leader->ID); ?>]" value="<?php echo esc_attr(get_user_meta($leader->ID,'bh_support_specialisms',true)); ?>"></td></tr><?php endforeach; ?></tbody></table>
+    <?php endif; ?>
+    <p><button class="button button-primary" name="bh_support_admin_save" value="1">Save Support Hub</button></p></form></div><?php
 }
 
 function bubbahub_support_process_question() {

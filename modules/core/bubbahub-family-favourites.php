@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 add_shortcode( 'bubbahub_family_recommendations', 'bubbahub_family_recommendations_shortcode' );
 add_action( 'wp_ajax_bubbahub_toggle_favourite', 'bubbahub_toggle_favourite_ajax' );
 add_action( 'wp_ajax_nopriv_bubbahub_toggle_favourite', 'bubbahub_toggle_favourite_guest' );
+add_action( 'wp_ajax_bubbahub_toggle_visited', 'bubbahub_toggle_visited_ajax' );
+add_action( 'wp_ajax_nopriv_bubbahub_toggle_visited', 'bubbahub_toggle_visited_ajax' );
 add_action( 'wp_enqueue_scripts', 'bubbahub_family_favourites_assets', 35 );
 
 function bubbahub_family_favourites_assets() {
@@ -17,6 +19,8 @@ function bubbahub_family_favourites_assets() {
         'ajaxUrl' => admin_url( 'admin-ajax.php' ),
         'nonce' => wp_create_nonce( 'bubbahub_favourite' ),
         'loginMessage' => 'Please log in to save groups to My Hub.',
+        'favourites' => bubbahub_user_favourite_ids(),
+        'visited' => function_exists( 'bubbahub_user_visited_ids' ) ? bubbahub_user_visited_ids() : array(),
     ) );
 }
 
@@ -26,6 +30,26 @@ function bubbahub_user_favourite_ids( $user_id = 0 ) {
     $ids = get_user_meta( $user_id, 'bh_favourite_groups', true );
     if ( ! is_array( $ids ) ) $ids = array();
     return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+}
+
+function bubbahub_user_visited_ids( $user_id = 0 ) {
+    $user_id = $user_id ? absint( $user_id ) : get_current_user_id();
+    if ( ! $user_id ) return array();
+    $ids = get_user_meta( $user_id, 'bh_visited_groups', true );
+    return is_array( $ids ) ? array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) ) : array();
+}
+
+function bubbahub_toggle_visited_ajax() {
+    check_ajax_referer( 'bubbahub_favourite', 'nonce' );
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in to save visited groups to My Hub.' ), 401 );
+    $group_id = isset( $_POST['group_id'] ) ? absint( $_POST['group_id'] ) : 0;
+    if ( ! $group_id || 'group' !== get_post_type( $group_id ) ) wp_send_json_error( array( 'message' => 'Invalid group.' ), 400 );
+    $ids = bubbahub_user_visited_ids();
+    $key = array_search( $group_id, $ids, true );
+    if ( false !== $key ) { unset( $ids[ $key ] ); $saved = false; } else { $ids[] = $group_id; $saved = true; }
+    $ids = array_values( array_unique( array_map( 'absint', $ids ) ) );
+    update_user_meta( get_current_user_id(), 'bh_visited_groups', $ids );
+    wp_send_json_success( array( 'saved' => $saved, 'count' => count( $ids ) ) );
 }
 
 function bubbahub_toggle_favourite_guest() {

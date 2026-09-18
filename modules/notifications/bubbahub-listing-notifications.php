@@ -1,0 +1,80 @@
+<?php
+/**
+ * BubbaHub Directory - Listing change notifications.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'save_post_group', 'bubbahub_directory_listing_change_notification', 99, 3 );
+
+function bubbahub_directory_notification_is_import() {
+    return ! empty( $GLOBALS['bubbahub_directory_csv_internal_import'] );
+}
+
+function bubbahub_directory_notification_is_automatic() {
+    return defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE;
+}
+
+function bubbahub_directory_send_listing_email( $to, $subject, $body_html ) {
+    if ( ! $to || ! is_email( $to ) ) return false;
+    $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+    return wp_mail( $to, $subject, $body_html, $headers );
+}
+
+function bubbahub_directory_listing_change_notification( $post_id, $post, $update ) {
+    if ( ! $update || ! $post || 'group' !== $post->post_type ) return;
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) || bubbahub_directory_notification_is_import() || bubbahub_directory_notification_is_automatic() ) return;
+    if ( ! is_user_logged_in() ) return;
+
+    $user = wp_get_current_user();
+    $author_id = (int) $post->post_author;
+    if ( ! $author_id || ! $user->ID ) return;
+
+    $is_admin = user_can( $user, 'manage_options' );
+    $is_leader = ( $user->ID === $author_id );
+    if ( ! $is_admin && ! $is_leader ) return;
+
+    $leader = get_userdata( $author_id );
+    if ( ! $leader || ! is_email( $leader->user_email ) ) return;
+
+    $listing_title = get_the_title( $post_id );
+    $listing_url   = get_permalink( $post_id );
+    $portal_url    = home_url( '/leader-portal/' );
+    $support_url   = home_url( '/support/' );
+
+    if ( $is_admin ) {
+        $subject = '🔔 Your Bubba Hub listing was recently updated';
+        $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
+        $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div>';
+        $body .= '<div style="padding:30px;">';
+        $body .= '<p>Hey there! 👋</p>';
+        $body .= '<h2>Your listing was recently updated</h2>';
+        $body .= '<p>Our Bubba Hub admin team has recently updated <strong>' . esc_html( $listing_title ) . '</strong>.</p>';
+        $body .= '<p>We’d really appreciate it if you could take a quick look and check that all of the information is correct.</p>';
+        $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $listing_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">View Your Listing</a></p>';
+        $body .= '<p>Please check your <strong>times, prices, venue, contact details, description and other information</strong>. If anything needs changing, you can update your listing from your Leader Portal.</p>';
+        $body .= '<p>If something doesn’t look right or you’re unsure about a change, just reply to this email and we’ll be happy to help.</p>';
+        $body .= '<hr style="border:0;border-top:1px solid #eee;margin:30px 0;">';
+        $body .= '<p><strong>Thanks for helping us keep Bubba Hub accurate for local families! 🌟</strong></p>';
+        $body .= '<p><a href="' . esc_url( $portal_url ) . '">Leader Portal</a> · <a href="' . esc_url( $support_url ) . '">Support</a></p>';
+        $body .= '<p>Warmly,<br><strong>The Bubba Hub Team</strong></p>';
+        $body .= '</div></div>';
+        bubbahub_directory_send_listing_email( $leader->user_email, $subject, $body );
+    } else {
+        $subject = '🎉 Your Bubba Hub listing has been updated';
+        $status_text = ( 'publish' === $post->post_status ) ? 'is now live on Bubba Hub' : 'has been updated';
+        $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
+        $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div>';
+        $body .= '<div style="padding:30px;">';
+        $body .= '<p>Hey there! 👋</p>';
+        $body .= '<h2>Your listing has been updated 🎉</h2>';
+        $body .= '<p><strong>' . esc_html( $listing_title ) . '</strong> ' . esc_html( $status_text ) . '.</p>';
+        $body .= '<p>Thanks for keeping your Bubba Hub information up to date. Families rely on your listing to find the right groups, classes and activities.</p>';
+        $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $listing_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">View Your Listing</a></p>';
+        $body .= '<p>If you made a change, please check the live listing to make sure everything looks as you expected.</p>';
+        $body .= '<p>Need a hand? Just reply to this email or visit our <a href="' . esc_url( $support_url ) . '">Support Page</a>.</p>';
+        $body .= '<p>Warmly,<br><strong>The Bubba Hub Team</strong></p>';
+        $body .= '<p style="font-size:13px;color:#777;">bubbahub.co.uk · @bubbahubsw on Facebook & Instagram</p>';
+        $body .= '</div></div>';
+        bubbahub_directory_send_listing_email( $leader->user_email, $subject, $body );
+    }
+}

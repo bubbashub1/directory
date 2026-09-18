@@ -2,12 +2,16 @@
 /**
  * Plugin Name: BubbaHub Directory
  * Description: Front-end directory for the Group custom post type with ACF-powered cards, advanced search, responsive grid controls, map view and a configurable drag-and-drop layout.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: BubbaHub
  * Requires PHP: 7.4
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.0' );
+
+// Isolate optional module bootstrap failures and surface them to administrators.
+$bh_runtime_guard = plugin_dir_path( __FILE__ ) . 'modules/core/bubbahub-runtime-guard.php';
+if ( file_exists( $bh_runtime_guard ) ) require_once $bh_runtime_guard;
+define( 'BUBBAHUB_DIRECTORY_VERSION', '1.3.1' );
 define( 'BUBBAHUB_DIRECTORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once plugin_dir_path( __FILE__ ) . 'bubbahub-group-template.php';

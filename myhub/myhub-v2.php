@@ -270,7 +270,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                         <h2>My Child Profiles</h2>
                         <p>Manage the children used to personalise your group suggestions.</p>
                     </div>
-                    <a class="bh-myhub-button" href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1', get_permalink() ) ); ?>"><svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Add child</span></a>
+                    <a class="bh-myhub-button" href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1', get_permalink() ) ); ?>">＋ Add child</a>
                 </div>
 
                 <div class="bh-myhub-family-carousel">
@@ -304,7 +304,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                     $antenatal = bubbahub_myhub_v3_antenatal_status( $due );
                                     ?>
                                     <div class="bh-myhub-tracker pregnancy bh-myhub-antenatal-tracker">
-                                        <div class="bh-myhub-tracker-title"><svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 1 1 6 0c0 2-1.2 3-1.2 5.2 0 1.6 1.2 2.5 2.7 3.8C18.1 14.5 19 17 19 20"/><path d="M9.5 9.5c-2.4 1.1-4.5 3.4-4.5 6.5 0 2.2 1.4 4 3.5 4H19"/><circle cx="12" cy="4" r=".4" fill="currentColor"/></svg><span>Antenatal Groups Hub</span></div>
+                                        <div class="bh-myhub-tracker-title">🤰 Antenatal Groups Hub</div>
                                         <strong>Antenatal support and classes for your pregnancy journey</strong>
                                         <?php if ( 'classes' === $antenatal['stage'] ) : ?>
                                             <span>Attend antenatal classes between <?php echo esc_html( wp_date( 'F Y', $antenatal['class_start']->getTimestamp() ) ); ?> and <?php echo esc_html( wp_date( 'F Y', $antenatal['class_end']->getTimestamp() ) ); ?>.</span>
@@ -312,7 +312,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                             <span>Nearly time! Is your hospital bag packed?</span>
                                         <?php else : ?>
                                             <span>You’re 38 weeks or more. Ready to tell My Hub your baby is here?</span>
-                                            <button type="button" class="bh-myhub-button bh-myhub-baby-here" data-bh-baby-here="<?php echo esc_attr( $child->ID ); ?>"><svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10a4 4 0 1 1 8 0"/><path d="M6 14c.8 3.2 3 5 6 5s5.2-1.8 6-5"/><path d="M9 14h.01M15 14h.01"/><path d="M4 10h2M18 10h2"/></svg><span>Baby is Here</span></button>
+                                            <button type="button" class="bh-myhub-button bh-myhub-baby-here" data-bh-baby-here="<?php echo esc_attr( $child->ID ); ?>">👶 Baby is Here</button>
                                         <?php endif; ?>
                                         <span>Due <?php echo esc_html( bubbahub_myhub_v3_date( $due ) ); ?></span>
                                     </div>
@@ -349,7 +349,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                         <?php endforeach; ?>
                     <?php else : ?>
                         <div class="bh-myhub-empty-family">
-                            <div class="bh-myhub-empty-icon"><svg class="bh-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12c2.2-3 4.2-3 6.4 0s4.2 3 6.4 0 4.2-3 6.2 0"/><path d="M4 17c2.2-3 4.2-3 6.4 0s4.2 3 6.4 0 4.2-3 6.2 0"/></svg></div>
+                            <div class="bh-myhub-empty-icon">👋</div>
                             <div><h3>Start your family profile</h3><p>Add your first child so Bubba Hub can personalise activities for your family.</p></div>
                         </div>
                     <?php endif; ?>

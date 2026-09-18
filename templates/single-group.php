@@ -17,6 +17,11 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $session       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'session_length', '' ) );
     $booking       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'booking_required', '' ) );
     $schedule      = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'business_hours', '' ) );
+    $business_hours = function_exists( 'get_field' ) ? get_field( 'group_business_hours_repeater', $group_id ) : array();
+    if ( ! is_array( $business_hours ) ) $business_hours = array();
+    $business_hour_days = array( 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' );
+    $today_name = wp_date( 'l' );
+    $now_minutes = (int) wp_date( 'G' ) * 60 + (int) wp_date( 'i' );
     $schedule_note = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'schedule_notes', '' ) );
     $map           = bubbahub_group_normalise_map( bubbahub_group_get_field( $group_id, 'map', '' ) );
     if ( ! $map && $venue_id ) $map = bubbahub_group_normalise_map( bubbahub_group_get_field( $venue_id, 'map', '' ) );
@@ -64,7 +69,56 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
                 </div>
                 <aside class="bhg-sidebar">
                     <section class="bhg-sidebar-card"><h2>Tags</h2><?php if ( $tags ) : ?><div class="bhg-tags"><?php foreach ( $tags as $tag ) : ?><a href="<?php echo esc_url( get_term_link( $tag ) ); ?>"><?php echo esc_html( $tag->name ); ?></a><?php endforeach; ?></div><?php else : ?><p class="bhg-muted">No tags added.</p><?php endif; ?></section>
-                    <section class="bhg-sidebar-card"><h2>Schedule</h2><div class="bhg-schedule"><?php echo $schedule !== '' ? wp_kses_post( nl2br( esc_html( $schedule ) ) ) : '<span class="bhg-muted">Schedule not added yet.</span>'; ?></div></section>
+                    <section class="bhg-sidebar-card bhg-business-hours-card"><h2>Business Hours</h2>
+                        <?php if ( $business_hours ) : ?>
+                            <div class="bhg-business-hours">
+                                <?php foreach ( $business_hour_days as $day_name ) :
+                                    $day_row = null;
+                                    foreach ( $business_hours as $row ) {
+                                        if ( ! is_array( $row ) ) continue;
+                                        $candidate = isset( $row['day_name'] ) ? $row['day_name'] : '';
+                                        if ( strtolower( trim( (string) $candidate ) ) === strtolower( $day_name ) ) { $day_row = $row; break; }
+                                    }
+                                    $closed = is_array( $day_row ) && ! empty( $day_row['is_closed'] );
+                                    $sessions = is_array( $day_row ) && ! empty( $day_row['sessions'] ) && is_array( $day_row['sessions'] ) ? $day_row['sessions'] : array();
+                                    $session_items = array();
+                                    $is_open_now = false;
+                                    foreach ( $sessions as $session_row ) {
+                                        if ( ! is_array( $session_row ) ) continue;
+                                        $start = '';
+                                        $end = '';
+                                        foreach ( array( 'start_time', 'start', 'from', 'opening_time', 'open' ) as $key ) if ( isset( $session_row[ $key ] ) && $session_row[ $key ] !== '' ) { $start = (string) $session_row[ $key ]; break; }
+                                        foreach ( array( 'end_time', 'end', 'to', 'closing_time', 'close' ) as $key ) if ( isset( $session_row[ $key ] ) && $session_row[ $key ] !== '' ) { $end = (string) $session_row[ $key ]; break; }
+                                        if ( $start === '' && $end === '' ) continue;
+                                        $session_items[] = trim( $start . ( $start !== '' && $end !== '' ? ' – ' : '' ) . $end );
+                                        $start_ts = strtotime( $start );
+                                        $end_ts = strtotime( $end );
+                                        if ( strtolower( $day_name ) === strtolower( $today_name ) && $start_ts !== false && $end_ts !== false ) {
+                                            $start_m = (int) date( 'G', $start_ts ) * 60 + (int) date( 'i', $start_ts );
+                                            $end_m = (int) date( 'G', $end_ts ) * 60 + (int) date( 'i', $end_ts );
+                                            if ( $now_minutes >= $start_m && $now_minutes < $end_m ) $is_open_now = true;
+                                        }
+                                    }
+                                    $day_classes = 'bhg-hours-day' . ( $is_open_now ? ' is-open-now' : '' );
+                                ?>
+                                    <div class="<?php echo esc_attr( $day_classes ); ?>">
+                                        <span class="bhg-hours-day-name"><?php echo esc_html( $day_name ); ?></span>
+                                        <div class="bhg-hours-times">
+                                            <?php if ( $closed || ! $session_items ) : ?>
+                                                <span class="bhg-hours-closed">Closed</span>
+                                            <?php else : ?>
+                                                <?php foreach ( $session_items as $time_slot ) : ?><span class="bhg-hours-slot"><?php echo esc_html( $time_slot ); ?></span><?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php elseif ( $schedule !== '' ) : ?>
+                            <div class="bhg-schedule"><?php echo wp_kses_post( nl2br( esc_html( $schedule ) ) ); ?></div>
+                        <?php else : ?>
+                            <span class="bhg-muted">Business hours not added yet.</span>
+                        <?php endif; ?>
+                    </section>
                     <section class="bhg-sidebar-card"><h2>Schedule notes</h2><div class="bhg-schedule-notes"><?php echo $schedule_note !== '' ? wp_kses_post( nl2br( esc_html( $schedule_note ) ) ) : '<span class="bhg-muted">No additional notes.</span>'; ?></div></section>
                     <section class="bhg-sidebar-card bhg-contact-card">
                         <h2>Contact</h2>

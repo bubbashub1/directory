@@ -27,6 +27,10 @@ if ( file_exists( $bh_platform_loader ) ) {
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 
+// Advanced directory search: ACF-linked filters, region/category, schedule day, term time and location.
+$bh_advanced_search = plugin_dir_path( __FILE__ ) . 'modules/core/bubbahub-advanced-search.php';
+if ( file_exists( $bh_advanced_search ) ) require_once $bh_advanced_search;
+
 // Leader/admin listing change notifications.
 $bh_listing_notifications = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-listing-notifications.php';
 if ( file_exists( $bh_listing_notifications ) ) require_once $bh_listing_notifications;

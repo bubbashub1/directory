@@ -162,6 +162,21 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
     $children = bubbahub_myhub_planner_v2_child_ids();
     $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
+    /* If no session records are available, use the existing group timetable planner as a fallback. */
+    if ( ! $rows && function_exists( 'bubbahub_myhub_planner_items' ) ) {
+        $legacy_items = bubbahub_myhub_planner_items( $children, array(), array() );
+        foreach ( $legacy_items as $legacy ) {
+            foreach ( $legacy['schedule'] as $legacy_day => $hours ) {
+                foreach ( $hours as $hour ) {
+                    $start = ''; $end = '';
+                    if ( preg_match( '/(\\d{1,2}:\\d{2})\\s*(?:[-–—to]+)\\s*(\\d{1,2}:\\d{2})/i', $hour, $m ) ) { $start = $m[1]; $end = $m[2]; }
+                    elseif ( preg_match( '/(\\d{1,2}:\\d{2})/i', $hour, $m ) ) { $start = $m[1]; }
+                    if ( ! $start ) continue;
+                    $rows[] = array('session_id'=>0,'group_id'=>$legacy['id'],'venue_id'=>0,'date'=>wp_date('Y-m-d',current_time('timestamp')),'start'=>$start,'end'=>$end,'title'=>$legacy['title'],'url'=>$legacy['url'],'image'=>$legacy['image'],'venue'=>'','venue_address'=>'');
+                }
+            }
+        }
+    }
     $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
     $interest_ids = $prefs['ids'];
     $location_values = bubbahub_myhub_planner_v2_user_location_values();

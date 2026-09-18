@@ -99,7 +99,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     }
     unset( $entries );
 
-    $account_url = function_exists( 'bubbahub_profile_um_url' ) ? bubbahub_profile_um_url() : home_url( '/account/' );
+    $account_url = add_query_arg( 'bh_account_settings', '1', home_url( '/my-hub/' ) );
 
     ob_start(); ?>
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">

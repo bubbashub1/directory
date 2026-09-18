@@ -17,7 +17,7 @@ while ( have_posts() ) : the_post();
     $price         = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'price', '' ) );
     $session       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'session_length', '' ) );
     $booking       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'booking_required', '' ) );
-    $schedule      = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'schedule', '' ) );
+    $schedule      = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'business_hours', '' ) );
     $schedule_note = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'schedule_notes', '' ) );
     $map           = bubbahub_group_normalise_map( bubbahub_group_get_field( $group_id, 'map', '' ) );
     if ( ! $map && $venue_id ) $map = bubbahub_group_normalise_map( bubbahub_group_get_field( $venue_id, 'map', '' ) );

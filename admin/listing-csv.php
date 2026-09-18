@@ -91,7 +91,7 @@ function bubbahub_directory_csv_value_decode( $value ) {
 
 function bubbahub_directory_csv_meta_keys() {
     global $wpdb;
-    $keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->postmeta} WHERE meta_key IS NOT NULL AND meta_key <> ''" );
+    $keys = $wpdb->get_col( "SELECT DISTINCT pm.meta_key FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'group' AND pm.meta_key IS NOT NULL AND pm.meta_key <> ''" );
     $keys = array_filter( array_map( 'sanitize_key', $keys ) );
     return array_values( array_unique( $keys ) );
 }
@@ -186,20 +186,32 @@ function bubbahub_directory_csv_import() {
     }
 
     $csv = preg_replace( '/^\xEF\xBB\xBF/', '', (string) $csv );
-    $lines = preg_split( "/\r\n|\n|\r/", $csv );
-    if ( count( $lines ) < 2 ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV contains no listing rows.' );
+    $stream = fopen( 'php://temp', 'r+' );
+    fwrite( $stream, $csv );
+    rewind( $stream );
 
-    $rows = array();
-    foreach ( $lines as $line ) {
-        if ( '' === trim( $line ) ) continue;
-        $rows[] = str_getcsv( $line );
+    $headers = fgetcsv( $stream );
+    if ( false === $headers || empty( $headers ) ) {
+        fclose( $stream );
+        bubbahub_directory_csv_import_redirect( 'error', 'The CSV contains no listing rows.' );
     }
-    if ( count( $rows ) < 2 ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV contains no listing rows.' );
 
     $headers = array_map( function( $header ) {
         $header = trim( preg_replace( '/^\xEF\xBB\xBF/', '', (string) $header ) );
         return sanitize_key( $header );
-    }, array_shift( $rows ) );
+    }, $headers );
+
+    $rows = array();
+    while ( false !== ( $values = fgetcsv( $stream ) ) ) {
+        $has_value = false;
+        foreach ( $values as $value ) {
+            if ( '' !== trim( (string) $value ) ) { $has_value = true; break; }
+        }
+        if ( $has_value ) $rows[] = $values;
+    }
+    fclose( $stream );
+
+    if ( empty( $rows ) ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV contains no listing rows.' );
 
     if ( ! in_array( 'id', $headers, true ) ) bubbahub_directory_csv_import_redirect( 'error', 'The CSV must contain an id column. It is the primary key for updates.' );
 

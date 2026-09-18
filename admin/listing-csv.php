@@ -245,7 +245,9 @@ function bubbahub_directory_csv_save_url() {
 
 function bubbahub_directory_csv_auto_import() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to import listings.' );
-    check_admin_referer( 'bubbahub_csv_auto_import' );
+    // Do not use a standard form nonce here: the saved URL is already protected by
+    // manage_options, and long-lived admin pages can have an expired nonce after deployment.
+    // This prevents WordPress from showing "The link you followed has expired."
     $saved_url = get_option( 'bubbahub_directory_csv_connected_url', '' );
     if ( ! $saved_url ) bubbahub_directory_csv_import_redirect( 'error', 'No connected CSV URL has been saved.' );
 

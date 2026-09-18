@@ -23,8 +23,12 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $today_name = wp_date( 'l' );
     $now_minutes = (int) wp_date( 'G' ) * 60 + (int) wp_date( 'i' );
     $schedule_note = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'schedule_notes', '' ) );
-    $map           = bubbahub_group_normalise_map( bubbahub_group_get_field( $group_id, 'map', '' ) );
-    if ( ! $map && $venue_id ) $map = bubbahub_group_normalise_map( bubbahub_group_get_field( $venue_id, 'map', '' ) );
+    // Resolve coordinates from the listing first, then its linked venue.
+    // This supports ACF map fields, imported latitude/longitude fields and legacy map formats.
+    $map           = function_exists( 'bubbahub_group_resolve_map' ) ? bubbahub_group_resolve_map( $group_id ) : null;
+    if ( ! $map && $venue_id && function_exists( 'bubbahub_group_resolve_map' ) ) {
+        $map = bubbahub_group_resolve_map( $venue_id );
+    }
     $venues        = bubbahub_group_get_organiser_venues( $organiser_id );
     $related       = bubbahub_group_related_query( $group_id, $organiser_id, $venue_id );
     $tags          = bubbahub_group_tags( $group_id );

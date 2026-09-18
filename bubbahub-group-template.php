@@ -165,10 +165,27 @@ function bubbahub_group_image( $post_id ) {
 }
 
 function bubbahub_group_normalise_map( $map ) {
+    // ACF Google Map fields normally return an array containing lat/lng.
+    // Some imports/older listings store the same data as JSON or serialised data,
+    // so accept those formats too.
     if ( is_array( $map ) ) {
         $lat = isset( $map['lat'] ) ? $map['lat'] : ( isset( $map['latitude'] ) ? $map['latitude'] : '' );
         $lng = isset( $map['lng'] ) ? $map['lng'] : ( isset( $map['longitude'] ) ? $map['longitude'] : '' );
         if ( $lat !== '' && $lng !== '' ) return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
+    }
+
+    if ( is_string( $map ) && $map !== '' ) {
+        $trimmed = trim( $map );
+        $json = json_decode( $trimmed, true );
+        if ( is_array( $json ) ) {
+            $coords = bubbahub_group_normalise_map( $json );
+            if ( $coords ) return $coords;
+        }
+        $unserialised = maybe_unserialize( $trimmed );
+        if ( is_array( $unserialised ) ) {
+            $coords = bubbahub_group_normalise_map( $unserialised );
+            if ( $coords ) return $coords;
+        }
     }
 
     if ( ! is_string( $map ) || $map === '' ) return null;
@@ -200,6 +217,35 @@ function bubbahub_group_normalise_map( $map ) {
 
     if ( preg_match( '/^\s*([-+]?\d+(?:\.\d+)?)\s*[, ]\s*([-+]?\d+(?:\.\d+)?)\s*$/', trim( $decoded ), $coords ) ) {
         return array( 'lat' => (float) $coords[1], 'lng' => (float) $coords[2] );
+    }
+
+    return null;
+}
+
+function bubbahub_group_resolve_map( $post_id ) {
+    // Support the primary ACF map field plus common legacy/import field names.
+    $map_fields = array( 'map', 'map_location', 'location_map', 'google_map' );
+    foreach ( $map_fields as $field_name ) {
+        $value = bubbahub_group_get_field( $post_id, $field_name, '' );
+        $coords = bubbahub_group_normalise_map( $value );
+        if ( $coords ) return $coords;
+    }
+
+    // Explicit coordinate fields are also supported by the importer and
+    // older listings. These take precedence over an address-only value.
+    $lat_fields = array( 'latitude', 'lat', 'map_lat' );
+    $lng_fields = array( 'longitude', 'lng', 'map_lng' );
+    $lat = $lng = '';
+    foreach ( $lat_fields as $field_name ) {
+        $lat = bubbahub_group_get_field( $post_id, $field_name, '' );
+        if ( $lat !== '' ) break;
+    }
+    foreach ( $lng_fields as $field_name ) {
+        $lng = bubbahub_group_get_field( $post_id, $field_name, '' );
+        if ( $lng !== '' ) break;
+    }
+    if ( $lat !== '' && $lng !== '' && is_numeric( $lat ) && is_numeric( $lng ) ) {
+        return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
     }
 
     return null;

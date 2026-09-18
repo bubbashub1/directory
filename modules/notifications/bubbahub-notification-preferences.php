@@ -208,7 +208,7 @@ function bubbahub_notification_session_changed( $meta_id, $session_id, $meta_key
         $group_id = absint( get_post_meta( $session_id, '_bh_group_id', true ) );
         $name = $group_id ? get_the_title( $group_id ) : get_the_title( $session_id );
         $message = 'There has been an update to your booked session for ' . $name . '. Please check My Hub for the latest date, time or venue details.';
-        bubbahub_notify_user( $user_id, 'booking', 'Update to your booked class – ' . $name, $message, home_url( '/my-hub/' ), array( 'sms' => true ) );
+        bubbahub_notify_user( $user_id, 'booking', 'Update to your booked class – ' . $name, $message, home_url( '/my-hub/' ), array( 'sms' => true, 'sms_emergency' => true ) );
         update_post_meta( $booking_id, '_bh_notification_session_change_' . sanitize_key( $meta_key ), $stamp );
     }
 }

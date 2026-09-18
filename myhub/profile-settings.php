@@ -132,8 +132,6 @@ function bubbahub_profile_handle_child_action() {
     $dob      = bubbahub_profile_date_value( isset( $_POST['child_date_of_birth'] ) ? wp_unslash( $_POST['child_date_of_birth'] ) : '' );
     $due      = bubbahub_profile_date_value( isset( $_POST['child_due_date'] ) ? wp_unslash( $_POST['child_due_date'] ) : '' );
     $avatar   = isset( $_POST['avatar_url'] ) ? esc_url_raw( wp_unslash( $_POST['avatar_url'] ) ) : '';
-    $allergies = isset( $_POST['allergies'] ) ? sanitize_text_field( wp_unslash( $_POST['allergies'] ) ) : '';
-    $notes     = isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '';
 
     if ( ! $name ) return array( 'error' => 'Please enter the child\'s name.' );
     if ( ! in_array( $status, array( 'born', 'expecting' ), true ) ) $status = 'born';
@@ -174,8 +172,6 @@ function bubbahub_profile_handle_child_action() {
     bubbahub_profile_update_field( $child_id, 'child_date_of_birth', $dob );
     bubbahub_profile_update_field( $child_id, 'child_due_date', $due );
     bubbahub_profile_update_field( $child_id, 'avatar_url', $avatar );
-    bubbahub_profile_update_field( $child_id, 'allergies', $allergies );
-    bubbahub_profile_update_field( $child_id, 'notes', $notes );
 
     /* Keep the existing age-group logic used by family suggestions in sync. */
     $age_group = bubbahub_profile_age_group( $dob );
@@ -231,11 +227,6 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
     $avatar = $get( 'avatar_url' );
     $allergies = $get( 'allergies' );
     $notes = $get( 'notes' );
-    $school_name = $get( 'school_name' );
-    $school_status = $get( 'school_application_status', 'active' );
-    $school_deadline = $get( 'school_application_deadline' );
-    $school_year = $get( 'school_year' );
-    $ofsted = $get( 'ofsted_rating' );
     $nap = $get( 'nap_schedule', array() );
 
     $dob = bubbahub_profile_date_value( $dob );
@@ -270,25 +261,6 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                     <label><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Expecting / Pregnancy</option></select></label>
                     <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>"></label>
                     <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>"></label>
-                </div>
-            </div>
-
-            <div class="bh-profile-card">
-                <div class="bh-profile-card-heading"><h3>Care information</h3><span>Private family notes</span></div>
-                <div class="bh-profile-grid one">
-                    <label><span>Allergies & dietary restrictions</span><input name="allergies" value="<?php echo esc_attr( $allergies ); ?>" placeholder="e.g. Peanuts, dairy"></label>
-                    <label><span>Other relevant information</span><textarea name="notes" rows="4" placeholder="Routine notes, favourite toys, additional information…"><?php echo esc_textarea( $notes ); ?></textarea></label>
-                </div>
-            </div>
-
-            <div class="bh-profile-card">
-                <div class="bh-profile-card-heading"><h3>School & childcare</h3><span>Uses existing My Hub tracker fields</span></div>
-                <div class="bh-profile-grid two">
-                    <label><span>School / childcare name</span><input name="school_name" value="<?php echo esc_attr( $school_name ); ?>"></label>
-                    <label><span>Status</span><select name="school_application_status"><option value="active" <?php selected( $school_status, 'active' ); ?>>Active</option><option value="closed" <?php selected( $school_status, 'closed' ); ?>>Closed</option><option value="now_in_school" <?php selected( $school_status, 'now_in_school' ); ?>>Now in School</option></select></label>
-                    <label><span>Application deadline</span><input name="school_application_deadline" type="date" value="<?php echo esc_attr( $school_deadline ); ?>"></label>
-                    <label><span>School year</span><input name="school_year" value="<?php echo esc_attr( $school_year ); ?>" placeholder="e.g. Reception 2027"></label>
-                    <label><span>Ofsted rating</span><input name="ofsted_rating" value="<?php echo esc_attr( $ofsted ); ?>"></label>
                 </div>
             </div>
 

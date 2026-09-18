@@ -104,7 +104,7 @@ function bubbahub_directory_csv_meta_keys() {
 function bubbahub_directory_csv_template() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
     check_admin_referer( 'bubbahub_csv_template' );
-    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','twitter','tiktok','map','term_time' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','map','term_time' );
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );

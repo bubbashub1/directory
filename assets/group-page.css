@@ -2,3 +2,52 @@
 .bhg-contact-links{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.bhg-contact-links a{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--bhg-border);border-radius:10px;background:#fff;color:var(--bhg-text);text-decoration:none;font-size:13px;font-weight:700}.bhg-contact-links a:hover{transform:translateY(-1px)}.bhg-contact-button{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--bhg-accent);color:#fff;text-decoration:none;font-weight:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer}.bh-contact-modal{position:fixed;inset:0;z-index:99999;display:none}.bh-contact-modal.is-open{display:block}.bh-contact-modal-backdrop{position:absolute;inset:0;background:rgba(20,25,30,.62)}.bh-contact-modal-dialog{position:relative;width:min(680px,calc(100% - 28px));max-height:90vh;overflow:auto;margin:5vh auto;background:#fff;border-radius:18px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.25)}.bh-contact-modal-close{position:absolute;right:14px;top:12px;width:38px;height:38px;border:0;border-radius:50%;background:#f3f4f5;font-size:26px;line-height:1;cursor:pointer}.bh-contact-modal-heading{padding-right:42px;margin-bottom:22px}.bh-contact-eyebrow{font-size:12px;letter-spacing:.08em;font-weight:900;color:var(--bhg-accent)}.bh-contact-modal-heading h2{margin:6px 0 8px}.bh-contact-modal-heading p{margin:0;color:var(--bhg-muted);line-height:1.55}.bh-modal-open{overflow:hidden}@media(max-width:700px){.bh-contact-modal-dialog{margin:2vh auto;width:calc(100% - 18px);padding:22px 18px;border-radius:14px}}
 
 .bhg-business-hours{display:flex;flex-direction:column;gap:0}.bhg-hours-day{display:grid;grid-template-columns:105px minmax(0,1fr);gap:14px;padding:10px 0;border-bottom:1px solid var(--bhg-border);font-size:14px}.bhg-hours-day:last-child{border-bottom:0}.bhg-hours-day-name{font-weight:800}.bhg-hours-times{display:flex;flex-direction:column;gap:4px;color:var(--bhg-text)}.bhg-hours-slot{display:block}.bhg-hours-closed{color:var(--bhg-muted)}.bhg-hours-day.is-open-now .bhg-hours-day-name,.bhg-hours-day.is-open-now .bhg-hours-times{color:#2e9b59}.bhg-hours-day.is-open-now .bhg-hours-day-name:after{content:' • Open now';font-size:11px;font-weight:800;margin-left:5px}@media(max-width:460px){.bhg-hours-day{grid-template-columns:85px minmax(0,1fr);gap:8px}}
+
+
+/* Contact organiser — modern Ninja Forms styling */
+.bh-contact-modal-dialog #nf-form-5-cont{margin:0}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-form-fields-required{display:none}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-field-container{margin-bottom:16px}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-field-label{margin-bottom:7px}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-field-label label{font-size:13px;font-weight:800;color:var(--bhg-text);line-height:1.3}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-field-label .ninja-forms-req-symbol{color:#e46f61;font-weight:900;margin-left:3px}
+.bh-contact-modal-dialog #nf-form-5-cont input[type="text"],
+.bh-contact-modal-dialog #nf-form-5-cont input[type="email"],
+.bh-contact-modal-dialog #nf-form-5-cont input[type="tel"],
+.bh-contact-modal-dialog #nf-form-5-cont input[type="url"],
+.bh-contact-modal-dialog #nf-form-5-cont input[type="number"],
+.bh-contact-modal-dialog #nf-form-5-cont input[type="search"],
+.bh-contact-modal-dialog #nf-form-5-cont select,
+.bh-contact-modal-dialog #nf-form-5-cont textarea{width:100%;box-sizing:border-box;border:1px solid #dfe3e7;border-radius:15px;background:#fafbfc;color:var(--bhg-text);font:inherit;font-size:15px;line-height:1.45;padding:13px 15px;min-height:50px;box-shadow:inset 0 1px 2px rgba(25,35,45,.025);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease,transform .18s ease}
+.bh-contact-modal-dialog #nf-form-5-cont textarea{min-height:140px;resize:vertical}
+.bh-contact-modal-dialog #nf-form-5-cont select{appearance:auto;padding-right:12px}
+.bh-contact-modal-dialog #nf-form-5-cont input::placeholder,
+.bh-contact-modal-dialog #nf-form-5-cont textarea::placeholder{color:#9aa2aa}
+.bh-contact-modal-dialog #nf-form-5-cont input:focus,
+.bh-contact-modal-dialog #nf-form-5-cont select:focus,
+.bh-contact-modal-dialog #nf-form-5-cont textarea:focus{outline:none;border-color:var(--bhg-accent);background:#fff;box-shadow:0 0 0 4px rgba(242,139,123,.14),0 4px 14px rgba(25,35,45,.05)}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-error input,
+.bh-contact-modal-dialog #nf-form-5-cont .nf-error select,
+.bh-contact-modal-dialog #nf-form-5-cont .nf-error textarea{border-color:#df7166;background:#fffafa}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-error-msg{font-size:12px;color:#c95d53;margin-top:6px}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-form-content{padding:0}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-form-content .nf-row{margin-left:-7px;margin-right:-7px}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-form-content .nf-row .nf-cell{padding-left:7px;padding-right:7px}
+.bh-contact-modal-dialog #nf-form-5-cont .submit-container{margin:8px 0 0}
+.bh-contact-modal-dialog #nf-form-5-cont input[type="submit"],
+.bh-contact-modal-dialog #nf-form-5-cont button[type="submit"]{width:100%;min-height:52px;border:0;border-radius:15px;background:var(--bhg-accent);color:#fff;padding:0 20px;font:inherit;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(242,139,123,.22);transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}
+.bh-contact-modal-dialog #nf-form-5-cont input[type="submit"]:hover,
+.bh-contact-modal-dialog #nf-form-5-cont button[type="submit"]:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(242,139,123,.28);filter:brightness(.98)}
+.bh-contact-modal-dialog #nf-form-5-cont input[type="submit"]:focus,
+.bh-contact-modal-dialog #nf-form-5-cont button[type="submit"]:focus{outline:none;box-shadow:0 0 0 4px rgba(242,139,123,.18),0 8px 18px rgba(242,139,123,.22)}
+.bh-contact-modal-dialog #nf-form-5-cont .nf-response-msg{padding:14px 16px;border-radius:14px;background:#f1fbf5;color:#28794b;font-size:14px;line-height:1.5}
+@media(min-width:701px){
+  .bh-contact-modal-dialog #nf-form-5-cont .nf-form-content .nf-row{display:flex}
+}
+@media(max-width:700px){
+  .bh-contact-modal-dialog #nf-form-5-cont .nf-field-container{margin-bottom:13px}
+  .bh-contact-modal-dialog #nf-form-5-cont input[type="text"],
+  .bh-contact-modal-dialog #nf-form-5-cont input[type="email"],
+  .bh-contact-modal-dialog #nf-form-5-cont input[type="tel"],
+  .bh-contact-modal-dialog #nf-form-5-cont textarea{border-radius:13px}
+}

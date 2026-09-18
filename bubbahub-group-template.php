@@ -123,26 +123,46 @@ function bubbahub_group_term_time( $post_id ) {
     return ! empty( $value );
 }
 
-function bubbahub_group_image( $post_id ) {
+function bubbahub_group_images( $post_id ) {
+    $ids = get_post_meta( $post_id, '_bubbahub_gallery_ids', true );
+    $ids = is_array( $ids ) ? array_map( 'absint', $ids ) : array();
+
     $gallery = bubbahub_group_get_field( $post_id, 'image', array() );
-
     if ( is_array( $gallery ) ) {
-        $first = reset( $gallery );
-
-        if ( is_array( $first ) && ! empty( $first['url'] ) ) return $first['url'];
-
-        if ( is_numeric( $first ) ) {
-            $url = wp_get_attachment_image_url( (int) $first, 'full' );
-            if ( $url ) return $url;
-        }
-
-        if ( is_object( $first ) && ! empty( $first->ID ) ) {
-            $url = wp_get_attachment_image_url( (int) $first->ID, 'full' );
-            if ( $url ) return $url;
+        foreach ( $gallery as $item ) {
+            $id = 0;
+            if ( is_numeric( $item ) ) $id = absint( $item );
+            elseif ( is_array( $item ) && ! empty( $item['ID'] ) ) $id = absint( $item['ID'] );
+            elseif ( is_array( $item ) && ! empty( $item['id'] ) ) $id = absint( $item['id'] );
+            elseif ( is_object( $item ) && ! empty( $item->ID ) ) $id = absint( $item->ID );
+            if ( $id ) $ids[] = $id;
         }
     }
 
-    return get_the_post_thumbnail_url( $post_id, 'full' ) ?: '';
+    $thumb = get_post_thumbnail_id( $post_id );
+    if ( $thumb ) array_unshift( $ids, (int) $thumb );
+
+    $ids = array_values( array_unique( array_filter( $ids ) ) );
+    $images = array();
+
+    foreach ( $ids as $id ) {
+        $url = wp_get_attachment_image_url( $id, 'full' );
+        if ( $url ) $images[] = array( 'id' => $id, 'url' => $url );
+    }
+
+    if ( ! $images ) {
+        $legacy = get_post_meta( $post_id, 'image_url', true );
+        if ( is_string( $legacy ) && filter_var( trim( $legacy ), FILTER_VALIDATE_URL ) ) {
+            $images[] = array( 'id' => 0, 'url' => trim( $legacy ) );
+        }
+    }
+
+    return $images;
+}
+
+function bubbahub_group_image( $post_id ) {
+    $images = bubbahub_group_images( $post_id );
+    return ! empty( $images[0]['url'] ) ? $images[0]['url'] : '';
 }
 
 function bubbahub_group_normalise_map( $map ) {

@@ -364,6 +364,10 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 </div>
             </section>
 
+            <?php if ( function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' ) ) : ?>
+                <?php echo bubbahub_myhub_weekly_planner_v2_shortcode(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <?php endif; ?>
+
             <section class="bh-myhub-section bh-myhub-suggested-section">
                 <div class="bh-myhub-section-heading">
                     <div><div class="bh-myhub-kicker">PERSONALISED FOR YOUR FAMILY</div><h2>Suggested Groups For Your Family</h2><p>Matched using your saved preferences and selected children's age ranges.</p></div>
@@ -373,9 +377,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
             </section>
 
 
-            <?php if ( function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' ) ) : ?>
-                <?php echo bubbahub_myhub_weekly_planner_v2_shortcode(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-            <?php endif; ?>        </div>
+        </div>
         <script>
 document.addEventListener('DOMContentLoaded',function(){
     document.querySelectorAll('[data-bh-baby-here]').forEach(function(button){

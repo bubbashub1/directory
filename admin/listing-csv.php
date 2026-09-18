@@ -68,7 +68,7 @@ function bubbahub_directory_csv_admin_page() {
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Recommended Google Sheets columns</h2>
-            <p><code>id, post_title, post_content, post_status, post_author, post_name, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, twitter, tiktok, map, term_time</code></p>
+            <p><code>id, post_title, post_content, post_status, post_author, post_name, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, map, term_time</code></p>
             <p>Any additional column is treated as a listing post-meta field, so the importer can carry new BubbaHub fields without changing this feature.</p>
         </div>
     </div>

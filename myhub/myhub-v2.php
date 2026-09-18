@@ -171,6 +171,13 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
             return '<div class="bh-myhub-login"><h2>Welcome to My Hub</h2><p>Please log in to see your family dashboard.</p></div>';
         }
 
+        /* The Add Child button on My Hub uses the same page with bh_add_child=1.
+         * Route that request to the real child editor supplied by profile-settings.php,
+         * so the inline loader receives a form and the POST is handled by the same save code. */
+        if ( isset( $_GET['bh_add_child'] ) && function_exists( 'bubbahub_profile_child_form' ) ) {
+            return bubbahub_profile_child_form( isset( $_GET['child_id'] ) ? absint( $_GET['child_id'] ) : 0 );
+        }
+
         $uid  = get_current_user_id();
         $user = wp_get_current_user();
 

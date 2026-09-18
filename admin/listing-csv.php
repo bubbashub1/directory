@@ -68,7 +68,7 @@ function bubbahub_directory_csv_admin_page() {
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Recommended Google Sheets columns</h2>
-            <p><code>id, post_title, post_content, post_status, post_author, post_name, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, map, term_time</code></p>
+            <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, latitude, longitude, map, term_time</code></p>
             <p>Any additional column is treated as a listing post-meta field, so the importer can carry new BubbaHub fields without changing this feature.</p>
         </div>
     </div>
@@ -104,7 +104,7 @@ function bubbahub_directory_csv_meta_keys() {
 function bubbahub_directory_csv_template() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
     check_admin_referer( 'bubbahub_csv_template' );
-    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time' );
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );
@@ -131,7 +131,7 @@ function bubbahub_directory_csv_export() {
     ) );
 
     $meta_keys = bubbahub_directory_csv_meta_keys();
-    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region' );
+    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'category', 'tags', 'region', 'latitude', 'longitude', 'map' );
     $headers = array_values( array_unique( array_merge( $fixed, $meta_keys ) ) );
 
     nocache_headers();
@@ -293,6 +293,21 @@ function bubbahub_directory_csv_import() {
             update_post_meta( $saved_id, 'latitude', (string) $latitude );
             update_post_meta( $saved_id, 'longitude', (string) $longitude );
             update_post_meta( $saved_id, 'map', $latitude . ',' . $longitude );
+        }
+
+        if ( array_key_exists( 'category', $data ) ) {
+            $category_taxonomy = taxonomy_exists( 'group_category' ) ? 'group_category' : ( taxonomy_exists( 'category' ) ? 'category' : '' );
+            if ( $category_taxonomy ) {
+                $value = is_array( $data['category'] ) ? implode( ',', $data['category'] ) : (string) $data['category'];
+                $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $value ) ) );
+                wp_set_object_terms( $saved_id, $terms, $category_taxonomy, false );
+            }
+        }
+
+        if ( array_key_exists( 'tags', $data ) && taxonomy_exists( 'post_tag' ) ) {
+            $value = is_array( $data['tags'] ) ? implode( ',', $data['tags'] ) : (string) $data['tags'];
+            $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $value ) ) );
+            wp_set_object_terms( $saved_id, $terms, 'post_tag', false );
         }
 
         if ( array_key_exists( 'region', $data ) ) {

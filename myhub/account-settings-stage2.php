@@ -206,14 +206,18 @@ function bubbahub_stage2_handle_interests() {
     bubbahub_stage2_update_meta( 'bubbahub_interest_taxonomy', $taxonomy );
     bubbahub_stage2_update_meta( 'bubbahub_interest_term_ids', $term_ids );
 
-    $location_taxonomy = bubbahub_stage2_location_taxonomy();
-    $location_term_id = isset( $_POST['planner_location'] ) ? absint( $_POST['planner_location'] ) : 0;
-    if ( $location_term_id && ( ! $location_taxonomy || ! term_exists( $location_term_id, $location_taxonomy ) ) ) $location_term_id = 0;
-    bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
-    bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $location_term_id );
-    $keyword = isset( $_POST['planner_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['planner_keyword'] ) ) : '';
-    bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', $keyword );
-    bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', '1' );
+    // The planner preferences have their own form. Do not overwrite them
+    // when the separate "Save interests & groups" form is submitted.
+    if ( isset( $_POST['planner_location'] ) || isset( $_POST['planner_keyword'] ) ) {
+        $location_taxonomy = bubbahub_stage2_location_taxonomy();
+        $location_term_id = isset( $_POST['planner_location'] ) ? absint( $_POST['planner_location'] ) : 0;
+        if ( $location_term_id && ( ! $location_taxonomy || ! term_exists( $location_term_id, $location_taxonomy ) ) ) $location_term_id = 0;
+        bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
+        bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $location_term_id );
+        $keyword = isset( $_POST['planner_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['planner_keyword'] ) ) : '';
+        bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', $keyword );
+        bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', '1' );
+    }
 
     $custom_groups = array();
     if ( ! empty( $_POST['custom_groups'] ) && is_array( $_POST['custom_groups'] ) ) {

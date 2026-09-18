@@ -5,10 +5,6 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-/* The booking engine lives in the same Directory plugin; load it before the planner bridge. */
-$bh_booking_engine = dirname( __DIR__ ) . '/bubbahub-booking-engine.php';
-if ( file_exists( $bh_booking_engine ) ) require_once $bh_booking_engine;
-
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
 
 function bubbahub_myhub_planner_v2_tax_terms( $taxonomy, $ids = array() ) {
@@ -48,24 +44,94 @@ function bubbahub_myhub_planner_v2_match( $group_id, $interest_ids, $location_id
 }
 
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
-    if(!is_user_logged_in())return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
-    $interest_ids=bubbahub_myhub_planner_v2_user_terms('user-interests'); $location_ids=bubbahub_myhub_planner_v2_user_terms('preferred-location');
-    $children=bubbahub_myhub_planner_v2_child_ids(); $rows=bubbahub_myhub_planner_v2_session_rows(7); $days=array('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'); $by=array_fill_keys($days,array());
-    foreach($rows as $row){$score=bubbahub_myhub_planner_v2_match($row['group_id'],$interest_ids,$location_ids);if($score<0)continue;$ts=strtotime($row['date'].' '.$row['start']);if(!$ts)continue;$day=wp_date('l',$ts);$row['score']=$score;$row['time_label']=wp_date('g:i A',$ts).($row['end']?' – '.wp_date('g:i A',strtotime($row['date'].' '.$row['end'])):'');$by[$day][]=$row;}
-    foreach($by as &$entries)usort($entries,function($a,$b){$x=$a['date'].' '.$a['start'];$y=$b['date'].' '.$b['start'];return $x<=>$y;});unset($entries);
+    if ( ! is_user_logged_in() ) return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
+
+    $interest_ids = bubbahub_myhub_planner_v2_user_terms( 'user-interests' );
+    $location_ids = bubbahub_myhub_planner_v2_user_terms( 'preferred-location' );
+    $children = bubbahub_myhub_planner_v2_child_ids();
+    $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
+    $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
+    $by = array_fill_keys( $days, array() );
+
+    foreach ( $rows as $row ) {
+        $score = bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_ids );
+        if ( $score < 0 ) continue;
+        $matching = array();
+        foreach ( $children as $index => $child_id ) {
+            if ( bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) $matching[] = $index + 1;
+        }
+        if ( ! $matching ) continue;
+        $ts = strtotime( $row['date'] . ' ' . $row['start'] );
+        if ( ! $ts ) continue;
+        $end_ts = strtotime( $row['date'] . ' ' . ( $row['end'] ?: $row['start'] ) );
+        $day = wp_date( 'l', $ts );
+        $row['child_numbers'] = $matching;
+        $row['is_all'] = count( $children ) > 1 && count( $matching ) === count( $children );
+        $row['indicator'] = $row['is_all'] ? 'All' : ( count( $matching ) === 1 ? 'Child ' . $matching[0] : 'Children' );
+        $row['calendar_url'] = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' . rawurlencode( $row['title'] ) . '&dates=' . rawurlencode( wp_date( 'Ymd\THis', $ts ) ) . '/' . rawurlencode( wp_date( 'Ymd\THis', $end_ts ) ) . '&details=' . rawurlencode( 'Bubba Hub: ' . $row['url'] ) . '&location=' . rawurlencode( $row['venue_address'] ?: $row['venue'] );
+        $by[ $day ][] = $row;
+    }
+
+    foreach ( $by as &$entries ) {
+        usort( $entries, function( $a, $b ) { return ( $a['date'] . ' ' . $a['start'] ) <=> ( $b['date'] . ' ' . $b['start'] ); } );
+    }
+    unset( $entries );
+
+    $account_url = function_exists( 'bubbahub_profile_um_url' ) ? bubbahub_profile_um_url() : home_url( '/account/' );
+
     ob_start(); ?>
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">
-      <div class="bh-myhub-section-heading"><div><div class="bh-myhub-kicker">YOUR WEEK</div><h2>Weekly Planner</h2><p>Your saved children, interests and preferred locations shape the activities shown here.</p></div></div>
-      <div class="bh-planner-summary"><span><?php echo esc_html(count($children)); ?> child profile<?php echo count($children)===1?'':'s'; ?></span><span><?php echo esc_html(count($interest_ids)); ?> saved interests</span><span><?php echo esc_html(count($location_ids)); ?> preferred locations</span></div>
+      <div class="bh-myhub-section-heading">
+        <div><div class="bh-myhub-kicker">YOUR WEEK</div><h2>Weekly Planner</h2><p>Your saved preferences personalise the activities shown here.</p></div>
+        <a class="bh-weekly-planner-preferences" href="<?php echo esc_url( $account_url ); ?>">Update Preferences →</a>
+      </div>
+
+      <?php if ( $children ) : ?>
+        <details class="bh-planner-child-filter-mobile">
+          <summary>Children <span>All · <?php echo esc_html( count( $children ) ); ?> child<?php echo count( $children ) === 1 ? '' : 'ren'; ?></span></summary>
+          <div class="bh-planner-child-options">
+            <button type="button" class="active" data-planner-child-filter="all">All</button>
+            <?php foreach ( $children as $index => $child_id ) : ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>">Child <?php echo esc_html( $index + 1 ); ?></button><?php endforeach; ?>
+          </div>
+        </details>
+        <div class="bh-planner-child-filter-desktop">
+          <strong>Show</strong>
+          <button type="button" class="active" data-planner-child-filter="all">All</button>
+          <?php foreach ( $children as $index => $child_id ) : ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>">Child <?php echo esc_html( $index + 1 ); ?></button><?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
       <div class="bh-planner-results">
-      <?php foreach($days as $day): ?><div class="bh-planner-day"><div class="bh-planner-day-title"><?php echo esc_html($day); ?></div><div class="bh-planner-day-items">
-        <?php if(!empty($by[$day])): foreach($by[$day] as $item): ?><a class="bh-planner-item" href="<?php echo esc_url($item['url']); ?>"><span class="bh-planner-thumb"><?php if($item['image']):?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else:?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif;?></span><span class="bh-planner-item-main"><strong><?php echo esc_html($item['title']); ?></strong><span class="bh-planner-hours"><?php echo esc_html($item['time_label']); ?><?php if($item['venue']): ?> · <?php echo esc_html($item['venue']); ?><?php endif; ?></span></span><span class="bh-planner-arrow" aria-hidden="true">→</span></a><?php endforeach; else:?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
+      <?php foreach ( $days as $day ) : ?><div class="bh-planner-day"><div class="bh-planner-day-title"><?php echo esc_html( $day ); ?></div><div class="bh-planner-day-items">
+        <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
+          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>">
+            <a class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>" href="<?php echo esc_url( $item['url'] ); ?>">
+              <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
+              <span class="bh-planner-item-main"><strong><?php echo esc_html( $item['title'] ); ?></strong><span class="bh-planner-location">📍 <?php echo esc_html( $item['venue'] ?: 'Location to be confirmed' ); ?></span></span>
+              <span class="bh-planner-child-indicator"><?php echo esc_html( $item['indicator'] ); ?></span>
+            </a>
+            <a class="bh-planner-calendar" href="<?php echo esc_url( $item['calendar_url'] ); ?>" target="_blank" rel="noopener">＋ Add to calendar</a>
+          </div>
+        <?php endforeach; else : ?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
       </div></div><?php endforeach; ?>
       </div>
+
+      <script>
+      document.addEventListener('DOMContentLoaded',function(){
+        document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
+          planner.querySelectorAll('[data-planner-child-filter]').forEach(function(button){
+            button.addEventListener('click',function(){
+              var filter=button.getAttribute('data-planner-child-filter');
+              planner.querySelectorAll('[data-planner-child-filter]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-planner-child-filter')===filter);});
+              planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
+                var kids=(item.getAttribute('data-planner-children')||'').split(',');
+                item.hidden=filter!=='all'&&kids.indexOf(filter)===-1;
+              });
+            });
+          });
+        });
+      });
+      </script>
     </section>
     <?php return ob_get_clean();
 }
-
-/* Booking bridge: planner refreshes use live booking-engine capacity and direct session links. */
-$bh_planner_booking_bridge = BUBBAHUB_MYHUB_PATH . 'planner-booking-bridge.php';
-if ( file_exists( $bh_planner_booking_bridge ) ) require_once $bh_planner_booking_bridge;

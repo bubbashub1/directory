@@ -39,6 +39,10 @@ if ( is_admin() ) {
 $bh_notification_preferences = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-notification-preferences.php';
 if ( file_exists( $bh_notification_preferences ) ) require_once $bh_notification_preferences;
 
+// SMS safety policy, quotas and leader alerts.
+$bh_sms_policy = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-sms-policy.php';
+if ( file_exists( $bh_sms_policy ) ) require_once $bh_sms_policy;
+
 // TextBee SMS provider for the notification centre.
 $bh_textbee_sms = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-textbee-sms.php';
 if ( file_exists( $bh_textbee_sms ) ) require_once $bh_textbee_sms;

@@ -337,6 +337,134 @@ function bubbahub_directory_csv_auto_import() {
     unset( $GLOBALS['bubbahub_directory_csv_internal_import'] );
 }
 
+function bubbahub_directory_csv_parse_business_hours( $value ) {
+    $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
+    $result = array();
+    foreach ( $days as $day ) $result[ $day ] = array( 'day_name' => $day, 'is_closed' => true, 'sessions' => array() );
+    if ( is_array( $value ) ) {
+        foreach ( $value as $row ) {
+            if ( ! is_array( $row ) || empty( $row['day_name'] ) ) continue;
+            $day = ucwords( strtolower( trim( (string) $row['day_name'] ) ) );
+            if ( ! isset( $result[ $day ] ) ) continue;
+            $result[ $day ] = array(
+                'day_name' => $day,
+                'is_closed' => ! empty( $row['is_closed'] ),
+                'sessions' => ! empty( $row['sessions'] ) && is_array( $row['sessions'] ) ? $row['sessions'] : array(),
+            );
+        }
+        return array_values( $result );
+    }
+    $text = trim( (string) $value );
+    if ( '' === $text ) return array_values( $result );
+    $parts = preg_split( '/\\s*;\\s*/', $text );
+    foreach ( $parts as $part ) {
+        $part = trim( $part );
+        if ( '' === $part ) continue;
+        if ( preg_match( '/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\\s+closed$/i', $part, $m ) ) {
+            $day = ucfirst( strtolower( $m[1] ) );
+            $result[ $day ]['is_closed'] = true;
+            $result[ $day ]['sessions'] = array();
+            continue;
+        }
+        if ( ! preg_match( '/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\\s+(.+?)\\s*-\\s*(.+)$/i', $part, $m ) ) continue;
+        $day = ucfirst( strtolower( $m[1] ) );
+        $start = trim( $m[2] );
+        $end = trim( $m[3] );
+        if ( ! isset( $result[ $day ] ) ) continue;
+        $result[ $day ]['is_closed'] = false;
+        $result[ $day ]['sessions'][] = array( 'start_time' => $start, 'end_time' => $end );
+    }
+    return array_values( $result );
+}
+
+function bubbahub_directory_csv_save_acf_business_hours( $post_id, $value ) {
+    if ( ! function_exists( 'update_field' ) ) return;
+    $hours = bubbahub_directory_csv_parse_business_hours( $value );
+    if ( function_exists( 'acf_get_field' ) ) {
+        $field = acf_get_field( 'group_business_hours_repeater' );
+        if ( is_array( $field ) && ! empty( $field['sub_fields'] ) ) {
+            $day_fields = array();
+            $session_fields = array();
+            foreach ( $field['sub_fields'] as $sub ) {
+                if ( ! empty( $sub['name'] ) ) {
+                    if ( 'sessions' === $sub['name'] ) {
+                        $session_fields = ! empty( $sub['sub_fields'] ) ? $sub['sub_fields'] : array();
+                    } elseif ( 'day_name' === $sub['name'] || 'is_closed' === $sub['name'] ) {
+                        $day_fields[] = $sub;
+                    }
+                }
+            }
+            foreach ( $hours as &$day ) {
+                $mapped_sessions = array();
+                foreach ( $day['sessions'] as $session ) {
+                    $mapped = array();
+                    foreach ( $session_fields as $sf ) {
+                        $name = isset( $sf['name'] ) ? $sf['name'] : '';
+                        if ( ! $name ) continue;
+                        $lower = strtolower( $name );
+                        if ( false !== strpos( $lower, 'start' ) || false !== strpos( $lower, 'open' ) || false !== strpos( $lower, 'from' ) ) $mapped[ $name ] = $session['start_time'];
+                        elseif ( false !== strpos( $lower, 'end' ) || false !== strpos( $lower, 'close' ) || false !== strpos( $lower, 'to' ) ) $mapped[ $name ] = $session['end_time'];
+                    }
+                    if ( ! $mapped ) $mapped = $session;
+                    $mapped_sessions[] = $mapped;
+                }
+                $day['sessions'] = $mapped_sessions;
+            }
+            unset( $day );
+        }
+    }
+    update_field( 'group_business_hours_repeater', $hours, $post_id );
+    // Keep the legacy CSV/meta value too for backwards compatibility.
+    if ( is_array( $value ) ) update_post_meta( $post_id, 'business_hours', wp_json_encode( $value ) );
+    else update_post_meta( $post_id, 'business_hours', (string) $value );
+}
+
+function bubbahub_directory_csv_import_or_create_venue( $group_id, $author_id, $address, $postcode, $latitude, $longitude, $map ) {
+    $address = trim( (string) $address );
+    $postcode = trim( (string) $postcode );
+    if ( ! post_type_exists( 'venue' ) || ( '' === $address && ( '' === $latitude || '' === $longitude ) ) ) return 0;
+    $venue_id = 0;
+    $venues = get_posts( array( 'post_type' => 'venue', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true ) );
+    foreach ( $venues as $candidate ) {
+        $c_lat = trim( (string) get_post_meta( $candidate, 'latitude', true ) );
+        $c_lng = trim( (string) get_post_meta( $candidate, 'longitude', true ) );
+        $c_address = trim( (string) get_post_meta( $candidate, 'address', true ) );
+        if ( $latitude !== '' && $longitude !== '' && $c_lat !== '' && $c_lng !== '' && abs( (float) $c_lat - (float) $latitude ) < 0.00001 && abs( (float) $c_lng - (float) $longitude ) < 0.00001 ) { $venue_id = (int) $candidate; break; }
+        if ( ! $venue_id && $address !== '' && $c_address !== '' && strtolower( $c_address ) === strtolower( $address ) ) { $venue_id = (int) $candidate; break; }
+    }
+    if ( ! $venue_id ) {
+        $title = $address !== '' ? $address : 'Venue';
+        $venue_id = wp_insert_post( array(
+            'post_type' => 'venue',
+            'post_title' => wp_strip_all_tags( $title ),
+            'post_status' => 'publish',
+            'post_author' => absint( $author_id ),
+        ), true );
+        if ( is_wp_error( $venue_id ) ) return 0;
+        $venue_id = absint( $venue_id );
+    } else {
+        if ( $author_id && (int) get_post_field( 'post_author', $venue_id ) !== (int) $author_id ) wp_update_post( array( 'ID' => $venue_id, 'post_author' => absint( $author_id ) ) );
+    }
+    if ( $address !== '' ) update_post_meta( $venue_id, 'address', $address );
+    if ( $postcode !== '' ) update_post_meta( $venue_id, 'postcode', $postcode );
+    if ( $latitude !== '' ) update_post_meta( $venue_id, 'latitude', $latitude );
+    if ( $longitude !== '' ) update_post_meta( $venue_id, 'longitude', $longitude );
+    if ( $map !== '' ) update_post_meta( $venue_id, 'map', $map );
+    if ( function_exists( 'update_field' ) ) {
+        foreach ( array( 'address','postcode','latitude','longitude','map' ) as $field_name ) {
+            $val = get_post_meta( $venue_id, $field_name, true );
+            if ( '' !== (string) $val ) update_field( $field_name, $val, $venue_id );
+        }
+    }
+    update_post_meta( $group_id, 'venue_id', $venue_id );
+    update_post_meta( $group_id, 'venue', $venue_id );
+    if ( function_exists( 'update_field' ) ) {
+        update_field( 'venue_id', $venue_id, $group_id );
+        update_field( 'venue', $venue_id, $group_id );
+    }
+    return $venue_id;
+}
+
 function bubbahub_directory_csv_import() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to import listings.' );
     if ( empty( $GLOBALS['bubbahub_directory_csv_internal_import'] ) ) {
@@ -542,13 +670,21 @@ function bubbahub_directory_csv_import() {
             update_post_meta( $saved_id, 'map', $latitude . ',' . $longitude );
         }
 
-        // Keep one simple schedule source: business_hours is the only CSV field used for hours.
-        // Older schedule/timetable meta is retained on existing listings but is no longer exposed by the CSV template.
+        // Import the weekly schedule into the nested ACF business-hours repeater.
         if ( array_key_exists( 'business_hours', $data ) ) {
-            $hours = is_array( $data['business_hours'] ) ? implode( '; ', $data['business_hours'] ) : trim( (string) $data['business_hours'] );
-            if ( '' !== $hours ) update_post_meta( $saved_id, 'business_hours', $hours );
-            else delete_post_meta( $saved_id, 'business_hours' );
+            bubbahub_directory_csv_save_acf_business_hours( $saved_id, $data['business_hours'] );
         }
+
+        // Create/reuse a Venue from the imported location and assign it to the same leader.
+        $venue_id = bubbahub_directory_csv_import_or_create_venue(
+            $saved_id,
+            isset( $postarr['post_author'] ) ? absint( $postarr['post_author'] ) : 0,
+            isset( $data['address'] ) ? $data['address'] : '',
+            isset( $data['postcode'] ) ? $data['postcode'] : '',
+            $latitude,
+            $longitude,
+            $map
+        );
 
         // Taxonomy imports: create missing terms automatically.
         if ( array_key_exists( 'category', $data ) ) {

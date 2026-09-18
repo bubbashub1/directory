@@ -37,10 +37,98 @@ $rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date
     wp_reset_postdata(); return $rows;
 }
 
-function bubbahub_myhub_planner_v2_match( $group_id, $interest_ids, $location_ids ) {
-    $score=0;
-    if($interest_ids&&taxonomy_exists('user-interests')) { $terms=wp_get_post_terms($group_id,'user-interests',array('fields'=>'ids')); if(!is_wp_error($terms)&&array_intersect(array_map('absint',$terms),$interest_ids))$score+=4; else return -1; }
-    if($location_ids) { $matched=false; foreach(array('preferred-location','preferred_location','location','region') as $tax){if(!taxonomy_exists($tax))continue;$terms=wp_get_post_terms($group_id,$tax,array('fields'=>'ids'));if(!is_wp_error($terms)&&array_intersect(array_map('absint',$terms),$location_ids)){$matched=true;$score+=3;break;}} if(!$matched)return -1; }
+function bubbahub_myhub_planner_v2_user_preference_terms() {
+    $uid = get_current_user_id();
+    $taxonomy = get_user_meta( $uid, 'bubbahub_interest_taxonomy', true );
+    $ids = get_user_meta( $uid, 'bubbahub_interest_term_ids', true );
+    return array(
+        'taxonomy' => is_string( $taxonomy ) ? sanitize_key( $taxonomy ) : '',
+        'ids'      => is_array( $ids ) ? array_values( array_filter( array_map( 'absint', $ids ) ) ) : array(),
+    );
+}
+
+function bubbahub_myhub_planner_v2_user_location_values() {
+    $uid = get_current_user_id();
+    $values = array();
+    foreach ( array( 'bubbahub_town', 'bubbahub_county', 'bubbahub_postcode', 'bubbahub_location', 'bubbahub_preferred_location', 'bubbahub_preferred_location_id' ) as $key ) {
+        $value = get_user_meta( $uid, $key, true );
+        if ( is_array( $value ) ) $values = array_merge( $values, $value );
+        elseif ( '' !== trim( (string) $value ) ) $values[] = $value;
+    }
+    $out = array();
+    foreach ( $values as $value ) {
+        if ( is_object( $value ) && isset( $value->term_id ) ) $out[] = absint( $value->term_id );
+        elseif ( is_array( $value ) && isset( $value['term_id'] ) ) $out[] = absint( $value['term_id'] );
+        elseif ( is_numeric( $value ) ) $out[] = absint( $value );
+        else $out[] = sanitize_text_field( (string) $value );
+    }
+    return array_values( array_unique( array_filter( $out, function( $v ) { return '' !== (string) $v; } ) );
+}
+
+function bubbahub_myhub_planner_v2_match( $group_id, $interest_ids = array(), $location_values = array(), $venue_id = 0 ) {
+    $score = 0;
+    $has_interest_preference = ! empty( $interest_ids );
+    $has_location_preference = ! empty( $location_values );
+
+    if ( $has_interest_preference ) {
+        $interest_taxonomy = get_user_meta( get_current_user_id(), 'bubbahub_interest_taxonomy', true );
+        $matched = false;
+        if ( $interest_taxonomy && taxonomy_exists( $interest_taxonomy ) ) {
+            $terms = wp_get_post_terms( $group_id, $interest_taxonomy, array( 'fields' => 'ids' ) );
+            if ( ! is_wp_error( $terms ) && array_intersect( array_map( 'absint', $terms ), $interest_ids ) ) {
+                $matched = true;
+            }
+        }
+        if ( ! $matched ) {
+            foreach ( get_object_taxonomies( get_post_type( $group_id ) ) as $tax ) {
+                $terms = wp_get_post_terms( $group_id, $tax, array( 'fields' => 'ids' ) );
+                if ( ! is_wp_error( $terms ) && array_intersect( array_map( 'absint', $terms ), $interest_ids ) ) {
+                    $matched = true;
+                    break;
+                }
+            }
+        }
+        if ( ! $matched ) return -1;
+        $score += 4;
+    }
+
+    if ( $has_location_preference ) {
+        $matched = false;
+        $location_text = strtolower( trim( implode( ' ', array_map( 'strval', $location_values ) ) ) );
+        foreach ( array( 'preferred-location', 'preferred_location', 'location', 'region', 'area', 'town', 'county' ) as $tax ) {
+            if ( ! taxonomy_exists( $tax ) ) continue;
+            $terms = wp_get_post_terms( $group_id, $tax, array( 'fields' => 'all' ) );
+            if ( is_wp_error( $terms ) ) continue;
+            foreach ( $terms as $term ) {
+                $term_ids = array_map( 'absint', array( $term->term_id ) );
+                if ( array_intersect( $term_ids, array_filter( array_map( 'absint', $location_values ) ) ) ) { $matched = true; break 2; }
+                if ( $location_text && ( false !== strpos( $location_text, strtolower( $term->name ) ) || false !== strpos( strtolower( $term->name ), $location_text ) ) ) { $matched = true; break 2; }
+            }
+        }
+        if ( ! $matched ) {
+            $haystack = strtolower( implode( ' ', array_filter( array(
+                get_the_title( $group_id ),
+                get_post_meta( $group_id, 'address', true ),
+                get_post_meta( $group_id, 'street_address', true ),
+                get_post_meta( $group_id, 'city', true ),
+                get_post_meta( $group_id, 'town', true ),
+                get_post_meta( $group_id, 'region', true ),
+                get_post_meta( $group_id, 'county', true ),
+                $venue_id ? get_the_title( $venue_id ) : '',
+                $venue_id ? get_post_meta( $venue_id, 'address', true ) : '',
+                $venue_id ? get_post_meta( $venue_id, 'street_address', true ) : '',
+                $venue_id ? get_post_meta( $venue_id, 'city', true ) : '',
+                $venue_id ? get_post_meta( $venue_id, 'region', true ) : '',
+            ) ) ) );
+            foreach ( $location_values as $location ) {
+                $location = strtolower( trim( (string) $location ) );
+                if ( $location && false !== strpos( $haystack, $location ) ) { $matched = true; break; }
+            }
+        }
+        if ( ! $matched ) return -1;
+        $score += 3;
+    }
+
     return $score;
 }
 
@@ -74,13 +162,18 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
     $children = bubbahub_myhub_planner_v2_child_ids();
     $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
+    $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
+    $interest_ids = $prefs['ids'];
+    $location_values = bubbahub_myhub_planner_v2_user_location_values();
     $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
         $matching = array();
         foreach ( $children as $index => $child_id ) {
-            if ( bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) $matching[] = $index + 1;
+            if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;
+            if ( -1 === bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_values, $row['venue_id'] ) ) continue;
+            $matching[] = $index + 1;
         }
         if ( ! $matching ) continue;
         $ts = strtotime( $row['date'] . ' ' . $row['start'] );

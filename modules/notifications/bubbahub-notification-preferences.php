@@ -169,6 +169,51 @@ function bubbahub_notification_upcoming_reminders() {
         }
     }
 }
+function bubbahub_notification_booking_status_changed( $meta_id, $booking_id, $meta_key, $meta_value ) {
+    if ( '_bh_status' !== $meta_key || 'bh_booking' !== get_post_type( $booking_id ) ) return;
+    $user_id = absint( get_post_meta( $booking_id, '_bh_user_id', true ) );
+    if ( ! $user_id ) return;
+    $status = sanitize_key( $meta_value );
+    $group_id = absint( get_post_meta( $booking_id, '_bh_group_id', true ) );
+    $name = $group_id ? get_the_title( $group_id ) : 'your class';
+    $url = home_url( '/my-hub/' );
+
+    if ( 'cancelled' === $status ) {
+        $key = '_bh_notification_cancelled_sent';
+        if ( get_post_meta( $booking_id, $key, true ) ) return;
+        bubbahub_notify_user( $user_id, 'booking', 'Booking cancelled – ' . $name, 'Your booking for ' . $name . ' has been cancelled. Please check My Hub for the latest details.', $url, array( 'sms' => true ) );
+        update_post_meta( $booking_id, $key, current_time( 'mysql' ) );
+    } elseif ( 'confirmed' === $status ) {
+        $key = '_bh_notification_confirmed_sent';
+        if ( get_post_meta( $booking_id, $key, true ) ) return;
+        bubbahub_notify_user( $user_id, 'booking', 'Booking confirmed – ' . $name, 'Your booking for ' . $name . ' has been confirmed. You can view the latest details in My Hub.', $url );
+        update_post_meta( $booking_id, $key, current_time( 'mysql' ) );
+    }
+}
+add_action( 'added_post_meta', 'bubbahub_notification_booking_status_changed', 30, 4 );
+add_action( 'updated_post_meta', 'bubbahub_notification_booking_status_changed', 30, 4 );
+
+function bubbahub_notification_session_changed( $meta_id, $session_id, $meta_key, $meta_value ) {
+    if ( 'bh_session' !== get_post_type( $session_id ) || ! in_array( $meta_key, array( '_bh_date', '_bh_start_time', '_bh_end_time', '_bh_venue_id', '_bh_session_status' ), true ) ) return;
+    $bookings = get_posts( array(
+        'post_type' => 'bh_booking', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids',
+        'meta_query' => array( array( 'key' => '_bh_session_id', 'value' => absint( $session_id ) ) ),
+    ) );
+    foreach ( $bookings as $booking_id ) {
+        $user_id = absint( get_post_meta( $booking_id, '_bh_user_id', true ) );
+        if ( ! $user_id ) continue;
+        $last = get_post_meta( $booking_id, '_bh_notification_session_change_' . sanitize_key( $meta_key ), true );
+        $stamp = current_time( 'mysql' );
+        if ( $last === $stamp ) continue;
+        $group_id = absint( get_post_meta( $session_id, '_bh_group_id', true ) );
+        $name = $group_id ? get_the_title( $group_id ) : get_the_title( $session_id );
+        $message = 'There has been an update to your booked session for ' . $name . '. Please check My Hub for the latest date, time or venue details.';
+        bubbahub_notify_user( $user_id, 'booking', 'Update to your booked class – ' . $name, $message, home_url( '/my-hub/' ), array( 'sms' => true ) );
+        update_post_meta( $booking_id, '_bh_notification_session_change_' . sanitize_key( $meta_key ), $stamp );
+    }
+}
+add_action( 'updated_post_meta', 'bubbahub_notification_session_changed', 40, 4 );
+
 function bubbahub_notification_schedule_reminders() {
     if ( ! wp_next_scheduled( 'bubbahub_notification_reminder_cron' ) ) {
         wp_schedule_event( time() + 300, 'hourly', 'bubbahub_notification_reminder_cron' );

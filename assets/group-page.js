@@ -17,11 +17,17 @@ function init(){var $root=$('.bhg-single');if(!$root.length)return;
   $root.on('click','[data-gallery-dot]',function(){show(parseInt($(this).data('gallery-dot'),10)||0);restart();});
   restart();
  }
+ function initContactModal(){
+  var $m=$root.find('#bh-contact-modal'); if(!$m.length)return;
+  $root.on('click','[data-contact-open]',function(e){e.preventDefault();$m.removeAttr('hidden').attr('aria-hidden','false').addClass('is-open');$('body').addClass('bh-modal-open');});
+  $root.on('click','[data-contact-close]',function(){$m.attr('hidden',true).attr('aria-hidden','true').removeClass('is-open');$('body').removeClass('bh-modal-open');});
+  $(document).on('keydown.bhContact',function(e){if(e.key==='Escape'&&$m.hasClass('is-open')){$m.attr('hidden',true).attr('aria-hidden','true').removeClass('is-open');$('body').removeClass('bh-modal-open');}});
+ }
  function buildMap(){var $map=$root.find('#bhg-map');if(!$map.length||!window.L)return;var lat=parseFloat($map.data('lat')),lng=parseFloat($map.data('lng'));if(!isFinite(lat)||!isFinite(lng))return;var map=L.map($map[0],{scrollWheelZoom:false}).setView([lat,lng],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);L.marker([lat,lng]).addTo(map);setTimeout(function(){map.invalidateSize();},100);}
  $root.on('change','.bhg-venue-select',function(){var venue=$(this).val(),$track=$root.find('[data-related-track]');$track.addClass('is-loading');$.ajax({url:BubbaHubGroupPage.ajaxUrl,type:'POST',dataType:'json',data:{action:'bubbahub_group_alternatives',nonce:BubbaHubGroupPage.nonce,post_id:$root.data('post-id'),venue_id:venue}}).done(function(r){if(r&&r.success)$track.html(r.data.html);}).always(function(){$track.removeClass('is-loading');});});
  $root.on('click','[data-carousel-prev]',function(){var t=$root.find('[data-related-track]')[0];if(t)t.scrollBy({left:-320,behavior:'smooth'});});
  $root.on('click','[data-carousel-next]',function(){var t=$root.find('[data-related-track]')[0];if(t)t.scrollBy({left:320,behavior:'smooth'});});
- sync();initGallery();buildMap();
+ sync();initGallery();initContactModal();buildMap();
 }
 $(init);
 })(jQuery);

@@ -118,7 +118,43 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
                                 <?php endforeach; ?>
                             </div>
                         <?php elseif ( $schedule !== '' ) : ?>
-                            <div class="bhg-schedule"><?php echo wp_kses_post( nl2br( esc_html( $schedule ) ) ); ?></div>
+                            <?php
+                            $legacy_hours = array();
+                            foreach ( $business_hour_days as $legacy_day ) $legacy_hours[ $legacy_day ] = array();
+                            $legacy_parts = preg_split( '/\\s*;\\s*/', (string) $schedule, -1, PREG_SPLIT_NO_EMPTY );
+                            foreach ( $legacy_parts as $legacy_part ) {
+                                if ( preg_match( '/^\\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\\s+(.+?)\\s*$/i', $legacy_part, $legacy_match ) ) {
+                                    $legacy_day = ucwords( strtolower( $legacy_match[1] ) );
+                                    $legacy_time = trim( $legacy_match[2] );
+                                    if ( $legacy_time !== '' ) $legacy_hours[ $legacy_day ][] = $legacy_time;
+                                }
+                            }
+                            ?>
+                            <div class="bhg-business-hours">
+                                <?php foreach ( $business_hour_days as $legacy_day ) :
+                                    $legacy_slots = isset( $legacy_hours[ $legacy_day ] ) ? $legacy_hours[ $legacy_day ] : array();
+                                    $legacy_open = false;
+                                    foreach ( $legacy_slots as $legacy_slot ) {
+                                        if ( preg_match( '/(\\d{1,2}:\\d{2})\\s*(?:-|–|—|to)\\s*(\\d{1,2}:\\d{2})/i', $legacy_slot, $legacy_times ) && strtolower( $legacy_day ) === strtolower( $today_name ) ) {
+                                            $legacy_start = strtotime( $legacy_times[1] ); $legacy_end = strtotime( $legacy_times[2] );
+                                            if ( $legacy_start !== false && $legacy_end !== false ) {
+                                                $legacy_start_m = (int) date( 'G', $legacy_start ) * 60 + (int) date( 'i', $legacy_start );
+                                                $legacy_end_m = (int) date( 'G', $legacy_end ) * 60 + (int) date( 'i', $legacy_end );
+                                                if ( $now_minutes >= $legacy_start_m && $now_minutes < $legacy_end_m ) $legacy_open = true;
+                                            }
+                                        }
+                                    }
+                                ?>
+                                    <div class="bhg-hours-day<?php echo $legacy_open ? ' is-open-now' : ''; ?>">
+                                        <span class="bhg-hours-day-name"><?php echo esc_html( $legacy_day ); ?></span>
+                                        <div class="bhg-hours-times">
+                                            <?php if ( $legacy_slots ) : ?>
+                                                <?php foreach ( $legacy_slots as $legacy_slot ) : ?><span class="bhg-hours-slot"><?php echo esc_html( $legacy_slot ); ?></span><?php endforeach; ?>
+                                            <?php else : ?><span class="bhg-hours-closed">Closed</span><?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         <?php else : ?>
                             <span class="bhg-muted">Business hours not added yet.</span>
                         <?php endif; ?>

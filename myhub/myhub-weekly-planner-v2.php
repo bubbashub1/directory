@@ -130,12 +130,14 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>">
-            <a class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>" href="<?php echo esc_url( $item['url'] ); ?>">
+            <div class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>">
+              <a class="bh-planner-listing-link" href="<?php echo esc_url( $item['url'] ); ?>">
               <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
               <span class="bh-planner-item-main"><strong><?php echo esc_html( $item['title'] ); ?></strong><span class="bh-planner-location">📍 <?php echo esc_html( $item['venue'] ?: 'Location to be confirmed' ); ?></span></span>
               <span class="bh-planner-child-indicator"><?php echo esc_html( $item['indicator'] ); ?></span>
+              </a>
               <span class="bh-planner-calendar-wrap"><a class="bh-planner-calendar" href="<?php echo esc_url( $item['calendar_url'] ); ?>" target="_blank" rel="noopener" aria-label="Add <?php echo esc_attr( $item['title'] ); ?> to calendar">＋ Add to calendar</a><span class="bh-planner-calendar-note">Add it to your calendar and share it with family.</span></span>
-            </a>
+            </div>
           </div>
         <?php endforeach; else : ?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
           </div>

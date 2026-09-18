@@ -68,7 +68,7 @@ function bubbahub_directory_csv_admin_page() {
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Recommended Google Sheets columns</h2>
-            <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, address, price, age_range, session_length, business_hours, schedule, timetable, email, phone, website, facebook, instagram, latitude, longitude, map, term_time, image_url</code></p>
+            <p><code>id, post_title, post_content, post_status, post_author, post_name, category, tags, region, sub_region, address, postcode, price, age_range, session_length, business_hours, email, phone, website, facebook, instagram, latitude, longitude, map, term_time, image_url</code></p>
             <p>Any additional column is treated as a listing post-meta field, so the importer can carry new BubbaHub fields without changing this feature.</p>
         </div>
     </div>
@@ -104,7 +104,7 @@ function bubbahub_directory_csv_meta_keys() {
 function bubbahub_directory_csv_template() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
     check_admin_referer( 'bubbahub_csv_template' );
-    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','sub_region','address','postcode','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time','image_url' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','sub_region','address','postcode','price','age_range','session_length','business_hours','email','phone','website','facebook','instagram','latitude','longitude','map','term_time','image_url' );
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );
@@ -166,7 +166,10 @@ function bubbahub_directory_csv_export() {
                 case 'post_content': $value = $post->post_content; break;
                 case 'post_excerpt': $value = $post->post_excerpt; break;
                 case 'post_status': $value = $post->post_status; break;
-                case 'post_author': $value = $post->post_author; break;
+                case 'post_author':
+                    $author_user = get_userdata( (int) $post->post_author );
+                    $value = $author_user ? $author_user->user_login : '';
+                    break;
                 case 'post_name': $value = $post->post_name; break;
                 case 'post_date': $value = $post->post_date; break;
                 case 'region': $value = implode( ', ', is_wp_error( $terms ) ? array() : $terms ); break;
@@ -295,6 +298,22 @@ function bubbahub_directory_csv_import() {
         $postarr = array( 'post_type' => 'group' );
         foreach ( array( 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date' ) as $field ) {
             if ( array_key_exists( $field, $data ) && '' !== (string) $data[ $field ] ) $postarr[ $field ] = $data[ $field ];
+        }
+
+        // post_author accepts a WordPress username. Numeric IDs remain supported for backwards compatibility.
+        if ( isset( $postarr['post_author'] ) && '' !== trim( (string) $postarr['post_author'] ) ) {
+            $author_value = trim( (string) $postarr['post_author'] );
+            if ( is_numeric( $author_value ) ) {
+                $author_id = absint( $author_value );
+            } else {
+                $author_user = get_user_by( 'login', $author_value );
+                $author_id = $author_user ? (int) $author_user->ID : 0;
+            }
+            if ( $author_id ) {
+                $postarr['post_author'] = $author_id;
+            } else {
+                unset( $postarr['post_author'] );
+            }
         }
         if ( empty( $postarr['post_status'] ) ) $postarr['post_status'] = 'publish';
         if ( ! empty( $existing ) ) $postarr['ID'] = $id;

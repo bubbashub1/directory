@@ -164,7 +164,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
     /* If no session records are available, use the existing group timetable planner as a fallback. */
     if ( ! $rows && function_exists( 'bubbahub_myhub_planner_items' ) ) {
-        $legacy_items = bubbahub_myhub_planner_items( $children, array(), array() );
+        list( $legacy_interest_filters, $legacy_location_filters ) = bubbahub_myhub_planner_user_preferences();
+        $legacy_items = bubbahub_myhub_planner_items( $children, $legacy_interest_filters, $legacy_location_filters );
         foreach ( $legacy_items as $legacy ) {
             foreach ( $legacy['schedule'] as $legacy_day => $hours ) {
                 foreach ( $hours as $hour ) {
@@ -172,7 +173,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
                     if ( preg_match( '/(\\d{1,2}:\\d{2})\\s*(?:[-–—to]+)\\s*(\\d{1,2}:\\d{2})/i', $hour, $m ) ) { $start = $m[1]; $end = $m[2]; }
                     elseif ( preg_match( '/(\\d{1,2}:\\d{2})/i', $hour, $m ) ) { $start = $m[1]; }
                     if ( ! $start ) continue;
-                    $rows[] = array('session_id'=>0,'group_id'=>$legacy['id'],'venue_id'=>0,'date'=>wp_date('Y-m-d',current_time('timestamp')),'start'=>$start,'end'=>$end,'title'=>$legacy['title'],'url'=>$legacy['url'],'image'=>$legacy['image'],'venue'=>'','venue_address'=>'');
+                    $rows[] = array('session_id'=>0,'group_id'=>$legacy['id'],'venue_id'=>0,'date'=>wp_date('Y-m-d',current_time('timestamp')),'start'=>$start,'end'=>$end,'title'=>$legacy['title'],'url'=>$legacy['url'],'image'=>$legacy['image'],'venue'=>'','venue_address'=>'','legacy_match'=>true);
                 }
             }
         }
@@ -186,8 +187,10 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     foreach ( $rows as $row ) {
         $matching = array();
         foreach ( $children as $index => $child_id ) {
-            if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;
-            if ( -1 === bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_values, $row['venue_id'] ) ) continue;
+            if ( empty( $row['legacy_match'] ) ) {
+                if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;
+                if ( -1 === bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_values, $row['venue_id'] ) ) continue;
+            }
             $matching[] = $index + 1;
         }
         if ( ! $matching ) continue;

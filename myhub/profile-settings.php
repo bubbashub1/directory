@@ -362,6 +362,11 @@ function bubbahub_account_settings_shortcode() {
             <div class="bh-connected-row"><div><strong><?php echo esc_html( $user->display_name ); ?></strong><small><?php echo esc_html( $user->user_email ); ?></small></div><a href="<?php echo esc_url( $um_url ); ?>">Open Ultimate Member →</a></div>
         </div>
 
+        <?php if ( function_exists( 'bubbahub_notification_preferences_shortcode' ) ) : ?>
+            <?php echo bubbahub_notification_preferences_shortcode(); ?>
+            <?php if ( function_exists( 'bubbahub_notification_feed_shortcode' ) ) echo bubbahub_notification_feed_shortcode(); ?>
+        <?php endif; ?>
+
         <div class="bh-profile-card">
             <div class="bh-profile-card-heading"><h3>Child profiles</h3><a href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1' ) ); ?>">＋ Add child</a></div>
             <?php if ( $children ) : ?>

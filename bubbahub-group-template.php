@@ -23,22 +23,21 @@ if ( ! defined( 'BUBBAHUB_DIRECTORY_PATH' ) ) {
  * It only replaces the single Group template when WordPress is displaying
  * an existing Group post, e.g. /group/demo-group/.
  */
-add_filter( 'template_include', 'bubbahub_group_page_template', 999 );
+add_filter( 'the_content', 'bubbahub_group_page_content', 20 );
 add_action( 'wp_enqueue_scripts', 'bubbahub_group_page_assets', 20 );
 add_filter( 'body_class', 'bubbahub_group_page_body_class' );
 add_action( 'wp_ajax_bubbahub_group_alternatives', 'bubbahub_group_alternatives_ajax' );
 add_action( 'wp_ajax_nopriv_bubbahub_group_alternatives', 'bubbahub_group_alternatives_ajax' );
 
-function bubbahub_group_page_template( $template ) {
-    if ( ! is_singular( 'group' ) ) return $template;
+function bubbahub_group_page_content( $content ) {
+    if ( ! is_singular( 'group' ) || ! in_the_loop() || ! is_main_query() ) return $content;
 
     $custom = BUBBAHUB_DIRECTORY_PATH . 'templates/single-group.php';
+    if ( ! is_readable( $custom ) ) return $content;
 
-    if ( is_readable( $custom ) ) {
-        return $custom;
-    }
-
-    return $template;
+    ob_start();
+    include $custom;
+    return ob_get_clean();
 }
 
 function bubbahub_group_page_body_class( $classes ) {

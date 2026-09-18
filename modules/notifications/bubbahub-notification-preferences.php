@@ -123,6 +123,111 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
     return $sent;
 }
 
+
+function bubbahub_notification_upcoming_reminders() {
+    $now = current_time( 'timestamp' );
+    $until = $now + ( 7 * DAY_IN_SECONDS );
+    $sessions = get_posts( array(
+        'post_type' => 'bh_session', 'post_status' => 'publish', 'posts_per_page' => 250,
+        'fields' => 'ids', 'no_found_rows' => true,
+        'meta_query' => array( array( 'key' => '_bh_date', 'compare' => 'EXISTS' ) ),
+    ) );
+    foreach ( $sessions as $session_id ) {
+        $date = sanitize_text_field( get_post_meta( $session_id, '_bh_date', true ) );
+        $start = sanitize_text_field( get_post_meta( $session_id, '_bh_start_time', true ) );
+        if ( ! $date || ! $start ) continue;
+        $timestamp = strtotime( $date . ' ' . $start );
+        if ( ! $timestamp || $timestamp < $now || $timestamp > $until ) continue;
+
+        $bookings = get_posts( array(
+            'post_type' => 'bh_booking', 'post_status' => 'publish', 'posts_per_page' => -1,
+            'fields' => 'ids', 'no_found_rows' => true,
+            'meta_query' => array(
+                array( 'key' => '_bh_session_id', 'value' => absint( $session_id ) ),
+                array( 'key' => '_bh_status', 'value' => array( 'confirmed', 'reserved' ), 'compare' => 'IN' ),
+            ),
+        ) );
+        foreach ( $bookings as $booking_id ) {
+            $user_id = absint( get_post_meta( $booking_id, '_bh_user_id', true ) );
+            if ( ! $user_id ) continue;
+            $days = $timestamp - $now <= 2 * DAY_IN_SECONDS ? '24-hour' : '7-day';
+            $sent_key = '_bh_notification_' . $days . '_reminder_sent';
+            if ( get_post_meta( $booking_id, $sent_key, true ) ) continue;
+
+            $group_id = absint( get_post_meta( $session_id, '_bh_group_id', true ) );
+            $name = $group_id ? get_the_title( $group_id ) : get_the_title( $session_id );
+            $venue_id = absint( get_post_meta( $session_id, '_bh_venue_id', true ) );
+            $venue = $venue_id ? get_the_title( $venue_id ) : '';
+            $date_text = wp_date( 'l, j F Y', $timestamp );
+            $time_text = wp_date( 'g:i A', $timestamp );
+            $message = $days === '24-hour'
+                ? sprintf( 'Reminder: %s is tomorrow at %s%s.', $name, $time_text, $venue ? ' at ' . $venue : '' )
+                : sprintf( 'Your booking for %s is coming up on %s at %s%s.', $name, $date_text, $time_text, $venue ? ' at ' . $venue : '' );
+            $url = home_url( '/my-hub/' );
+            bubbahub_notify_user( $user_id, 'booking', $name . ' – ' . ( $days === '24-hour' ? 'tomorrow' : 'upcoming class' ), $message, $url, array( 'sms' => true ) );
+            update_post_meta( $booking_id, $sent_key, current_time( 'mysql' ) );
+        }
+    }
+}
+function bubbahub_notification_schedule_reminders() {
+    if ( ! wp_next_scheduled( 'bubbahub_notification_reminder_cron' ) ) {
+        wp_schedule_event( time() + 300, 'hourly', 'bubbahub_notification_reminder_cron' );
+    }
+}
+add_action( 'init', 'bubbahub_notification_schedule_reminders' );
+add_action( 'bubbahub_notification_reminder_cron', 'bubbahub_notification_upcoming_reminders' );
+
+function bubbahub_notification_booking_created( $new_status, $old_status, $post ) {
+    if ( ! $post || 'bh_booking' !== $post->post_type || 'publish' !== $new_status || 'publish' === $old_status ) return;
+    $user_id = absint( get_post_meta( $post->ID, '_bh_user_id', true ) );
+    if ( ! $user_id || get_post_meta( $post->ID, '_bh_notification_created_sent', true ) ) return;
+    $group_id = absint( get_post_meta( $post->ID, '_bh_group_id', true ) );
+    $session_id = absint( get_post_meta( $post->ID, '_bh_session_id', true ) );
+    $name = $group_id ? get_the_title( $group_id ) : get_the_title( $session_id );
+    bubbahub_notify_user( $user_id, 'booking', 'Booking confirmed – ' . $name, 'Your Bubba Hub booking has been recorded. You can view your booking and its latest status in My Hub.', home_url( '/my-hub/' ) );
+    update_post_meta( $post->ID, '_bh_notification_created_sent', current_time( 'mysql' ) );
+}
+add_action( 'transition_post_status', 'bubbahub_notification_booking_created', 20, 3 );
+
+function bubbahub_notification_admin_menu() {
+    add_submenu_page( 'options-general.php', 'Bubba Hub Notifications', 'Bubba Hub Notifications', 'manage_options', 'bubbahub-notifications', 'bubbahub_notification_admin_page' );
+}
+add_action( 'admin_menu', 'bubbahub_notification_admin_menu' );
+
+function bubbahub_notification_admin_page() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+    if ( ! empty( $_POST['bh_notification_admin_action'] ) && check_admin_referer( 'bubbahub_notification_admin', 'bh_notification_admin_nonce' ) ) {
+        update_option( 'bubbahub_notification_admin_email_from_name', sanitize_text_field( wp_unslash( $_POST['from_name'] ?? 'Bubba Hub' ) ) );
+        update_option( 'bubbahub_notification_digest_frequency', sanitize_key( $_POST['digest_frequency'] ?? 'weekly' ) );
+        echo '<div class="notice notice-success is-dismissible"><p>Bubba Hub notification settings saved.</p></div>';
+    }
+    $from = get_option( 'bubbahub_notification_admin_email_from_name', 'Bubba Hub' );
+    $frequency = get_option( 'bubbahub_notification_digest_frequency', 'weekly' );
+    ?>
+    <div class="wrap">
+        <h1>Bubba Hub Notifications</h1>
+        <p>Manage the notification framework used by family accounts. Essential transactional emails remain separate from optional preferences.</p>
+        <form method="post">
+            <?php wp_nonce_field( 'bubbahub_notification_admin', 'bh_notification_admin_nonce' ); ?>
+            <input type="hidden" name="bh_notification_admin_action" value="save">
+            <table class="form-table">
+                <tr><th scope="row"><label for="bh-from-name">Email sender name</label></th><td><input class="regular-text" id="bh-from-name" name="from_name" value="<?php echo esc_attr( $from ); ?>"></td></tr>
+                <tr><th scope="row"><label for="bh-digest">Digest frequency</label></th><td><select id="bh-digest" name="digest_frequency"><option value="daily" <?php selected( $frequency, 'daily' ); ?>>Daily</option><option value="weekly" <?php selected( $frequency, 'weekly' ); ?>>Weekly</option></select></td></tr>
+            </table>
+            <?php submit_button( 'Save notification settings' ); ?>
+        </form>
+        <h2>Notification types</h2>
+        <ul>
+            <li>Class &amp; booking alerts — confirmations, changes and reminders</li>
+            <li>Support — specialist questions and replies</li>
+            <li>Community — relevant local updates</li>
+            <li>Email digest — future daily/weekly round-up</li>
+            <li>SMS reminders — ready for an SMS provider connection</li>
+        </ul>
+    </div>
+    <?php
+}
+
 function bubbahub_notification_preferences_shortcode() {
     if ( ! is_user_logged_in() ) return '<p>Please log in to manage your notification preferences.</p>';
 
@@ -202,7 +307,7 @@ function bubbahub_notification_feed_shortcode() {
     <section class="bh-notification-feed">
         <div class="bh-notification-feed-head"><div><span class="bh-notification-kicker">BUBBA HUB</span><h2>Your notifications</h2></div></div>
         <?php if ( ! $items ) : ?>
-            <div class="bh-notification-empty">You're all caught up. New relevant updates will appear here.</div>
+            <div class="bh-notification-empty">You’re all caught up. New relevant updates will appear here.</div>
         <?php else : foreach ( $items as $item ) : ?>
             <article class="bh-notification-item <?php echo empty( $item['read'] ) ? 'is-new' : ''; ?>">
                 <div class="bh-notification-item-icon"><?php echo 'booking' === ( $item['type'] ?? '' ) ? '📅' : ( 'community' === ( $item['type'] ?? '' ) ? '🏡' : '🔔' ); ?></div>

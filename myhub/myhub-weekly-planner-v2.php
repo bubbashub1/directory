@@ -33,7 +33,9 @@ function bubbahub_myhub_planner_v2_session_rows( $days_ahead = 7 ) {
     $q=new WP_Query(array('post_type'=>'bh_session','post_status'=>'publish','posts_per_page'=>250,'meta_query'=>array(array('key'=>'_bh_date','value'=>array($from,$to),'compare'=>'BETWEEN','type'=>'DATE')),'orderby'=>'meta_value','meta_key'=>'_bh_date','order'=>'ASC','no_found_rows'=>true));
     $rows=array();
     while($q->have_posts()){$q->the_post();$sid=get_the_ID();$gid=absint(get_post_meta($sid,'_bh_group_id',true));if(!$gid||'group'!==get_post_type($gid))continue;$date=get_post_meta($sid,'_bh_date',true);$start=get_post_meta($sid,'_bh_start_time',true);$end=get_post_meta($sid,'_bh_end_time',true);$vid=absint(get_post_meta($sid,'_bh_venue_id',true));$venue_address=$vid?(get_post_meta($vid,'address',true)?:get_post_meta($vid,'street_address',true)):'';
-$rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date,'start'=>$start,'end'=>$end,'title'=>get_the_title($gid),'url'=>get_permalink($gid),'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'venue'=>$vid?get_the_title($vid):'','venue_address'=>$venue_address);}
+$coords = function_exists('bubbahub_group_resolve_map') ? bubbahub_group_resolve_map($gid) : null;
+if ( ! $coords && $vid && function_exists('bubbahub_group_resolve_map') ) $coords = bubbahub_group_resolve_map($vid);
+$rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date,'start'=>$start,'end'=>$end,'title'=>get_the_title($gid),'url'=>get_permalink($gid),'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'venue'=>$vid?get_the_title($vid):'','venue_address'=>$venue_address,'lat'=>$coords ? $coords['lat'] : null,'lng'=>$coords ? $coords['lng'] : null);}
     wp_reset_postdata(); return $rows;
 }
 
@@ -45,6 +47,59 @@ function bubbahub_myhub_planner_v2_user_preference_terms() {
         'taxonomy' => is_string( $taxonomy ) ? sanitize_key( $taxonomy ) : '',
         'ids'      => is_array( $ids ) ? array_values( array_filter( array_map( 'absint', $ids ) ) ) : array(),
     );
+}
+
+function bubbahub_myhub_planner_v2_user_location_radius() {
+    $uid = get_current_user_id();
+    $town = trim( (string) get_user_meta( $uid, 'bubbahub_town', true ) );
+    $county = trim( (string) get_user_meta( $uid, 'bubbahub_county', true ) );
+    $radius = trim( (string) get_user_meta( $uid, 'bubbahub_search_radius', true ) );
+    if ( ! $radius ) $radius = trim( (string) get_user_meta( $uid, 'bubbahub_search_radius', true ) );
+    preg_match( '/(\\d+(?:\\.\\d+)?)/', $radius, $m );
+    $radius_miles = ! empty( $m[1] ) ? (float) $m[1] : 10.0;
+
+    $lat = get_user_meta( $uid, 'bubbahub_location_latitude', true );
+    $lng = get_user_meta( $uid, 'bubbahub_location_longitude', true );
+
+    if ( ! is_numeric( $lat ) || ! is_numeric( $lng ) ) {
+        $query = trim( $town . ( $county ? ', ' . $county : '' ) . ', UK' );
+        if ( $query ) {
+            $response = wp_remote_get(
+                'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' . rawurlencode( $query ),
+                array( 'timeout' => 4, 'headers' => array( 'User-Agent' => 'BubbaHub/1.0 (+https://bubbahub.co.uk)' ) )
+            );
+            if ( ! is_wp_error( $response ) ) {
+                $data = json_decode( wp_remote_retrieve_body( $response ), true );
+                if ( ! empty( $data[0]['lat'] ) && ! empty( $data[0]['lon'] ) ) {
+                    $lat = (float) $data[0]['lat'];
+                    $lng = (float) $data[0]['lon'];
+                    update_user_meta( $uid, 'bubbahub_location_latitude', $lat );
+                    update_user_meta( $uid, 'bubbahub_location_longitude', $lng );
+                }
+            }
+        }
+    }
+
+    return array(
+        'town' => $town,
+        'radius_miles' => $radius_miles,
+        'lat' => is_numeric( $lat ) ? (float) $lat : null,
+        'lng' => is_numeric( $lng ) ? (float) $lng : null,
+    );
+}
+
+function bubbahub_myhub_planner_v2_distance_miles( $lat1, $lng1, $lat2, $lng2 ) {
+    $earth_miles = 3958.7613;
+    $dlat = deg2rad( $lat2 - $lat1 );
+    $dlng = deg2rad( $lng2 - $lng1 );
+    $a = sin( $dlat / 2 ) * sin( $dlat / 2 ) + cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) * sin( $dlng / 2 ) * sin( $dlng / 2 );
+    return $earth_miles * 2 * atan2( sqrt( $a ), sqrt( max( 0, 1 - $a ) ) );
+}
+
+function bubbahub_myhub_planner_v2_row_in_radius( $row, $location ) {
+    if ( ! is_numeric( $location['lat'] ) || ! is_numeric( $location['lng'] ) ) return true;
+    if ( ! isset( $row['lat'], $row['lng'] ) || ! is_numeric( $row['lat'] ) || ! is_numeric( $row['lng'] ) ) return false;
+    return bubbahub_myhub_planner_v2_distance_miles( $location['lat'], $location['lng'], $row['lat'], $row['lng'] ) <= (float) $location['radius_miles'];
 }
 
 function bubbahub_myhub_planner_v2_user_location_values() {
@@ -189,7 +244,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
                     if ( ! $start ) continue;
                     $start_ts = strtotime( wp_date( 'Y-m-d', $date_ts ) . ' ' . $start );
                     if ( ! $start_ts || $start_ts < $today_ts ) continue;
-                    $rows[] = array( 'session_id'=>0, 'group_id'=>$gid, 'venue_id'=>function_exists('bubbahub_group_venue_id') ? bubbahub_group_venue_id($gid) : 0, 'date'=>wp_date('Y-m-d',$date_ts), 'start'=>$start, 'end'=>$end_time, 'title'=>get_the_title($gid), 'url'=>get_permalink($gid), 'image'=>function_exists('bubbahub_group_image') ? bubbahub_group_image($gid) : get_the_post_thumbnail_url($gid,'thumbnail'), 'venue'=>'', 'venue_address'=>'', 'legacy_match'=>true );
+                    $rows[] = array( 'session_id'=>0, 'group_id'=>$gid, 'venue_id'=>function_exists('bubbahub_group_venue_id') ? bubbahub_group_venue_id($gid) : 0, 'date'=>wp_date('Y-m-d',$date_ts), 'start'=>$start, 'end'=>$end_time, 'title'=>get_the_title($gid), 'url'=>get_permalink($gid), 'image'=>function_exists('bubbahub_group_image') ? bubbahub_group_image($gid) : get_the_post_thumbnail_url($gid,'thumbnail'), 'venue'=>'', 'venue_address'=>'', 'lat'=>($coords && isset($coords['lat']) ? $coords['lat'] : null), 'lng'=>($coords && isset($coords['lng']) ? $coords['lng'] : null), 'legacy_match'=>true );
                 }
             }
         }
@@ -198,10 +253,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
     $interest_ids = $prefs['ids'];
     $location_values = bubbahub_myhub_planner_v2_user_location_values();
+    $location_radius = bubbahub_myhub_planner_v2_user_location_radius();
     $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
+        if ( ! bubbahub_myhub_planner_v2_row_in_radius( $row, $location_radius ) ) continue;
         $matching = array();
         foreach ( $children as $index => $child_id ) {
             if ( empty( $row['legacy_match'] ) ) {

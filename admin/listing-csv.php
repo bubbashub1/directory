@@ -358,35 +358,19 @@ function bubbahub_directory_csv_import() {
             continue;
         }
 
-        // Resolve the CSV post_author to a WordPress user. If a username does not exist,
-        // create the leader account from post_author + email. The welcome email is sent only
-        // after the listing has been successfully saved, so its listing link is always valid.
+        // Resolve the CSV post_author to a WordPress user. New users are handled by
+        // the central Bubba Hub welcome-email hook, which also covers Admin > Add New User.
         $author_username  = isset( $data['post_author'] ) ? sanitize_user( trim( (string) $data['post_author'] ), true ) : '';
         $author_email     = isset( $data['email'] ) ? sanitize_email( trim( (string) $data['email'] ) ) : '';
         $author_user      = null;
         $new_user_created = false;
-        $welcome_user_id  = 0;
-
         if ( $author_username && ! is_numeric( $author_username ) ) {
             $author_user = get_user_by( 'login', $author_username );
             if ( ! $author_user && $author_email && is_email( $author_email ) && ! email_exists( $author_email ) ) {
-                // Prevent WordPress/core or another plugin from sending its generic
-                // "Your username and password" email. Bubba Hub sends the branded
-                // welcome email below instead.
-                $suppress_user_email = function( $send, $user ) use ( $author_email ) {
-                    if ( $user instanceof WP_User && $user->user_email === $author_email ) return false;
-                    return $send;
-                };
-                add_filter( 'wp_send_new_user_notification_to_user', $suppress_user_email, 10, 2 );
-
                 $new_user_id = wp_create_user( $author_username, wp_generate_password( 32, true, true ), $author_email );
-
-                remove_filter( 'wp_send_new_user_notification_to_user', $suppress_user_email, 10 );
-
                 if ( ! is_wp_error( $new_user_id ) ) {
                     $author_user = get_user_by( 'id', $new_user_id );
                     $new_user_created = true;
-                    $welcome_user_id = (int) $new_user_id;
                     wp_update_user( array( 'ID' => $new_user_id, 'display_name' => $author_username ) );
                 }
             }

@@ -7,8 +7,7 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $organiser_id  = (int) get_post_field( 'post_author', $group_id );
     $organiser     = get_userdata( $organiser_id );
     $category      = bubbahub_group_category( $group_id );
-    $images        = bubbahub_group_images( $group_id );
-    $image         = ! empty( $images[0]['url'] ) ? $images[0]['url'] : '';
+    $booking_sessions = function_exists( 'bubbahub_booking_get_available_sessions' ) ? bubbahub_booking_get_available_sessions( $group_id ) : array();
     $term_time     = bubbahub_group_term_time( $group_id );
     $venue_id      = bubbahub_group_venue_id( $group_id );
     $address       = bubbahub_group_address( $group_id, $venue_id );
@@ -32,20 +31,6 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
                 <?php if ( bubbahub_group_can_edit( $group_id ) ) : ?><a class="bhg-button bhg-button-accent" href="<?php echo esc_url( get_edit_post_link( $group_id ) ); ?>">Edit Listing</a><?php endif; ?>
             </div>
             <header class="bhg-hero">
-                <?php if ( $images ) : ?>
-                    <div class="bhg-hero-image bhg-hero-gallery" data-gallery>
-                        <?php foreach ( $images as $index => $gallery_image ) : ?>
-                            <img class="bhg-gallery-slide<?php echo 0 === $index ? ' is-active' : ''; ?>" src="<?php echo esc_url( $gallery_image['url'] ); ?>" alt="<?php echo esc_attr( get_the_title() . ' image ' . ( $index + 1 ) ); ?>" <?php echo 0 === $index ? '' : 'loading="lazy"'; ?>>
-                        <?php endforeach; ?>
-                        <?php if ( count( $images ) > 1 ) : ?>
-                            <button type="button" class="bhg-gallery-arrow bhg-gallery-prev" data-gallery-prev aria-label="Previous image">‹</button>
-                            <button type="button" class="bhg-gallery-arrow bhg-gallery-next" data-gallery-next aria-label="Next image">›</button>
-                            <div class="bhg-gallery-dots" aria-label="Gallery images">
-                                <?php foreach ( $images as $index => $gallery_image ) : ?><button type="button" class="bhg-gallery-dot<?php echo 0 === $index ? ' is-active' : ''; ?>" data-gallery-dot="<?php echo esc_attr( $index ); ?>" aria-label="Show image <?php echo esc_attr( $index + 1 ); ?>"></button><?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
                 <div class="bhg-hero-content">
                     <?php if ( $category ) : ?><div class="bhg-category"><?php echo esc_html( $category ); ?></div><?php endif; ?>
                     <h1><?php echo esc_html( get_the_title() ); ?></h1>
@@ -74,7 +59,7 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
                     <section class="bhg-sidebar-card"><h2>Tags</h2><?php if ( $tags ) : ?><div class="bhg-tags"><?php foreach ( $tags as $tag ) : ?><a href="<?php echo esc_url( get_term_link( $tag ) ); ?>"><?php echo esc_html( $tag->name ); ?></a><?php endforeach; ?></div><?php else : ?><p class="bhg-muted">No tags added.</p><?php endif; ?></section>
                     <section class="bhg-sidebar-card"><h2>Schedule</h2><div class="bhg-schedule"><?php echo $schedule !== '' ? wp_kses_post( nl2br( esc_html( $schedule ) ) ) : '<span class="bhg-muted">Schedule not added yet.</span>'; ?></div></section>
                     <section class="bhg-sidebar-card"><h2>Schedule notes</h2><div class="bhg-schedule-notes"><?php echo $schedule_note !== '' ? wp_kses_post( nl2br( esc_html( $schedule_note ) ) ) : '<span class="bhg-muted">No additional notes.</span>'; ?></div></section>
-                    <section class="bhg-sidebar-card bhg-ready"><div class="bhg-ready-icon" aria-hidden="true">✓</div><h2>Ready to Join?</h2><p>Secure your spot for this group right away.</p><a href="#bh-booking" class="bhg-book-button" data-booking-open>Book My Space Now <span>→</span></a></section>
+                    <section class="bhg-sidebar-card bhg-ready"><?php if ( $booking_sessions ) : ?><div class="bhg-ready-icon" aria-hidden="true">✓</div><h2>Ready to Join?</h2><p>Secure your spot for this group right away.</p><a href="#bh-booking" class="bhg-book-button" data-booking-open>Book My Space Now <span>→</span></a><?php else : ?><div class="bhg-ready-icon" aria-hidden="true">ℹ</div><h2>No Bookings Available</h2><p>Sorry, no bookings are currently available. Please check the organiser's website for more information.</p><?php endif; ?></section>
                 </aside>
             </div>
             <?php if ( function_exists( 'bubbahub_booking_render_group_widget' ) ) : ?><?php bubbahub_booking_render_group_widget( $group_id ); ?><?php endif; ?>

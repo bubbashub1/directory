@@ -104,7 +104,7 @@ function bubbahub_directory_csv_meta_keys() {
 function bubbahub_directory_csv_template() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
     check_admin_referer( 'bubbahub_csv_template' );
-    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','address','postcode','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time' );
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );
@@ -131,7 +131,7 @@ function bubbahub_directory_csv_export() {
     ) );
 
     $meta_keys = bubbahub_directory_csv_meta_keys();
-    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'category', 'tags', 'region', 'latitude', 'longitude', 'map' );
+    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'category', 'tags', 'region', 'address', 'postcode', 'latitude', 'longitude', 'map' );
     $headers = array_values( array_unique( array_merge( $fixed, $meta_keys ) ) );
 
     nocache_headers();
@@ -170,6 +170,8 @@ function bubbahub_directory_csv_export() {
                 case 'post_name': $value = $post->post_name; break;
                 case 'post_date': $value = $post->post_date; break;
                 case 'region': $value = implode( ', ', is_wp_error( $terms ) ? array() : $terms ); break;
+                case 'address': $value = get_post_meta( $id, 'address', true ); break;
+                case 'postcode': $value = get_post_meta( $id, 'postcode', true ); break;
                 case 'latitude': $value = $latitude; break;
                 case 'longitude': $value = $longitude; break;
                 case 'map': $value = $map_value; break;
@@ -317,7 +319,7 @@ function bubbahub_directory_csv_import() {
             if ( taxonomy_exists( 'region' ) ) wp_set_object_terms( $saved_id, $terms, 'region', false );
         }
 
-        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'latitude', 'longitude', 'map' );
+        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'address', 'postcode', 'latitude', 'longitude', 'map' );
         foreach ( $data as $key => $value ) {
             if ( in_array( $key, $core, true ) || '' === $key ) continue;
             if ( is_string( $value ) && '' === trim( $value ) ) {

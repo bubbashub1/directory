@@ -62,7 +62,7 @@ function bubbahub_myhub_planner_v2_user_location_values() {
         elseif ( is_numeric( $value ) ) $out[] = absint( $value );
         else $out[] = sanitize_text_field( (string) $value );
     }
-    return array_values( array_unique( array_filter( $out, function( $v ) { return '' !== (string) $v; } ) );
+    return array_values( array_unique( array_filter( $out, function( $v ) { return '' !== (string) $v; } ) ) );
 }
 
 function bubbahub_myhub_planner_v2_match( $group_id, $interest_ids = array(), $location_values = array(), $venue_id = 0 ) {

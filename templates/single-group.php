@@ -17,9 +17,40 @@ if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $session       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'session_length', '' ) );
     $booking       = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'booking_required', '' ) );
     $schedule      = bubbahub_group_format_value( bubbahub_group_get_field( $group_id, 'business_hours', '' ) );
+    // Read Business Hours from the actual saved field value. The ACF field-group key
+    // (group_business_hours_repeater) is not itself the repeater field name, so
+    // also inspect all saved ACF/meta values for the day/session structure.
     $business_hours = bubbahub_group_get_field( $group_id, 'business_hours', array() );
-    if ( empty( $business_hours ) ) $business_hours = bubbahub_group_get_field( $group_id, 'group_business_hours_repeater', array() );
-    if ( empty( $business_hours ) ) $business_hours = bubbahub_group_get_field( $group_id, 'schedule', array() );
+    if ( is_string( $business_hours ) ) {
+        $decoded = json_decode( $business_hours, true );
+        if ( is_array( $decoded ) ) $business_hours = $decoded;
+    }
+    if ( ! is_array( $business_hours ) || empty( $business_hours ) ) {
+        $business_hours = array();
+        if ( function_exists( 'get_fields' ) ) {
+            $all_fields = get_fields( $group_id );
+            if ( is_array( $all_fields ) ) {
+                foreach ( $all_fields as $field_value ) {
+                    if ( ! is_array( $field_value ) ) continue;
+                    foreach ( $field_value as $candidate_row ) {
+                        if ( is_array( $candidate_row ) && ( isset( $candidate_row['day_name'] ) || isset( $candidate_row['sessions'] ) ) ) {
+                            $business_hours = $field_value;
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if ( ! $business_hours ) {
+        $raw_business_hours = get_post_meta( $group_id, 'business_hours', true );
+        if ( is_string( $raw_business_hours ) ) {
+            $decoded = json_decode( $raw_business_hours, true );
+            if ( is_array( $decoded ) ) $business_hours = $decoded;
+        } elseif ( is_array( $raw_business_hours ) ) {
+            $business_hours = $raw_business_hours;
+        }
+    }
     if ( ! is_array( $business_hours ) ) $business_hours = array();
     $business_hour_days = array( 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' );
     $today_name = wp_date( 'l' );

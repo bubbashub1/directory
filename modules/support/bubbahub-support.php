@@ -28,7 +28,7 @@ add_action( 'init', 'bubbahub_support_register_cpt' );
 
 function bubbahub_support_defaults() {
     $defaults = array(
-        'keywords' => array( 'sleep','feeding','breastfeeding','weaning','speech','language','toilet training','potty training','sleep','behaviour','parenting','postnatal','pregnancy','baby massage','mental health','SEND','autism','ADHD','financial support','domestic abuse','bereavement' ),
+        'keywords' => array( 'sleep','feeding','breastfeeding','weaning','speech','language','toilet training','potty training','behaviour','parenting','postnatal','pregnancy','baby massage','mental health','SEND','autism','ADHD','financial support','domestic abuse','bereavement' ),
         'links' => array(
             array('title'=>'GOV.UK Family Hubs','url'=>'https://www.gov.uk/find-family-hub-local-area','description'=>'Find local family hub support in England.','keywords'=>'family hub,parenting,baby,support'),
             array('title'=>'Devon Best Start Family Hubs','url'=>'https://www.devon.gov.uk/children-families-education/child-family-support/family-support/family-hubs/','description'=>'Family support, advice and services across Devon.','keywords'=>'devon,family hub,parenting,baby'),
@@ -159,16 +159,27 @@ function bubbahub_support_public() {
 add_shortcode('bubbahub_support','bubbahub_support_public');
 add_shortcode('bubbahub_support_article_form','bubbahub_support_article_form');
 
-function bubbahub_support_useful_links() {
-    $s=bubbahub_support_defaults(); $keywords=$s['keywords']; $links=$s['links']; $html='<section class="bh-support-section"><div class="bh-support-section-head"><div><span class="bh-support-kicker">Useful links</span><h2>Find trusted support</h2><p>Admin can add keywords and vetted links. We also provide a Google Maps search for each topic.</p></div></div><div class="bh-support-link-grid">';
-    foreach($keywords as $keyword){$url='https://www.google.com/maps/search/'.rawurlencode($keyword.' family support Devon Cornwall');$html.='<a class="bh-support-link" href="'.esc_url($url).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Search local support on Google Maps ↗</span></a>';}
-    foreach($links as $l){if(empty($l['url']))continue;$html.='<a class="bh-support-link" href="'.esc_url($l['url']).'" target="_blank" rel="noopener"><strong>'.esc_html($l['title']).'</strong><span>'.esc_html($l['description']).' ↗</span></a>';}
+function bubbahub_support_resource_matches($item_keywords,$topic){
+    if(!$topic) return true;
+    $hay=strtolower((string)$item_keywords); $topic=strtolower(trim($topic));
+    if(!$hay) return false;
+    foreach(array_filter(preg_split('/[,\\s]+/',$topic)) as $term){ if(strlen($term)>=3 && strpos($hay,$term)!==false) return true; }
+    return false;
+}
+function bubbahub_support_useful_links($topic='') {
+    $s=bubbahub_support_defaults(); $keywords=$s['keywords']; $links=$s['links'];
+    if(!$topic && !empty($_GET['support_topic'])) $topic=sanitize_text_field(wp_unslash($_GET['support_topic']));
+    $html='<section class="bh-support-section" id="support-resources"><div class="bh-support-section-head"><span class="bh-support-kicker">Useful links</span><h2>'.($topic?'Recommended support for '.esc_html(ucwords($topic)):'Find trusted support').'</h2><p>Explore trusted resources or search locally on Google Maps.</p></div><div class="bh-support-link-grid">';
+    foreach($links as $l){if(empty($l['url'])||($topic&&!bubbahub_support_resource_matches($l['keywords']??'', $topic)))continue;$html.='<a class="bh-support-link" href="'.esc_url($l['url']).'" target="_blank" rel="noopener"><strong>'.esc_html($l['title']).'</strong><span>'.esc_html($l['description']).' ↗</span></a>';}
+    $show=$topic?array($topic):array_slice($keywords,0,6); foreach($show as $keyword){$url='https://www.google.com/maps/search/'.rawurlencode($keyword.' family support Devon Cornwall');$html.='<a class="bh-support-link" href="'.esc_url($url).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Search local support on Google Maps ↗</span></a>';}
     return $html.'</div></section>';
 }
-function bubbahub_support_apps() {
-    $s=bubbahub_support_defaults(); $apps=$s['apps']; $html='<section class="bh-support-section"><div class="bh-support-section-head"><div><span class="bh-support-kicker">Family apps</span><h2>Useful apps</h2><p>Search the Apple App Store or Google Play for the topics you need.</p></div></div><div class="bh-support-link-grid">';
-    foreach($s['keywords'] as $keyword){$html.='<a class="bh-support-link" href="'.esc_url('https://apps.apple.com/gb/search?term='.rawurlencode($keyword)).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Find apps on the App Store ↗</span></a><a class="bh-support-link" href="'.esc_url('https://play.google.com/store/search?q='.rawurlencode($keyword).'&c=apps').'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Find apps on Google Play ↗</span></a>';}
-    foreach($apps as $a){$html.='<a class="bh-support-link" href="'.esc_url($a['url']).'" target="_blank" rel="noopener"><strong>'.esc_html($a['title']).'</strong><span>'.esc_html($a['description']).' ↗</span></a>';}
+function bubbahub_support_apps($topic='') {
+    $s=bubbahub_support_defaults(); $apps=$s['apps'];
+    if(!$topic && !empty($_GET['support_topic'])) $topic=sanitize_text_field(wp_unslash($_GET['support_topic']));
+    $html='<section class="bh-support-section" id="support-apps"><div class="bh-support-section-head"><span class="bh-support-kicker">Family apps</span><h2>'.($topic?'Apps for '.esc_html(ucwords($topic)):'Useful family apps').'</h2><p>Find curated apps or browse the Apple App Store and Google Play.</p></div><div class="bh-support-link-grid">';
+    foreach($apps as $a){if(empty($a['url'])||($topic&&!bubbahub_support_resource_matches($a['keywords']??'', $topic)))continue;$html.='<a class="bh-support-link" href="'.esc_url($a['url']).'" target="_blank" rel="noopener"><strong>'.esc_html($a['title']).'</strong><span>'.esc_html($a['description']).' ↗</span></a>';}
+    if($topic){$stores=array('App Store'=>'https://apps.apple.com/gb/search?term='.rawurlencode($topic),'Google Play'=>'https://play.google.com/store/search?q='.rawurlencode($topic).'&c=apps'); foreach($stores as $name=>$url)$html.='<a class="bh-support-link" href="'.esc_url($url).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($topic)).'</strong><span>Find apps on '.esc_html($name).' ↗</span></a>';} else {foreach(array_slice($s['keywords'],0,6) as $keyword){$html.='<a class="bh-support-link" href="'.esc_url('https://apps.apple.com/gb/search?term='.rawurlencode($keyword)).'" target="_blank" rel="noopener"><strong>'.esc_html(ucwords($keyword)).'</strong><span>Search apps on the App Store ↗</span></a>';}}
     return $html.'</div></section>';
 }
 
@@ -181,13 +192,20 @@ function bubbahub_support_admin_page() {
     if(!current_user_can('manage_options')) return;
     $s=bubbahub_support_defaults();
     if(!empty($_POST['bh_support_admin_save'])&&check_admin_referer('bh_support_admin')){
-        $s['keywords']=array_values(array_filter(array_map('sanitize_text_field',preg_split('/\r?\n/',wp_unslash($_POST['keywords']??''))));
-        $s['links']=array();
+        if (array_key_exists('keywords', $_POST)) {
+            $s['keywords']=array_values(array_filter(array_map('sanitize_text_field',preg_split('/\r?\n/',wp_unslash($_POST['keywords'])))));
+        }
+        if (array_key_exists('link_title', $_POST)) {
+            $s['links']=array();
         foreach((array)($_POST['link_title']??array()) as $i=>$title){$url=esc_url_raw($_POST['link_url'][$i]??'');if($title&&$url)$s['links'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['link_description'][$i]??''),'keywords'=>sanitize_text_field($_POST['link_keywords'][$i]??''));}
-        $s['apps']=array();
-        foreach((array)($_POST['app_title']??array()) as $i=>$title){$url=esc_url_raw($_POST['app_url'][$i]??'');if($title&&$url)$s['apps'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['app_description'][$i]??''));}
+            }
+        }
+        if (array_key_exists('app_title', $_POST)) {
+            $s['apps']=array();
+            foreach((array)$_POST['app_title'] as $i=>$title){$url=esc_url_raw($_POST['app_url'][$i]??'');if($title&&$url)$s['apps'][]=array('title'=>sanitize_text_field($title),'url'=>$url,'description'=>sanitize_text_field($_POST['app_description'][$i]??''),'keywords'=>sanitize_text_field($_POST['app_keywords'][$i]??''));}
+        }
         update_option('bubbahub_support_settings',$s);
-        foreach((array)($_POST['leader_specialisms']??array()) as $uid=>$specialisms) update_user_meta(absint($uid),'bh_support_specialisms',sanitize_text_field($specialisms));
+        if (array_key_exists('leader_specialisms', $_POST)) foreach((array)$_POST['leader_specialisms'] as $uid=>$specialisms) update_user_meta(absint($uid),'bh_support_specialisms',sanitize_text_field($specialisms));
         echo '<div class="notice notice-success"><p>Support Hub settings saved.</p></div>';
     }
     $tab=sanitize_key($_GET['tab']??'topics');
@@ -209,7 +227,7 @@ function bubbahub_support_admin_page() {
       <table class="widefat"><thead><tr><th>Title</th><th>URL</th><th>Description</th><th>Keywords</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['links']));$i++):$l=$s['links'][$i]??array(); ?><tr><td><input name="link_title[]" value="<?php echo esc_attr($l['title']??''); ?>"></td><td><input class="widefat" name="link_url[]" value="<?php echo esc_attr($l['url']??''); ?>"></td><td><input class="widefat" name="link_description[]" value="<?php echo esc_attr($l['description']??''); ?>"></td><td><input name="link_keywords[]" value="<?php echo esc_attr($l['keywords']??''); ?>"></td></tr><?php endfor; ?></tbody></table>
     <?php elseif($tab==='apps'): ?>
       <h2>Curated apps</h2><p>Add recommended apps alongside the automatic App Store and Google Play searches.</p>
-      <table class="widefat"><thead><tr><th>App</th><th>URL</th><th>Description</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['apps']));$i++):$a=$s['apps'][$i]??array(); ?><tr><td><input name="app_title[]" value="<?php echo esc_attr($a['title']??''); ?>"></td><td><input class="widefat" name="app_url[]" value="<?php echo esc_attr($a['url']??''); ?>"></td><td><input class="widefat" name="app_description[]" value="<?php echo esc_attr($a['description']??''); ?>"></td></tr><?php endfor; ?></tbody></table>
+      <table class="widefat"><thead><tr><th>App</th><th>URL</th><th>Description</th><th>Keywords</th></tr></thead><tbody><?php for($i=0;$i<max(5,count($s['apps']));$i++):$a=$s['apps'][$i]??array(); ?><tr><td><input name="app_title[]" value="<?php echo esc_attr($a['title']??''); ?>"></td><td><input class="widefat" name="app_url[]" value="<?php echo esc_attr($a['url']??''); ?>"></td><td><input class="widefat" name="app_description[]" value="<?php echo esc_attr($a['description']??''); ?>"></td><td><input name="app_keywords[]" value="<?php echo esc_attr($a['keywords']??''); ?>"></td></tr><?php endfor; ?></tbody></table>
     <?php elseif($tab==='leaders'): ?>
       <h2>Leader specialisms</h2><p>Optional extra matching terms for each approved leader. Example: <code>sleep, breastfeeding, baby massage</code>.</p>
       <table class="widefat"><thead><tr><th>Leader</th><th>Email</th><th>Specialisms</th></tr></thead><tbody><?php foreach(get_users(array('role__in'=>array('leader','leaderpro'))) as $leader): ?><tr><td><?php echo esc_html($leader->display_name); ?></td><td><?php echo esc_html($leader->user_email); ?></td><td><input class="widefat" name="leader_specialisms[<?php echo esc_attr($leader->ID); ?>]" value="<?php echo esc_attr(get_user_meta($leader->ID,'bh_support_specialisms',true)); ?>"></td></tr><?php endforeach; ?></tbody></table>

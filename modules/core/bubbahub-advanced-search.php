@@ -100,8 +100,13 @@ function bubbahub_advanced_search_acf_fields() {
             if ( ! in_array( $field['type'], array( 'select','radio','checkbox','button_group','true_false' ), true ) ) continue;
             if ( empty( $field['choices'] ) && 'true_false' !== $field['type'] ) continue;
             $legacy_enabled = ! empty( $field['bubbahub_advanced_search'] );
-            if ( $imported && ! in_array( sanitize_key( $field['name'] ), $imported, true ) && ! $legacy_enabled ) continue;
-            if ( ! $imported && ! $legacy_enabled ) continue;
+            // Once the admin has made an explicit import selection, that selection is authoritative.
+            // Before any selection is saved, retain the existing per-field ACF setting for backwards compatibility.
+            if ( $imported ) {
+                if ( ! in_array( sanitize_key( $field['name'] ), $imported, true ) ) continue;
+            } elseif ( ! $legacy_enabled ) {
+                continue;
+            }
             $fields[ $field['name'] ] = $field;
         }
     }

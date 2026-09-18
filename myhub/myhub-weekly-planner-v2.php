@@ -240,7 +240,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
-        if ( ! bubbahub_myhub_planner_v2_row_in_radius( $row, $location_radius ) ) continue;
+        // Location is now controlled by the saved Location taxonomy preference.
+        // The old Town/City + radius filter must not remove planner sessions.
         $matching = array();
         foreach ( $children as $index => $child_id ) {
             if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;

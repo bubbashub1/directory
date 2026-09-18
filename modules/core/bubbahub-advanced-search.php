@@ -83,7 +83,7 @@ function bubbahub_advanced_search_query( $f, $pp = 12 ) {
     if ( ! empty($f['category']) && $cat_tax ) $tax_query[] = array('taxonomy'=>$cat_tax,'field'=>'slug','terms'=>sanitize_title($f['category']));
     if($tax_query){$tax_query['relation']='AND';$args['tax_query']=$tax_query;}
     $mq=array();
-    if(!empty($f['age']))$mq[]=array('key'=>'age_range','value'=>sanitize_text_field($f['age']),'compare'=>'LIKE');
+    if(!empty($f['age'])){ $ages=is_array($f['age'])?$f['age']:array($f['age']); $or=array('relation'=>'OR'); foreach($ages as $age)$or[]=array('key'=>'age_range','value'=>sanitize_text_field($age),'compare'=>'LIKE'); if(count($or)>1)$mq[]=$or; }
     if('free'===($f['price']??''))$mq[]=array('key'=>'price','value'=>'Free','compare'=>'LIKE');
     if('paid'===($f['price']??''))$mq[]=array('key'=>'price','value'=>'Free','compare'=>'NOT LIKE');
     if(!empty($f['location'])){$or=array('relation'=>'OR');foreach(bubbahub_advanced_search_location_keys() as $k)$or[]=array('key'=>$k,'value'=>sanitize_text_field($f['location']),'compare'=>'LIKE');$mq[]=$or;}
@@ -104,8 +104,8 @@ function bubbahub_advanced_search_query( $f, $pp = 12 ) {
     return new WP_Query($args);
 }
 function bubbahub_advanced_search_filters_from_request( $source ) {
-    $acf=isset($source['acf'])&&is_array($source['acf'])?$source['acf']:array();foreach($acf as $k=>$v)$acf[$k]=is_array($v)?array_map('sanitize_text_field',wp_unslash($v)):sanitize_text_field(wp_unslash($v));
-    return array('search'=>sanitize_text_field(wp_unslash($source['search']??'')),'region'=>sanitize_title(wp_unslash($source['region']??'')),'age'=>sanitize_text_field(wp_unslash($source['age']??'')),'price'=>sanitize_text_field(wp_unslash($source['price']??'')),'location'=>sanitize_text_field(wp_unslash($source['location']??'')),'category'=>sanitize_title(wp_unslash($source['category']??'')),'day'=>sanitize_key(wp_unslash($source['day']??'')),'term_time'=>sanitize_key(wp_unslash($source['term_time']??'')),'acf'=>$acf,'lat'=>(float)($source['lat']??0),'lng'=>(float)($source['lng']??0),'radius'=>max(1,min(100,(float)($source['radius']??25))),'paged'=>max(1,(int)($source['paged']??1)));
+    $acf=isset($source['acf'])&&is_array($source['acf'])?$source['acf']:(isset($source['bh_acf'])&&is_array($source['bh_acf'])?$source['bh_acf']:array());foreach($acf as $k=>$v)$acf[$k]=is_array($v)?array_map('sanitize_text_field',wp_unslash($v)):sanitize_text_field(wp_unslash($v));
+    return array('search'=>sanitize_text_field(wp_unslash($source['search']??$source['bh_search']??'')),'region'=>sanitize_title(wp_unslash($source['region']??$source['bh_region']??'')),'age'=>isset($source['age'])?array_map('sanitize_text_field',(array)wp_unslash($source['age'])):(isset($source['bh_age'])?array_map('sanitize_text_field',(array)wp_unslash($source['bh_age'])):array()),'price'=>sanitize_text_field(wp_unslash($source['price']??$source['bh_price']??'')),'location'=>sanitize_text_field(wp_unslash($source['location']??$source['bh_location']??'')),'category'=>sanitize_title(wp_unslash($source['category']??$source['bh_category']??'')),'day'=>sanitize_key(wp_unslash($source['day']??$source['bh_day']??'')),'term_time'=>sanitize_key(wp_unslash($source['term_time']??$source['bh_term_time']??'')),'acf'=>$acf,'lat'=>(float)($source['lat']??$source['bh_lat']??0),'lng'=>(float)($source['lng']??$source['bh_lng']??0),'radius'=>max(1,min(100,(float)($source['radius']??$source['bh_radius']??25))),'paged'=>max(1,(int)($source['paged']??1)));
 }
 function bubbahub_advanced_search_ajax(){
     check_ajax_referer('bubbahub_directory','nonce');

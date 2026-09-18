@@ -45,19 +45,19 @@ function bubbahub_directory_csv_admin_page() {
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Import listings</h2>
             <p><strong>Workflow:</strong> Export → edit in Google Sheets → paste the sheet CSV URL here → import. Existing <code>id</code> values update listings; blank IDs create listings.</p>
-            <p>Upload a CSV or paste a public Google Sheets CSV/export URL. A row with an existing <strong>id</strong> updates that listing. Leave <strong>id</strong> blank to create a new listing.</p>
+            <p>Choose one of the two import methods below. A row with an existing <strong>id</strong> updates that listing. Leave <strong>id</strong> blank to create a new listing.</p>
             <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="bubbahub_directory_csv_import">
                 <?php wp_nonce_field( 'bubbahub_csv_import' ); ?>
                 <table class="form-table">
                     <tr>
-                        <th scope="row"><label for="bh_csv_file">CSV file</label></th>
+                        <th scope="row"><label for="bh_csv_file">Import from CSV File</label></th>
                         <td><input id="bh_csv_file" name="bh_csv_file" type="file" accept=".csv,text/csv"></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="bh_csv_url">Google Sheets / CSV URL</label></th>
+                        <th scope="row"><label for="bh_csv_url">Import from Google Sheets</label></th>
                         <td>
-                            <input id="bh_csv_url" name="bh_csv_url" type="url" class="regular-text code" style="width:100%;max-width:700px;" placeholder="https://docs.google.com/spreadsheets/d/...">
+                            <input id="bh_csv_url" name="bh_csv_url" type="url" class="regular-text code" style="width:100%;max-width:700px;" placeholder="Paste your published Google Sheets CSV URL">
                             <p class="description">The sheet must be publicly accessible or otherwise return CSV data without requiring an interactive Google login.</p>
                         </td>
                     </tr>
@@ -104,7 +104,7 @@ function bubbahub_directory_csv_meta_keys() {
 function bubbahub_directory_csv_template() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
     check_admin_referer( 'bubbahub_csv_template' );
-    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','sub_region','address','postcode','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','category','tags','region','sub_region','address','postcode','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','latitude','longitude','map','term_time','image_url' );
     nocache_headers();
     header( 'Content-Type: text/csv; charset=utf-8' );
     header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );
@@ -335,6 +335,18 @@ function bubbahub_directory_csv_import() {
             $value = is_array( $data['tags'] ) ? implode( ',', $data['tags'] ) : (string) $data['tags'];
             $terms = array_filter( array_map( 'trim', preg_split( '/[,|]/', $value ) ) );
             if ( $terms ) wp_set_object_terms( $saved_id, $terms, 'post_tag', false );
+        }
+
+        // Optional listing image import. Accept a direct image URL in image_url.
+        if ( array_key_exists( 'image_url', $data ) ) {
+            $image_url = trim( (string) $data['image_url'] );
+            if ( '' !== $image_url && filter_var( $image_url, FILTER_VALIDATE_URL ) ) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                require_once ABSPATH . 'wp-admin/includes/media.php';
+                require_once ABSPATH . 'wp-admin/includes/image.php';
+                $attachment_id = media_sideload_image( esc_url_raw( $image_url ), $saved_id, null, 'id' );
+                if ( ! is_wp_error( $attachment_id ) ) set_post_thumbnail( $saved_id, $attachment_id );
+            }
         }
 
         if ( array_key_exists( 'region', $data ) && taxonomy_exists( 'region' ) ) {

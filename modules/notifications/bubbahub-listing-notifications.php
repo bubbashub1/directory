@@ -6,6 +6,39 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'save_post_group', 'bubbahub_directory_listing_change_notification', 99, 3 );
 
+
+add_action( 'user_register', 'bubbahub_directory_send_new_leader_welcome', 20, 1 );
+add_filter( 'wp_send_new_user_notification_to_user', 'bubbahub_directory_suppress_generic_new_user_email', 10, 2 );
+
+function bubbahub_directory_send_new_leader_welcome( $user_id ) {
+    $user = get_userdata( (int) $user_id );
+    if ( ! $user || ! is_email( $user->user_email ) || get_user_meta( $user_id, '_bubbahub_welcome_sent', true ) ) return;
+    $reset_key = get_password_reset_key( $user );
+    $reset_url = ! is_wp_error( $reset_key ) ? network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $reset_key ) . '&login=' . rawurlencode( $user->user_login ), 'login' ) : wp_lostpassword_url();
+    $portal_url = home_url( '/leader-portal/' );
+    $support_url = home_url( '/support/' );
+    $subject = '🎉 Welcome to Bubba Hub! Your account is ready';
+    $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
+    $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div><div style="padding:30px;">';
+    $body .= '<p>Hey there! 👋</p><h2>Welcome to Bubba Hub! 🎉</h2><p>We’re so excited to have you on board. Your Bubba Hub account is ready, and you can now access your Leader Portal.</p>';
+    $body .= '<p><strong>Username:</strong> ' . esc_html( $user->user_login ) . '</p>';
+    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $reset_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#8bc6c9;color:#fff;text-decoration:none;font-weight:bold;">Set Your Password & Access Your Account</a></p>';
+    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $portal_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">Open Your Leader Portal</a></p>';
+    $body .= '<h3>🌟 What can you do?</h3><ul><li>Manage and update your listings</li><li>Keep classes and schedules up to date</li><li>Manage bookings and reservations</li><li>Keep venues and locations up to date</li><li>Connect with local families and the Bubba Hub community</li></ul>';
+    $body .= '<p><a href="' . esc_url( $support_url ) . '">Visit the Bubba Hub Support Centre</a></p><p>If you need anything at all, just reply to this email — we’re always happy to help.</p><p>Warmly,<br><strong>The Bubba Hub Team</strong> 💛</p><p style="font-size:13px;color:#777;">Bubba Hub · bubbahub.co.uk · @bubbahubsw on Facebook & Instagram</p></div></div>';
+    $from_name = function() { return 'Bubba Hub'; };
+    $from_email = function() { return 'contact@bubbahub.co.uk'; };
+    add_filter( 'wp_mail_from_name', $from_name ); add_filter( 'wp_mail_from', $from_email );
+    $sent = wp_mail( $user->user_email, $subject, $body, array( 'Content-Type: text/html; charset=UTF-8' ) );
+    remove_filter( 'wp_mail_from_name', $from_name ); remove_filter( 'wp_mail_from', $from_email );
+    if ( $sent ) update_user_meta( $user_id, '_bubbahub_welcome_sent', current_time( 'mysql' ) );
+}
+
+function bubbahub_directory_suppress_generic_new_user_email( $send, $user ) {
+    if ( $user instanceof WP_User && get_user_meta( $user->ID, '_bubbahub_welcome_sent', true ) ) return false;
+    return $send;
+}
+
 function bubbahub_directory_notification_is_import() {
     return ! empty( $GLOBALS['bubbahub_directory_csv_internal_import'] );
 }

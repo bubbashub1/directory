@@ -323,7 +323,22 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <div class="bh-planner-day-title"><?php echo esc_html( $day ); ?><span class="bh-planner-day-chevron" aria-hidden="true">⌄</span></div>
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
-          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>">
+          <?php
+            $planner_tax = function_exists( 'bubbahub_stage2_location_taxonomy' ) ? bubbahub_stage2_location_taxonomy() : '';
+            $planner_location_ids = $planner_tax ? wp_get_post_terms( (int) $item['group_id'], $planner_tax, array( 'fields' => 'ids' ) ) : array();
+            if ( $planner_tax && empty( $planner_location_ids ) && ! empty( $item['venue_id'] ) ) $planner_location_ids = wp_get_post_terms( (int) $item['venue_id'], $planner_tax, array( 'fields' => 'ids' ) );
+            if ( is_wp_error( $planner_location_ids ) ) $planner_location_ids = array();
+            $planner_search_parts = array( $item['title'] );
+            $planner_search_parts[] = get_post_field( 'post_content', (int) $item['group_id'] );
+            foreach ( get_object_taxonomies( get_post_type( (int) $item['group_id'] ) ) as $planner_tax_name ) {
+                $planner_term_names = wp_get_post_terms( (int) $item['group_id'], $planner_tax_name, array( 'fields' => 'names' ) );
+                if ( ! is_wp_error( $planner_term_names ) ) $planner_search_parts = array_merge( $planner_search_parts, $planner_term_names );
+            }
+            if ( ! empty( $item['venue'] ) ) $planner_search_parts[] = $item['venue'];
+            if ( ! empty( $item['venue_address'] ) ) $planner_search_parts[] = $item['venue_address'];
+            $planner_search_text = strtolower( wp_strip_all_tags( implode( ' ', array_map( 'strval', $planner_search_parts ) ) ) );
+          ?>
+          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
             <div class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>">
               <a class="bh-planner-listing-link" href="<?php echo esc_url( $item['url'] ); ?>">
               <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
@@ -339,6 +354,10 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       </div><?php endforeach; ?>
       </div>
 
+
+<style>
+.bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}.bh-planner-search-row{display:flex;gap:12px;align-items:end}.bh-planner-search-row label{flex:1;display:flex;flex-direction:column;gap:6px}.bh-planner-search-row label span{font-weight:700;font-size:13px}.bh-planner-search-row select,.bh-planner-search-row input{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}.bh-planner-search-save{min-height:44px;padding:0 20px;border:0;border-radius:10px;cursor:pointer}.bh-planner-search-save.is-saved{opacity:.8}.bh-planner-search-suggestions{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:10px;margin-top:72px;box-shadow:0 5px 20px rgba(0,0,0,.08);overflow:hidden}.bh-planner-search-suggestions button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:#fff;cursor:pointer}.bh-planner-search-hint{margin:8px 0 0;font-size:12px;opacity:.7}@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-row label{margin-bottom:10px}.bh-planner-search-save{width:100%}.bh-planner-search-suggestions{position:relative;margin-top:-5px;width:100%}}
+</style>
       <script>
       document.addEventListener('DOMContentLoaded',function(){
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
@@ -362,7 +381,39 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           }
           if(input) input.addEventListener('input',renderSuggestions);
           if(suggestions) suggestions.addEventListener('click',function(e){var b=e.target.closest('[data-suggest]');if(!b)return;input.value=b.getAttribute('data-suggest');suggestions.hidden=true;});
-          if(save) save.addEventListener('click',function(){try{localStorage.setItem('bh_planner_keyword',input?input.value:'');localStorage.setItem('bh_planner_location',location?location.value:'');}catch(e){} save.textContent='Saved';setTimeout(function(){save.textContent='Edit / Save';},1200);});
+          function applySearch(){
+            var loc=location?location.value:'', q=input?input.value.toLowerCase().trim():'';
+            planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
+              var locs=(item.getAttribute('data-planner-location-ids')||'').split(',');
+              var text=item.getAttribute('data-planner-search')||'';
+              var locationOk=!loc||locs.indexOf(String(loc))!==-1;
+              var words=q?q.split(/\\s+/).filter(Boolean):[];
+              var keywordOk=!words.length||words.every(function(word){return text.indexOf(word)!==-1;});
+              item.hidden=!(locationOk&&keywordOk);
+            });
+            planner.querySelectorAll('.bh-planner-day').forEach(function(day){
+              var visible=Array.from(day.querySelectorAll('.bh-planner-item-wrap')).some(function(x){return !x.hidden;});
+              day.hidden=!visible;
+            });
+          }
+          function lockSearch(){
+            if(input) input.disabled=true; if(location) location.disabled=true;
+            if(save){save.textContent='Edit';save.classList.add('is-saved');}
+          }
+          function editSearch(){
+            if(input) input.disabled=false; if(location) location.disabled=false;
+            if(save){save.textContent='Save';save.classList.remove('is-saved');}
+            if(input) input.focus();
+          }
+          if(save) save.addEventListener('click',function(){
+            if(save.classList.contains('is-saved')){editSearch();return;}
+            try{localStorage.setItem('bh_planner_keyword',input?input.value:'');localStorage.setItem('bh_planner_location',location?location.value:'');}catch(e){}
+            applySearch(); lockSearch();
+          });
+          if(input) input.addEventListener('input',function(){renderSuggestions();});
+          if(location) location.addEventListener('change',applySearch);
+          applySearch();
+          if(savedKeyword||savedLocation) lockSearch();
         });
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
           planner.querySelectorAll('[data-planner-child-filter]').forEach(function(button){

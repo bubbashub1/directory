@@ -377,35 +377,37 @@ function bubbahub_directory_csv_parse_business_hours( $value ) {
     return array_values( $result );
 }
 
+function bubbahub_directory_csv_map_session_fields( $session, $session_fields ) {
+    $mapped = array();
+    foreach ( $session_fields as $sf ) {
+        $name = isset( $sf['name'] ) ? (string) $sf['name'] : '';
+        if ( ! $name ) continue;
+        $lower = strtolower( $name );
+        if ( false !== strpos( $lower, 'start' ) || false !== strpos( $lower, 'open' ) || false !== strpos( $lower, 'from' ) ) $mapped[ $name ] = $session['start_time'];
+        elseif ( false !== strpos( $lower, 'end' ) || false !== strpos( $lower, 'close' ) || false !== strpos( $lower, 'to' ) ) $mapped[ $name ] = $session['end_time'];
+    }
+    return $mapped ? $mapped : $session;
+}
+
 function bubbahub_directory_csv_save_acf_business_hours( $post_id, $value ) {
     if ( ! function_exists( 'update_field' ) ) return;
     $hours = bubbahub_directory_csv_parse_business_hours( $value );
     if ( function_exists( 'acf_get_field' ) ) {
         $field = acf_get_field( 'group_business_hours_repeater' );
         if ( is_array( $field ) && ! empty( $field['sub_fields'] ) ) {
-            $day_fields = array();
             $session_fields = array();
             foreach ( $field['sub_fields'] as $sub ) {
                 if ( ! empty( $sub['name'] ) ) {
                     if ( 'sessions' === $sub['name'] ) {
                         $session_fields = ! empty( $sub['sub_fields'] ) ? $sub['sub_fields'] : array();
-                    } elseif ( 'day_name' === $sub['name'] || 'is_closed' === $sub['name'] ) {
-                        $day_fields[] = $sub;
+                    }
                     }
                 }
             }
             foreach ( $hours as &$day ) {
                 $mapped_sessions = array();
                 foreach ( $day['sessions'] as $session ) {
-                    $mapped = array();
-                    foreach ( $session_fields as $sf ) {
-                        $name = isset( $sf['name'] ) ? $sf['name'] : '';
-                        if ( ! $name ) continue;
-                        $lower = strtolower( $name );
-                        if ( false !== strpos( $lower, 'start' ) || false !== strpos( $lower, 'open' ) || false !== strpos( $lower, 'from' ) ) $mapped[ $name ] = $session['start_time'];
-                        elseif ( false !== strpos( $lower, 'end' ) || false !== strpos( $lower, 'close' ) || false !== strpos( $lower, 'to' ) ) $mapped[ $name ] = $session['end_time'];
-                    }
-                    if ( ! $mapped ) $mapped = $session;
+                    $mapped = bubbahub_directory_csv_map_session_fields( $session, $session_fields );
                     $mapped_sessions[] = $mapped;
                 }
                 $day['sessions'] = $mapped_sessions;

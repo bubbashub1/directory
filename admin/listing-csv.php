@@ -374,12 +374,29 @@ function bubbahub_directory_csv_import() {
                     $new_user_created = true;
                     wp_update_user( array( 'ID' => $new_user_id, 'display_name' => $author_username ) );
                     update_user_meta( $new_user_id, '_bubbahub_welcome_sent', current_time( 'mysql' ) );
-                    $login_url = wp_login_url();
-                    $reset_url = wp_lostpassword_url();
-                    $subject = 'Welcome to Bubba Hub';
-                    $message = "Hi {$author_username},\\n\\nWelcome to Bubba Hub! Your leader account has been created and your listing has been added to the Bubba Hub directory.\\n\\nUsername: {$author_username}\\n\\nTo set your password and access your account, use the WordPress password reset page:\\n{$reset_url}\\n\\nYou can then log in here:\\n{$login_url}\\n\\nOnce logged in, you can manage your Bubba Hub listing and access the leader features available to you.\\n\\nIf you have any questions, please contact Bubba Hub.\\n\\nBubba Hub";
-                    wp_mail( $author_email, $subject, $message, array( 'Content-Type: text/plain; charset=UTF-8' ) );
-                }
+                    $reset_key = get_password_reset_key( $author_user );
+                    $reset_url = ! is_wp_error( $reset_key ) ? network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $reset_key ) . '&login=' . rawurlencode( $author_username ), 'login' ) : wp_lostpassword_url();
+                    $listing_url = get_permalink( $saved_id );
+                    $portal_url = home_url( '/leader-portal/' );
+                    $support_url = home_url( '/support/' );
+                    $subject = '🎉 Welcome to Bubba Hub! Your groups & classes are live!';
+                    $body = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;color:#333;line-height:1.6;">';
+                    $body .= '<div style="padding:24px;text-align:center;border-radius:14px 14px 0 0;background:#f8e8ef;"><h1 style="margin:0;">Bubba Hub 💛</h1></div>';
+                    $body .= '<div style="padding:30px;">';
+                    $body .= '<p>Hey there! 👋</p><h2>Welcome to Bubba Hub! 🎉</h2>';
+                    $body .= '<p>We’re so excited to have you on board. Your groups and classes have now been added to the Bubba Hub directory.</p>';
+                    $body .= '<p><strong>Username:</strong> ' . esc_html( $author_username ) . '</p>';
+                    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $listing_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#f3a6b8;color:#fff;text-decoration:none;font-weight:bold;">View Your Listings</a></p>';
+                    $body .= '<p>Before you log in for the first time, set your password using the secure button below.</p>';
+                    $body .= '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url( $reset_url ) . '" style="display:inline-block;padding:14px 24px;border-radius:8px;background:#8bc6c9;color:#fff;text-decoration:none;font-weight:bold;">Set Your Password & Access Your Account</a></p>';
+                    $body .= '<h3>🌟 What can you do next?</h3><ul><li>Manage and update your listings</li><li>Keep your classes and schedules up to date</li><li>Manage bookings and reservations</li><li>Connect with local families</li><li>Keep your venues and locations up to date</li><li>Stay connected with the Bubba Hub community</li></ul>';
+                    $body .= '<h3>🌈 Let’s build this together</h3><p>Bubba Hub is more than just a directory — we’re building a community that brings families, group leaders, businesses and local specialists together.</p>';
+                    $body .= '<p><a href="' . esc_url( $support_url ) . '">Visit the Bubba Hub Support Centre</a></p>';
+                    $body .= '<p>If you need anything at all, just reply to this email — we’re always happy to help.</p>';
+                    $body .= '<p>Warmly,<br><strong>The Bubba Hub Team</strong> 💛</p>';
+                    $body .= '<p style="font-size:13px;color:#777;">bubbahub.co.uk · @bubbahubsw on Facebook & Instagram</p>';
+                    $body .= '</div></div>';
+                    wp_mail( $author_email, $subject, $body, array( 'Content-Type: text/html; charset=UTF-8' ) );                }
             }
         }
 

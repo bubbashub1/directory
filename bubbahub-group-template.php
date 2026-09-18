@@ -248,6 +248,32 @@ function bubbahub_group_resolve_map( $post_id ) {
         return array( 'lat' => (float) $lat, 'lng' => (float) $lng );
     }
 
+    if ( function_exists( 'get_fields' ) ) {
+        $all_fields = get_fields( $post_id );
+        if ( is_array( $all_fields ) ) {
+            foreach ( $all_fields as $field_value ) {
+                $coords = bubbahub_group_normalise_map( $field_value );
+                if ( $coords ) return $coords;
+                if ( is_array( $field_value ) ) {
+                    foreach ( $field_value as $nested_value ) {
+                        $coords = bubbahub_group_normalise_map( $nested_value );
+                        if ( $coords ) return $coords;
+                    }
+                }
+            }
+        }
+    }
+
+    foreach ( array( 'latitude', 'lat', 'map_lat', '_latitude' ) as $field_name ) {
+        $raw_lat = get_post_meta( $post_id, $field_name, true );
+        foreach ( array( 'longitude', 'lng', 'map_lng', '_longitude' ) as $lng_name ) {
+            $raw_lng = get_post_meta( $post_id, $lng_name, true );
+            if ( is_numeric( $raw_lat ) && is_numeric( $raw_lng ) ) {
+                return array( 'lat' => (float) $raw_lat, 'lng' => (float) $raw_lng );
+            }
+        }
+    }
+
     return null;
 }
 

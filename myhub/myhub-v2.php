@@ -201,6 +201,17 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
             return '<div class="bh-myhub-login"><h2>Welcome to My Hub</h2><p>Please log in to see your family dashboard.</p></div>';
         }
 
+        /* Account Settings uses the same My Hub page. Handle the route directly here
+         * so it does not depend on the shortcode interception layer. */
+        if ( isset( $_GET['bh_account_settings'] ) ) {
+            if ( function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
+                return bubbahub_account_settings_stage2_shortcode();
+            }
+            if ( function_exists( 'bubbahub_account_settings_shortcode' ) ) {
+                return bubbahub_account_settings_shortcode();
+            }
+        }
+
         /* The Add Child button on My Hub uses the same page with bh_add_child=1.
          * Route that request to the real child editor supplied by profile-settings.php,
          * so the inline loader receives a form and the POST is handled by the same save code. */

@@ -1,7 +1,7 @@
 <?php
 /**
  * BubbaHub My Hub – session-based weekly planner.
- * Uses child profiles plus the user-interests and preferred-location taxonomies.
+ * Uses child profiles to build the weekly planner; account preferences are managed separately.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -72,16 +72,12 @@ function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if ( ! is_user_logged_in() ) return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
 
-    $interest_ids = bubbahub_myhub_planner_v2_user_terms( 'user-interests' );
-    $location_ids = bubbahub_myhub_planner_v2_user_terms( 'preferred-location' );
     $children = bubbahub_myhub_planner_v2_child_ids();
     $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
     $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
-        $score = bubbahub_myhub_planner_v2_match( $row['group_id'], $interest_ids, $location_ids );
-        if ( $score < 0 ) continue;
         $matching = array();
         foreach ( $children as $index => $child_id ) {
             if ( bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) $matching[] = $index + 1;
@@ -108,7 +104,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     ob_start(); ?>
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">
       <div class="bh-myhub-section-heading">
-        <div><div class="bh-myhub-kicker">YOUR WEEK</div><h2>Weekly Planner</h2><p>Your saved preferences personalise the activities shown here.</p></div>
+        <div><div class="bh-myhub-kicker">YOUR WEEK</div><h2>Weekly Planner</h2></div>
         <a class="bh-weekly-planner-preferences" href="<?php echo esc_url( $account_url ); ?>">Update Preferences →</a>
       </div>
 

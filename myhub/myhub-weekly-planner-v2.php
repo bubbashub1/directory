@@ -136,7 +136,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
               <span class="bh-planner-item-main"><strong><?php echo esc_html( $item['title'] ); ?></strong><span class="bh-planner-location">📍 <?php echo esc_html( $item['venue'] ?: 'Location to be confirmed' ); ?></span></span>
               <span class="bh-planner-child-indicator"><?php echo esc_html( $item['indicator'] ); ?></span>
             </a>
-            <a class="bh-planner-calendar" href="<?php echo esc_url( $item['calendar_url'] ); ?>" target="_blank" rel="noopener">＋ Add to calendar</a>
+            <div class="bh-planner-calendar-wrap"><a class="bh-planner-calendar" href="<?php echo esc_url( $item['calendar_url'] ); ?>" target="_blank" rel="noopener">＋ Add to calendar</a><span class="bh-planner-calendar-note">Add it to your calendar and share it with family.</span></div>
           </div>
         <?php endforeach; else : ?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
       </div></div><?php endforeach; ?>

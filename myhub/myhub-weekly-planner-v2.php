@@ -125,8 +125,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
       <div class="bh-planner-results">
       <?php foreach ( $days as $day ) : ?><div class="bh-planner-day">
-        <details class="bh-planner-day-accordion">
-          <summary class="bh-planner-day-title"><?php echo esc_html( $day ); ?><span class="bh-planner-day-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="bh-planner-day-accordion">
+          <div class="bh-planner-day-title"><?php echo esc_html( $day ); ?><span class="bh-planner-day-chevron" aria-hidden="true">⌄</span></div>
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>">
@@ -141,7 +141,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           </div>
         <?php endforeach; else : ?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
           </div>
-        </details>
+        </div>
       </div><?php endforeach; ?>
       </div>
 

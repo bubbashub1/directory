@@ -131,7 +131,7 @@ function bubbahub_directory_csv_export() {
     ) );
 
     $meta_keys = bubbahub_directory_csv_meta_keys();
-    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'category', 'tags', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map' );
+    $fixed = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'category', 'tags', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map', 'business_hours', 'term_time', 'image_url' );
     $headers = array_values( array_unique( array_merge( $fixed, $meta_keys ) ) );
 
     nocache_headers();
@@ -176,6 +176,9 @@ function bubbahub_directory_csv_export() {
                 case 'latitude': $value = $latitude; break;
                 case 'longitude': $value = $longitude; break;
                 case 'map': $value = $map_value; break;
+                case 'business_hours': $value = get_post_meta( $id, 'business_hours', true ); break;
+                case 'term_time': $value = get_post_meta( $id, 'term_time', true ); break;
+                case 'image_url': $value = ''; break;
                 default: $value = get_post_meta( $id, $column, true ); break;
             }
             $row[] = bubbahub_directory_csv_value_encode( $value );
@@ -321,6 +324,14 @@ function bubbahub_directory_csv_import() {
             update_post_meta( $saved_id, 'map', $latitude . ',' . $longitude );
         }
 
+        // Keep one simple schedule source: business_hours is the only CSV field used for hours.
+        // Older schedule/timetable meta is retained on existing listings but is no longer exposed by the CSV template.
+        if ( array_key_exists( 'business_hours', $data ) ) {
+            $hours = is_array( $data['business_hours'] ) ? implode( '; ', $data['business_hours'] ) : trim( (string) $data['business_hours'] );
+            if ( '' !== $hours ) update_post_meta( $saved_id, 'business_hours', $hours );
+            else delete_post_meta( $saved_id, 'business_hours' );
+        }
+
         // Taxonomy imports: create missing terms automatically.
         if ( array_key_exists( 'category', $data ) ) {
             $category_taxonomy = taxonomy_exists( 'group_category' ) ? 'group_category' : ( taxonomy_exists( 'category' ) ? 'category' : '' );
@@ -384,7 +395,7 @@ function bubbahub_directory_csv_import() {
             }
         }
 
-        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map' );
+        $core = array( 'id', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_author', 'post_name', 'post_date', 'region', 'sub_region', 'address', 'postcode', 'latitude', 'longitude', 'map', 'business_hours', 'image_url', 'term_time' );
         foreach ( $data as $key => $value ) {
             if ( in_array( $key, $core, true ) || '' === $key ) continue;
             if ( is_string( $value ) && '' === trim( $value ) ) {

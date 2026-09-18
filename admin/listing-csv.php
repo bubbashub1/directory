@@ -397,18 +397,15 @@ function bubbahub_directory_csv_save_acf_business_hours( $post_id, $value ) {
         if ( is_array( $field ) && ! empty( $field['sub_fields'] ) ) {
             $session_fields = array();
             foreach ( $field['sub_fields'] as $sub ) {
-                if ( ! empty( $sub['name'] ) ) {
-                    if ( 'sessions' === $sub['name'] ) {
-                        $session_fields = ! empty( $sub['sub_fields'] ) ? $sub['sub_fields'] : array();
-                    }
-                    }
+                if ( ! empty( $sub['name'] ) && 'sessions' === $sub['name'] ) {
+                    $session_fields = ! empty( $sub['sub_fields'] ) ? $sub['sub_fields'] : array();
+                    break;
                 }
             }
             foreach ( $hours as &$day ) {
                 $mapped_sessions = array();
                 foreach ( $day['sessions'] as $session ) {
-                    $mapped = bubbahub_directory_csv_map_session_fields( $session, $session_fields );
-                    $mapped_sessions[] = $mapped;
+                    $mapped_sessions[] = bubbahub_directory_csv_map_session_fields( $session, $session_fields );
                 }
                 $day['sessions'] = $mapped_sessions;
             }

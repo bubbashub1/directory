@@ -23,6 +23,10 @@ if ( file_exists( $bh_platform_loader ) ) {
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 
+// Support Hub: family questions, specialist articles, useful links and apps.
+$bh_support_module = plugin_dir_path( __FILE__ ) . 'modules/support/bubbahub-support.php';
+if ( file_exists( $bh_support_module ) ) require_once $bh_support_module;
+
 if ( is_admin() ) {
     require_once plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
 }

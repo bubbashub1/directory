@@ -177,3 +177,7 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-weekly-planner-v2 .bh-planner-child-options{display:flex;flex-wrap:wrap;gap:7px;padding:0 12px 12px;}
 }
 
+
+/* Child profile icons: keep them at the original compact size. */
+.bh-myhub-child-card .bh-icon{width:12px!important;height:12px!important;max-width:12px!important;max-height:12px!important;display:inline-block!important;vertical-align:middle!important;flex:0 0 12px!important;}
+.bh-myhub-child-card .bh-myhub-tracker-title .bh-icon{width:12px!important;height:12px!important;max-width:12px!important;max-height:12px!important;}

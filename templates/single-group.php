@@ -1,8 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-get_header();
-while ( have_posts() ) : the_post();
+global $post;
+if ( ! $post || 'group' !== get_post_type( $post ) ) return;
     $group_id      = get_the_ID();
     $organiser_id  = (int) get_post_field( 'post_author', $group_id );
     $organiser     = get_userdata( $organiser_id );
@@ -48,7 +48,7 @@ while ( have_posts() ) : the_post();
                 <?php endif; ?>
                 <div class="bhg-hero-content">
                     <?php if ( $category ) : ?><div class="bhg-category"><?php echo esc_html( $category ); ?></div><?php endif; ?>
-                    <h1><?php the_title(); ?></h1>
+                    <h1><?php echo esc_html( get_the_title() ); ?></h1>
                     <div class="bhg-badges" aria-label="Listing actions">
                         <button type="button" class="bhg-badge" data-badge-action="favourite" aria-pressed="false"><span>♡</span> Fav</button>
                         <button type="button" class="bhg-badge" data-badge-action="compare" aria-pressed="false"><span>＋</span> Compare</button>
@@ -62,7 +62,7 @@ while ( have_posts() ) : the_post();
             <div class="bhg-layout">
                 <div class="bhg-main-column">
                     <section class="bhg-section bhg-quick-details"><h2>Quick Details</h2><div class="bhg-detail-grid"><?php foreach ( array( 'Age range' => $age, 'Price' => $price, 'Session length' => $session, 'Booking required' => $booking ) as $label => $value ) : ?><div class="bhg-detail-card"><span><?php echo esc_html( $label ); ?></span><strong><?php echo $value !== '' ? esc_html( $value ) : 'Not specified'; ?></strong></div><?php endforeach; ?></div></section>
-                    <section class="bhg-section bhg-description"><h2>About this group</h2><div class="bhg-richtext"><?php the_content(); ?></div></section>
+                    <section class="bhg-section bhg-description"><h2>About this group</h2><div class="bhg-richtext"><?php echo wpautop( do_shortcode( get_the_content() ) ); ?></div></section>
                     <section class="bhg-section bhg-map-section">
                         <div class="bhg-section-heading"><div><h2>Location</h2><p>Find this class and explore other venues from the same organiser.</p></div></div>
                         <?php if ( count( $venues ) > 1 ) : ?><label class="bhg-venue-select-label" for="bhg-venue-select">Show classes at venue</label><select id="bhg-venue-select" class="bhg-venue-select" data-group-id="<?php echo esc_attr( $group_id ); ?>"><option value="">Current venue</option><?php foreach ( $venues as $venue ) : ?><option value="<?php echo esc_attr( $venue->ID ); ?>" <?php selected( $venue->ID, $venue_id ); ?>><?php echo esc_html( $venue->post_title ); ?></option><?php endforeach; ?></select><?php endif; ?>

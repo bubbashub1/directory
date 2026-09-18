@@ -15,7 +15,7 @@ function bubbahub_advanced_search_acf_fields() {
     if ( ! function_exists( 'acf_get_field_groups' ) || ! function_exists( 'acf_get_fields' ) ) return $fields;
     foreach ( acf_get_field_groups( array( 'post_type' => 'group' ) ) as $group ) {
         foreach ( (array) acf_get_fields( $group ) as $field ) {
-            if ( empty( $field['name'] ) || in_array( $field['name'], array( 'term_time','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
+            if ( empty( $field['name'] ) || in_array( $field['name'], array( 'term_time','age_range','business_hours','schedule','timetable','image','map','email','website','phone' ), true ) ) continue;
             if ( ! in_array( $field['type'], array( 'select','radio','checkbox','button_group','true_false' ), true ) ) continue;
             if ( empty( $field['choices'] ) && 'true_false' !== $field['type'] ) continue;
             $fields[ $field['name'] ] = $field;

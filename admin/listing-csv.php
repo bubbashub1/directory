@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 add_action( 'admin_menu', 'bubbahub_directory_csv_admin_menu' );
 add_action( 'admin_post_bubbahub_directory_csv_export', 'bubbahub_directory_csv_export' );
 add_action( 'admin_post_bubbahub_directory_csv_import', 'bubbahub_directory_csv_import' );
+add_action( 'admin_post_bubbahub_directory_csv_template', 'bubbahub_directory_csv_template' );
 
 function bubbahub_directory_csv_admin_menu() {
     add_submenu_page(
@@ -38,10 +39,12 @@ function bubbahub_directory_csv_admin_page() {
             <h2>Export listings</h2>
             <p>Exports every published Group listing, including the WordPress ID, core listing fields, region taxonomy and listing meta fields.</p>
             <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=bubbahub_directory_csv_export' ), 'bubbahub_csv_export' ) ); ?>">Download CSV</a>
+            <a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=bubbahub_directory_csv_template' ), 'bubbahub_csv_template' ) ); ?>">Download Template</a>
         </div>
 
         <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
             <h2>Import listings</h2>
+            <p><strong>Workflow:</strong> Export → edit in Google Sheets → paste the sheet CSV URL here → import. Existing <code>id</code> values update listings; blank IDs create listings.</p>
             <p>Upload a CSV or paste a public Google Sheets CSV/export URL. A row with an existing <strong>id</strong> updates that listing. Leave <strong>id</strong> blank to create a new listing.</p>
             <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="bubbahub_directory_csv_import">
@@ -94,6 +97,23 @@ function bubbahub_directory_csv_meta_keys() {
     $keys = $wpdb->get_col( "SELECT DISTINCT pm.meta_key FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'group' AND pm.meta_key IS NOT NULL AND pm.meta_key <> ''" );
     $keys = array_filter( array_map( 'sanitize_key', $keys ) );
     return array_values( array_unique( $keys ) );
+}
+
+
+
+function bubbahub_directory_csv_template() {
+    if ( ! current_user_can( 'manage_options' ) ) wp_die( 'You do not have permission to download the template.' );
+    check_admin_referer( 'bubbahub_csv_template' );
+    $headers = array( 'id','post_title','post_content','post_status','post_author','post_name','region','address','price','age_range','session_length','business_hours','schedule','timetable','email','phone','website','facebook','instagram','twitter','tiktok','map','term_time' );
+    nocache_headers();
+    header( 'Content-Type: text/csv; charset=utf-8' );
+    header( 'Content-Disposition: attachment; filename="bubbahub-listing-template.csv"' );
+    $out = fopen( 'php://output', 'w' );
+    fwrite( $out, "\xEF\xBB\xBF" );
+    fputcsv( $out, $headers );
+    fputcsv( $out, array_fill( 0, count( $headers ), '' ) );
+    fclose( $out );
+    exit;
 }
 
 function bubbahub_directory_csv_export() {

@@ -5,7 +5,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BUBBAHUB_SUPPORT_VERSION', '1.0.0' );
+define( 'BUBBAHUB_SUPPORT_VERSION', '1.1.0' );
 
 function bubbahub_support_is_leader() {
     if ( ! is_user_logged_in() ) return false;
@@ -16,7 +16,7 @@ function bubbahub_support_is_leader() {
 function bubbahub_support_register_cpt() {
     register_post_type( 'bh_support_request', array(
         'labels' => array( 'name'=>'Support Questions', 'singular_name'=>'Support Question' ),
-        'public'=>false, 'show_ui'=>false, 'supports'=>array('title','editor','author'),
+        'public'=>false, 'show_ui'=>true, 'show_in_menu'=>false, 'supports'=>array('title','editor','author'),
     ) );
     register_post_type( 'bh_support_article', array(
         'labels' => array( 'name'=>'Support Articles', 'singular_name'=>'Support Article', 'add_new_item'=>'Add Specialist Article', 'edit_item'=>'Edit Specialist Article' ),
@@ -36,7 +36,12 @@ function bubbahub_support_defaults() {
         ),
         'apps' => array(),
     );
-    return get_option( 'bubbahub_support_settings', $defaults );
+    $saved = get_option( 'bubbahub_support_settings', array() );
+    return array(
+        'keywords' => !empty($saved['keywords']) ? $saved['keywords'] : $defaults['keywords'],
+        'links' => isset($saved['links']) ? $saved['links'] : $defaults['links'],
+        'apps' => isset($saved['apps']) ? $saved['apps'] : $defaults['apps'],
+    );
 }
 
 function bubbahub_support_match_leaders( $question, $topic, $region='' ) {
@@ -83,7 +88,8 @@ function bubbahub_support_send_question( $data ) {
     $sent=0;
     foreach($matches as $leader_id=>$match){
         $email=get_userdata($leader_id); if(!$email||!is_email($email->user_email)) continue;
-        $reply_url=add_query_arg(array('bh_support_reply'=>$post_id),home_url('/leader/'));
+        $leader_page_id=absint(get_option('bubbahub_support_leader_page_id'));
+        $reply_url=$leader_page_id ? get_permalink($leader_page_id) : home_url('/leader/');
         $body="A BubbaHub family has asked for support that may match your experience.\n\n";
         $body.="Topic: {$data['topic']}\nArea: {$data['region']}\n\nQuestion:\n{$data['question']}\n\n";
         $body.="Matched areas: ".implode(', ',$match['matched'])."\n\n";
@@ -111,7 +117,8 @@ function bubbahub_support_reply_handler() {
     update_post_meta($id,'_bh_support_replies',$history);
     wp_mail($email,'BubbaHub support reply from '.$leader->display_name,"A BubbaHub specialist has replied to your question.\n\n".$reply."\n\nYou can reply to this email if you need to continue the conversation.");
     update_post_meta($id,'_bh_support_status','replied');
-    wp_safe_redirect(add_query_arg('bh_support_replied','1',home_url('/leader/')));
+    $leader_page_id=absint(get_option('bubbahub_support_leader_page_id'));
+    wp_safe_redirect(add_query_arg('bh_support_replied','1',$leader_page_id?get_permalink($leader_page_id):home_url('/leader/')));
     exit;
 }
 add_action('template_redirect','bubbahub_support_reply_handler');
@@ -222,7 +229,7 @@ function bubbahub_support_process_question() {
     );
     if(!$data['name']||!is_email($data['email'])||!$data['topic']||!$data['question']) return;
     $result=bubbahub_support_send_question($data);
-    if(!is_wp_error($result)) wp_safe_redirect(add_query_arg('support_sent','1',wp_get_referer()?:home_url('/support/'))); exit;
+    if(!is_wp_error($result)){ wp_safe_redirect(add_query_arg('support_sent','1',wp_get_referer()?:home_url('/support/'))); exit; }
 }
 add_action('template_redirect','bubbahub_support_process_question');
 

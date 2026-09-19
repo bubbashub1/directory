@@ -15,19 +15,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build clean ZIP
+      - name: Build WordPress-ready plugin ZIP
         shell: bash
         run: |
           set -euo pipefail
           rm -rf package
-          mkdir -p package/directory-main
-          rsync -a --exclude='.git' --exclude='.github' --exclude='package' ./ package/directory-main/
-          cd package
-          zip -qr ../bubbahub-directory-main-clean-upload.zip directory-main
+          mkdir -p package/directory
+          rsync -a --exclude='.git' --exclude='.github' --exclude='package' ./ package/directory/
 
-      - name: Upload ZIP artifact
+          test -f package/directory/directory.php
+          test -f package/directory/modules/core/bubbahub-advanced-search.php
+          test -f package/directory/myhub/myhub-v2.php
+          test -f package/directory/myhub/myhub-weekly-planner-v2.php
+
+          cd package
+          zip -qr ../bubbahub-directory-wordpress-ready.zip directory
+
+          unzip -t ../bubbahub-directory-wordpress-ready.zip >/dev/null
+
+      - name: Upload WordPress-ready ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: bubbahub-directory-main-clean-upload
-          path: bubbahub-directory-main-clean-upload.zip
+          name: bubbahub-directory-wordpress-ready
+          path: bubbahub-directory-wordpress-ready.zip
           if-no-files-found: error

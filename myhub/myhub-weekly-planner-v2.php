@@ -455,11 +455,6 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
       </div>
 
-      <div class="bh-calendar-view-switcher" aria-label="Directory views">
-        <a class="bh-calendar-view-link" href="<?php echo esc_url( remove_query_arg( array( 'bh_view', 'bh_week', 'bh_planner_mode' ) ) ); ?>">Directory</a>
-        <span class="bh-calendar-view-link is-active" aria-current="page">Calendar</span>
-      </div>
-
       <form class="bh-calendar-search-form" method="get">
         <input type="hidden" name="bh_view" value="planner">
         <input type="hidden" name="bh_planner_mode" value="<?php echo esc_attr($view); ?>">
@@ -1222,5 +1217,30 @@ document.addEventListener('DOMContentLoaded',function(){
   .bh-weekly-planner-v2 .bh-calendar-search-actions{grid-column:1;display:grid;grid-template-columns:1fr 1fr}
   .bh-weekly-planner-v2 .bh-calendar-search-actions button{width:100%;padding:0 10px}
   .bh-weekly-planner-v2 .bh-calendar-advanced-search{grid-template-columns:1fr;padding:10px}
+}
+
+/* Print PDF: remove the excessive top whitespace and keep the header/logo compact. */
+@media print{
+  @page{size:A4;margin:10mm 9mm 10mm 9mm}
+  html,body{margin:0!important;padding:0!important}
+  .bh-weekly-planner-v2{margin:0!important;padding:0!important}
+  .bh-planner-print-header{
+    margin:0!important;
+    padding:0 0 8px!important;
+    min-height:0!important;
+    page-break-after:avoid!important;
+    break-after:avoid-page!important;
+  }
+  .bh-planner-print-header img{
+    display:block!important;
+    max-height:42px!important;
+    width:auto!important;
+    margin:0!important;
+  }
+  .bh-planner-print-header h1,
+  .bh-planner-print-header h2,
+  .bh-planner-print-header p{margin-top:0!important}
+  .bh-planner-calendar,
+  .bh-planner-grid{margin-top:0!important}
 }
 </style>

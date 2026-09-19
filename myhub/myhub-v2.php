@@ -195,6 +195,142 @@ if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
     }
 }
 
+if ( ! function_exists( 'bubbahub_myhub_v3_support_reply_handler' ) ) {
+    function bubbahub_myhub_v3_support_reply_handler() {
+        if ( empty( $_POST['bh_myhub_support_reply_action'] ) || ! is_user_logged_in() ) {
+            return;
+        }
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_myhub_support_reply_nonce'] ?? '' ) ), 'bh_myhub_support_reply' ) ) {
+            return;
+        }
+
+        $uid     = get_current_user_id();
+        $id      = absint( $_POST['support_request_id'] ?? 0 );
+        $reply   = trim( sanitize_textarea_field( wp_unslash( $_POST['support_reply'] ?? '' ) ) );
+        $request = $id ? get_post( $id ) : false;
+
+        if ( ! $id || ! $request || 'bh_support_request' !== $request->post_type || (int) $request->post_author !== $uid || '' === $reply ) {
+            return;
+        }
+
+        $history   = get_post_meta( $id, '_bh_support_replies', true );
+        $history   = is_array( $history ) ? $history : array();
+        $user      = wp_get_current_user();
+        $history[] = array(
+            'user'  => $uid,
+            'name'  => $user->display_name,
+            'reply' => $reply,
+            'time'  => current_time( 'mysql' ),
+        );
+        update_post_meta( $id, '_bh_support_replies', $history );
+        update_post_meta( $id, '_bh_support_status', 'user_replied' );
+
+        $topic  = sanitize_text_field( get_post_meta( $id, '_bh_support_topic', true ) );
+        $email  = sanitize_email( get_post_meta( $id, '_bh_support_email', true ) );
+        $matches = array_map( 'absint', (array) get_post_meta( $id, '_bh_support_matches', true ) );
+        $subject = 'BubbaHub support follow-up' . ( $topic ? ' – ' . $topic : '' );
+        $body = "A family has replied to a BubbaHub support conversation.\\n\\n";
+        $body .= "Topic: " . $topic . "\\n";
+        $body .= "Reply from: " . $user->display_name . "\\n\\n";
+        $body .= "Reply:\\n" . $reply . "\\n\\n";
+        $body .= "Please log in to the Leader Portal to continue the conversation.";
+
+        foreach ( $matches as $leader_id ) {
+            $leader = get_userdata( $leader_id );
+            if ( $leader && is_email( $leader->user_email ) ) {
+                wp_mail( $leader->user_email, $subject, $body );
+            }
+        }
+        if ( function_exists( 'wp_mail' ) && is_email( $email ) ) {
+            wp_mail( $email, 'BubbaHub support reply received', "Your follow-up has been recorded.\\n\\n" . $reply );
+        }
+
+        wp_safe_redirect( add_query_arg( 'bh_support_reply_sent', '1', wp_get_referer() ? wp_get_referer() : get_permalink() ) );
+        exit;
+    }
+}
+add_action( 'template_redirect', 'bubbahub_myhub_v3_support_reply_handler' );
+
+if ( ! function_exists( 'bubbahub_myhub_v3_support_requests' ) ) {
+    function bubbahub_myhub_v3_support_requests( $uid ) {
+        $requests = get_posts( array(
+            'post_type'      => 'bh_support_request',
+            'post_status'    => 'publish',
+            'author'         => absint( $uid ),
+            'posts_per_page' => 20,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'no_found_rows'  => true,
+        ) );
+
+        ob_start();
+        ?>
+        <section class="bh-myhub-section bh-myhub-support-section">
+            <div class="bh-myhub-section-heading">
+                <div>
+                    <div class="bh-myhub-kicker">SUPPORT &amp; GUIDANCE</div>
+                    <h2>My Support Requests</h2>
+                    <p>Your questions and specialist replies, all in one place.</p>
+                </div>
+                <a class="bh-myhub-button" href="<?php echo esc_url( home_url( '/support/' ) . '#ask-specialist' ); ?>">＋ Ask A Specialist</a>
+            </div>
+            <?php if ( ! empty( $_GET['bh_support_reply_sent'] ) ) : ?>
+                <div class="bh-myhub-support-notice">Your reply has been sent.</div>
+            <?php endif; ?>
+            <?php if ( ! $requests ) : ?>
+                <div class="bh-myhub-support-empty">
+                    <strong>No support requests yet.</strong>
+                    <span>Use <em>Ask A Specialist</em> in Support &amp; Guidance to send your first question.</span>
+                </div>
+            <?php else : ?>
+                <div class="bh-myhub-support-list">
+                <?php foreach ( $requests as $request ) :
+                    $topic    = get_post_meta( $request->ID, '_bh_support_topic', true );
+                    $replies  = get_post_meta( $request->ID, '_bh_support_replies', true );
+                    $replies  = is_array( $replies ) ? $replies : array();
+                    ?>
+                    <article class="bh-myhub-support-thread">
+                        <div class="bh-myhub-support-thread-head">
+                            <div>
+                                <div class="bh-myhub-support-topic"><?php echo esc_html( $topic ? $topic : 'Support question' ); ?></div>
+                                <h3><?php echo esc_html( get_the_title( $request ) ); ?></h3>
+                            </div>
+                            <time datetime="<?php echo esc_attr( get_post_time( 'c', true, $request ) ); ?>"><?php echo esc_html( wp_date( 'j M Y, H:i', get_post_time( 'U', true, $request ) ) ); ?></time>
+                        </div>
+                        <div class="bh-myhub-support-email-meta"><strong>From:</strong> You <span>•</span> <strong>To:</strong> Bubba Hub Support</div>
+                        <div class="bh-myhub-support-message bh-myhub-support-message-user">
+                            <div class="bh-myhub-support-message-label">Your message</div>
+                            <div><?php echo nl2br( esc_html( get_post_field( 'post_content', $request ) ) ); ?></div>
+                        </div>
+                        <?php foreach ( $replies as $reply ) :
+                            $name = ! empty( $reply['name'] ) ? $reply['name'] : 'Bubba Hub Specialist';
+                            $body = isset( $reply['reply'] ) ? $reply['reply'] : '';
+                            if ( '' === trim( $body ) ) { continue; }
+                            ?>
+                            <div class="bh-myhub-support-message bh-myhub-support-message-specialist">
+                                <div class="bh-myhub-support-message-label"><?php echo esc_html( $name ); ?> replied</div>
+                                <div><?php echo nl2br( esc_html( $body ) ); ?></div>
+                                <?php if ( ! empty( $reply['time'] ) ) : ?><time><?php echo esc_html( wp_date( 'j M Y, H:i', strtotime( $reply['time'] ) ) ); ?></time><?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                        <form class="bh-myhub-support-reply-form" method="post">
+                            <?php wp_nonce_field( 'bh_myhub_support_reply', 'bh_myhub_support_reply_nonce' ); ?>
+                            <input type="hidden" name="bh_myhub_support_reply_action" value="1">
+                            <input type="hidden" name="support_request_id" value="<?php echo esc_attr( $request->ID ); ?>">
+                            <label for="bh-support-reply-<?php echo esc_attr( $request->ID ); ?>">Reply to this conversation</label>
+                            <textarea id="bh-support-reply-<?php echo esc_attr( $request->ID ); ?>" name="support_reply" rows="4" placeholder="Write your reply..." required></textarea>
+                            <button type="submit" class="bh-myhub-button">Send reply</button>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
 if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
     function bubbahub_myhub_v3_render() {
         if ( ! is_user_logged_in() ) {
@@ -374,6 +510,8 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     <?php endforeach; ?>
                 </div>
             </section>
+
+            <?php echo bubbahub_myhub_v3_support_requests( $uid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
             <section class="bh-myhub-section bh-myhub-suggested-section">
                 <div class="bh-myhub-section-heading">

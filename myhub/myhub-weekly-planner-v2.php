@@ -227,11 +227,15 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
     var location=planner.querySelector('.bh-planner-location-select');
+    if(!location) return;
+
     function applyRegion(){
       var loc=location?location.value:'';
       planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
         var locs=(item.getAttribute('data-planner-location-ids')||'').split(',').filter(Boolean);
-        item.hidden=!!loc && locs.indexOf(String(loc))===-1;
+        var show = !loc || locs.indexOf(String(loc)) !== -1;
+        item.hidden = !show;
+        item.style.display = show ? '' : 'none';
       });
       planner.querySelectorAll('.bh-planner-day').forEach(function(day){
         var items=day.querySelectorAll('.bh-planner-item-wrap');

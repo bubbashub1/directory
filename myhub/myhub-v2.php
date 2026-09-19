@@ -410,7 +410,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 </div>
 
                 <div class="bh-myhub-family-carousel">
-                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-prev" aria-label="Previous child" aria-controls="bh-myhub-children">‹</button>
+                    <div class="bh-myhub-family-viewport">
                     <div class="bh-myhub-family-grid" id="bh-myhub-children">
                     <?php if ( $children ) : ?>
                         <?php foreach ( $children as $child ) :
@@ -482,7 +482,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
 
                                 <div class="bh-myhub-child-actions">
                                     <a class="bh-myhub-child-specialist" href="<?php echo esc_url( add_query_arg( array( 'child_id' => $child->ID ), home_url( '/support/' ) ) . '#ask-specialist' ); ?>">Ask A Specialist about <?php echo esc_html( $name ); ?></a>
-                                    <a href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => 1, 'child_id' => $child->ID ), get_permalink() ) ); ?>">Edit profile</a>
+                                    <a class="bh-myhub-edit-profile" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => 1, 'child_id' => $child->ID ), get_permalink() ) ); ?>"><span aria-hidden="true">✎</span> Edit profile</a>
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -493,7 +493,11 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                         </div>
                     <?php endif; ?>
                 </div>
-                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-next" aria-label="Next child" aria-controls="bh-myhub-children">›</button>
+                    </div>
+                    <div class="bh-myhub-family-carousel-controls">
+                        <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-prev" aria-label="Previous child" aria-controls="bh-myhub-children">‹</button>
+                        <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-next" aria-label="Next child" aria-controls="bh-myhub-children">›</button>
+                    </div>
                 </div>
             </section>
 

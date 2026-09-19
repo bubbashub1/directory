@@ -247,7 +247,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             $ts=strtotime($item['date'].' '.$item['start']);
             $end_ts=$item['end']?strtotime($item['date'].' '.$item['end']):$ts+3600;
             if($end_ts<$ts)$end_ts=strtotime('+1 day',$end_ts);
-            $item['calendar_url']='https://calendar.google.com/calendar/render?action=TEMPLATE&text='.rawurlencode($item['title']).'&dates='.rawurlencode(wp_date('Ymd\THis',$ts)).'/'.rawurlencode(wp_date('Ymd\THis',$end_ts)).'&details='.rawurlencode('Bubba Hub: '.$item['url']).'&location='.rawurlencode($item['venue_address']?:$item['venue']);
+            $item['calendar_url']=add_query_arg(array('bubbahub_calendar_event'=>1,'group'=>(int)$item['group_id'],'date'=>$item['date'],'start'=>$item['start'],'end'=>$item['end']),home_url('/'));
             $start_m=(int)wp_date('H',$ts)*60+(int)wp_date('i',$ts);$end_m=(int)wp_date('H',$end_ts)*60+(int)wp_date('i',$end_ts);
             $lane=0;while(isset($lanes[$lane])&&$lanes[$lane]>$start_m)$lane++;$lanes[$lane]=$end_m;$item['lane']=$lane;
         }

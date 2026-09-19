@@ -431,7 +431,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             <?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item):
               $start_ts=strtotime($item['date'].' '.$item['start']);$end_ts=$item['end']?strtotime($item['date'].' '.$item['end']):$start_ts+3600;if($end_ts<$start_ts)$end_ts=strtotime('+1 day',$end_ts);
               $start_m=(int)wp_date('H',$start_ts)*60+(int)wp_date('i',$start_ts);$end_m=(int)wp_date('H',$end_ts)*60+(int)wp_date('i',$end_ts);
-              $top=max(0,$start_m-$grid_start);$height=max(42,$end_m-$start_m);$lane_count=1;$lane=0;$left=0;$width=100%;
+              $top=max(0,$start_m-$grid_start);$height=max(42,$end_m-$start_m);$lane_count=1;$lane=0;$left=0;$width=100;
               $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']);
               $category_terms = array();
               foreach ( array('category','group_category','listing_category') as $tax ) {

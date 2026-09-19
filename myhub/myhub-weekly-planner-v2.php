@@ -443,7 +443,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-timetable-empty{padding:12px;text-align:center;color:#aaa;font-size:11px}
 .bh-planner-mobile{display:none}.bh-weekly-planner-v2{padding-bottom:50px}.bh-planner-mobile-day{border:1px solid #e4e4e4;border-radius:12px;background:#fff;margin:0 0 9px;overflow:hidden}.bh-planner-mobile-day-heading{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #eee}.bh-planner-mobile-day-heading>span:first-child{display:flex;flex-direction:column;gap:2px}.bh-planner-mobile-day-heading strong{font-size:15px}.bh-planner-mobile-day-heading small{font-size:11px;color:#777}.bh-planner-mobile-count{min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f1f1;font-size:11px;font-weight:700}.bh-planner-mobile-items{padding:10px;display:grid;gap:9px}.bh-planner-item-wrap{margin:0}.bh-planner-item{height:100%;border:1px solid #e7e7e7;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}.bh-planner-mobile-calendar-link{display:block;margin:0 10px 10px;padding:7px 10px;border:1px solid #ddd;border-radius:8px;text-align:center;text-decoration:none!important;font-size:12px;font-weight:700}.bh-planner-listing-link{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none!important}.bh-planner-thumb{width:58px;height:58px;min-width:58px;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f3f3}.bh-planner-thumb img{width:100%;height:100%;object-fit:cover;display:block}.bh-planner-placeholder{font-size:22px;opacity:.45}.bh-planner-item-main{display:flex;flex-direction:column;min-width:0;line-height:1.3}.bh-planner-item-main strong{font-size:14px;line-height:1.25}.bh-planner-session-label{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-time{font-size:12px;font-weight:700;margin-top:2px}.bh-planner-location{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media print{
-  @page{size:A4 landscape;margin:6mm}
+  @page{size:A4 landscape;margin:0}
   html,body{margin:0!important;padding:0!important;width:auto!important;height:auto!important;min-height:0!important;overflow:hidden!important}
   body *{visibility:hidden!important}
   .bh-weekly-planner-v2{
@@ -451,16 +451,16 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     position:fixed!important;
     top:0!important;
     left:0!important;
-    width:100%!important;
-    max-width:none!important;
-    height:calc(100vh - 12mm)!important;
+    width:420mm!important;
+    max-width:420mm!important;
+    height:297mm!important;
     min-height:0!important;
     margin:0!important;
     padding:0!important;
     background:#fff!important;
     box-shadow:none!important;
     overflow:hidden!important;
-    transform:scale(.86)!important;
+    transform:none!important;
     transform-origin:top left!important;
   }
   .bh-weekly-planner-v2 .bh-planner-timetable-desktop,

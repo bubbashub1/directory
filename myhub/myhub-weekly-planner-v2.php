@@ -376,7 +376,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
       <div class="bh-planner-timetable-desktop">
         <div class="bh-timetable-header"><div class="bh-timetable-time-head">TIME</div>
-          <?php foreach($days as $day): ?><div class="bh-timetable-day-head"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j M',strtotime($week_dates[$day]))); ?></span></div><?php endforeach; ?>
+          <?php foreach($days as $day): ?><div class="bh-timetable-day-head<?php echo $week_dates[$day] === wp_date('Y-m-d', current_time('timestamp' )) ? ' bh-timetable-day-head-today' : ''; ?>"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j',strtotime($week_dates[$day]))); ?></span></div><?php endforeach; ?>
         </div>
         <div class="bh-timetable-body" style="--bh-grid-hours:<?php echo esc_attr($grid_hours); ?>;">
           <div class="bh-timetable-times"><?php for($h=$grid_start;$h<=$grid_end;$h+=60): ?><span style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"><?php echo esc_html(sprintf('%02d:00',floor($h/60))); ?></span><?php endfor; ?></div>
@@ -535,6 +535,277 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
   .bh-timetable{display:none!important}
 }
 @media(max-width:700px){.bh-planner-actions{flex-direction:row;flex-wrap:wrap}.bh-planner-subscribe-button,.bh-planner-print-button{flex:1 1 0;min-width:0}.bh-planner-calendar-toolbar{grid-template-columns:1fr 1fr;}.bh-planner-calendar-toolbar strong{grid-column:1/-1;grid-row:1;order:-1;margin-bottom:4px}.bh-planner-calendar-toolbar a{ text-align:center }.bh-planner-search-location{max-width:none}.bh-timetable-header,.bh-timetable-body{min-width:0}.bh-planner-timetable-desktop{display:none}.bh-planner-mobile{display:block}}
+
+/* Google Calendar-inspired weekly view: clean grid, compact controls and dense event cards. */
+.bh-weekly-planner-v2{
+  --bh-gcal-blue:#1a73e8;
+  --bh-gcal-blue-soft:#e8f0fe;
+  --bh-gcal-border:#dadce0;
+  --bh-gcal-grid:#e8eaed;
+  --bh-gcal-muted:#70757a;
+  --bh-gcal-text:#3c4043;
+  background:#fff;
+}
+.bh-planner-calendar-toolbar{
+  grid-template-columns:auto auto 1fr auto!important;
+  gap:8px!important;
+  align-items:center!important;
+  margin:0 0 12px!important;
+}
+.bh-planner-calendar-toolbar a{
+  min-height:36px;
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 13px!important;
+  border:1px solid var(--bh-gcal-border)!important;
+  border-radius:4px!important;
+  background:#fff!important;
+  color:var(--bh-gcal-text)!important;
+  font-size:14px!important;
+  font-weight:500!important;
+  box-shadow:none!important;
+  transition:background .15s ease,border-color .15s ease;
+}
+.bh-planner-calendar-toolbar a:hover{
+  background:#f8f9fa!important;
+  border-color:#c7c9cc!important;
+}
+.bh-planner-calendar-toolbar strong{
+  color:var(--bh-gcal-text)!important;
+  font-size:18px!important;
+  font-weight:400!important;
+}
+.bh-planner-today{
+  border-color:var(--bh-gcal-blue)!important;
+  color:var(--bh-gcal-blue)!important;
+  font-weight:600!important;
+}
+.bh-planner-search{
+  margin:0 0 12px!important;
+  padding:10px 12px!important;
+  border:1px solid var(--bh-gcal-border)!important;
+  border-radius:8px!important;
+  background:#fff!important;
+}
+.bh-planner-search-location{
+  max-width:320px!important;
+  gap:5px!important;
+}
+.bh-planner-search-location>span{
+  color:var(--bh-gcal-muted)!important;
+  font-size:11px!important;
+  font-weight:500!important;
+}
+.bh-planner-search select{
+  min-height:38px!important;
+  padding:8px 10px!important;
+  border:1px solid var(--bh-gcal-border)!important;
+  border-radius:4px!important;
+  color:var(--bh-gcal-text)!important;
+  background:#fff!important;
+}
+.bh-planner-timetable-desktop{
+  border:1px solid var(--bh-gcal-border)!important;
+  border-radius:8px!important;
+  overflow:auto!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.bh-timetable-header{
+  background:#fff!important;
+  border-bottom:1px solid var(--bh-gcal-border)!important;
+}
+.bh-timetable-time-head{
+  padding:10px 4px!important;
+  color:var(--bh-gcal-muted)!important;
+  background:#fff!important;
+  border-right:1px solid var(--bh-gcal-border)!important;
+  font-size:10px!important;
+  font-weight:500!important;
+}
+.bh-timetable-day-head{
+  position:relative;
+  padding:8px 5px 10px!important;
+  background:#fff!important;
+  border-right:1px solid var(--bh-gcal-border)!important;
+}
+.bh-timetable-day-head strong{
+  color:var(--bh-gcal-muted)!important;
+  font-size:11px!important;
+  font-weight:500!important;
+  text-transform:uppercase;
+}
+.bh-timetable-day-head span{
+  display:flex!important;
+  width:30px;
+  height:30px;
+  margin:4px auto 0;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  color:var(--bh-gcal-text)!important;
+  font-size:16px!important;
+  font-weight:400!important;
+}
+.bh-timetable-day-head.bh-timetable-day-head-today span{
+  background:var(--bh-gcal-blue)!important;
+  color:#fff!important;
+  font-weight:500!important;
+}
+.bh-timetable-day-head.bh-timetable-day-head-today{
+  background:#fff!important;
+}
+.bh-timetable-body{
+  background:#fff!important;
+  height:calc(var(--bh-grid-hours) * 60px);
+}
+.bh-timetable-times{
+  background:#fff!important;
+  border-right:1px solid var(--bh-gcal-border)!important;
+}
+.bh-timetable-times span{
+  color:var(--bh-gcal-muted)!important;
+  font-size:10px!important;
+  font-weight:400!important;
+}
+.bh-timetable-column{
+  background:repeating-linear-gradient(
+    to bottom,
+    #fff 0,
+    #fff 59px,
+    var(--bh-gcal-grid) 59px,
+    var(--bh-gcal-grid) 60px
+  )!important;
+  border-right:1px solid var(--bh-gcal-border)!important;
+}
+.bh-timetable-hour-line{
+  border-top:0!important;
+}
+.bh-timetable-column:after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  border-top:1px solid var(--bh-gcal-grid);
+  pointer-events:none;
+}
+.bh-timetable-event{
+  padding:1px!important;
+  border-radius:4px!important;
+  z-index:2;
+}
+.bh-timetable-event>a:first-child{
+  box-sizing:border-box;
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+  min-height:0!important;
+  padding:4px 6px!important;
+  background:var(--bh-gcal-blue)!important;
+  border:0!important;
+  border-left:3px solid #0b57d0!important;
+  border-radius:4px!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+.bh-timetable-event>a:first-child strong{
+  color:#fff!important;
+  font-size:12px!important;
+  line-height:1.18!important;
+  font-weight:500!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+.bh-timetable-event>a:first-child span{
+  color:rgba(255,255,255,.92)!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  margin-top:2px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis;
+}
+.bh-timetable-event>a:first-child b{
+  color:#fff!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  margin-top:3px!important;
+  font-weight:600!important;
+}
+.bh-timetable-event>a:first-child small{
+  color:rgba(255,255,255,.88)!important;
+  font-size:9px!important;
+  line-height:1.15!important;
+  margin-top:auto!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis;
+}
+.bh-timetable-event .bh-planner-calendar-link{
+  display:none!important;
+}
+.bh-timetable-event:hover>a:first-child{
+  background:#185abc!important;
+}
+.bh-timetable-empty{
+  color:var(--bh-gcal-muted)!important;
+  font-size:11px!important;
+}
+.bh-planner-actions{
+  margin-top:12px!important;
+  padding:10px!important;
+  border:0!important;
+  background:transparent!important;
+}
+.bh-planner-print-button,.bh-planner-subscribe-button{
+  min-height:36px!important;
+  padding:8px 13px!important;
+  border:1px solid var(--bh-gcal-border)!important;
+  border-radius:4px!important;
+  background:#fff!important;
+  color:var(--bh-gcal-text)!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  box-shadow:none!important;
+}
+.bh-planner-print-button:hover,.bh-planner-subscribe-button:hover{
+  background:#f8f9fa!important;
+}
+.bh-timetable-column-many{
+  min-width:390px;
+}
+.bh-timetable-column-many .bh-timetable-event>a:first-child{
+  padding:4px 5px!important;
+}
+.bh-timetable-column-many .bh-timetable-event strong{
+  font-size:11px!important;
+}
+@media(max-width:700px){
+  .bh-planner-calendar-toolbar{
+    grid-template-columns:1fr 1fr!important;
+    gap:6px!important;
+  }
+  .bh-planner-calendar-toolbar strong{
+    grid-column:1/-1!important;
+    grid-row:1!important;
+    order:-1!important;
+    font-size:17px!important;
+    margin-bottom:2px!important;
+  }
+  .bh-planner-calendar-toolbar a{
+    min-height:40px!important;
+    border-radius:4px!important;
+    font-size:13px!important;
+  }
+  .bh-planner-search{
+    border-radius:8px!important;
+  }
+}
+
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',function(){

@@ -444,7 +444,28 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 @media print{ @page{size:landscape;margin:8mm} body{margin:0!important;padding:0!important} body *{visibility:hidden!important}.bh-weekly-planner-v2{visibility:visible!important;position:absolute!important;left:0!important;top:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;box-shadow:none!important}.bh-weekly-planner-v2 .bh-planner-timetable-desktop,.bh-weekly-planner-v2 .bh-planner-timetable-desktop *{visibility:visible!important}.bh-weekly-planner-v2>.bh-myhub-section-heading,.bh-planner-calendar-toolbar,.bh-planner-search,.bh-planner-actions,.bh-weekly-planner-preferences,.bh-planner-mobile{display:none!important}.bh-planner-timetable-desktop{display:block!important;width:100%!important;max-width:none!important;overflow:visible!important;border:1px solid #999!important}
     .bh-weekly-planner-v2 .bh-planner-print-footer{display:flex!important;visibility:visible!important;align-items:center;justify-content:center;gap:12px;margin:12px 0 0;padding:8px 0 0;border-top:1px solid #ddd;text-align:center;font-size:10px;line-height:1.35}
     .bh-weekly-planner-v2 .bh-planner-print-footer img{display:block;width:42px;height:42px;object-fit:contain}
-.bh-timetable-body{min-width:0!important}.bh-timetable-header{min-width:0!important}.bh-timetable-event{break-inside:avoid}.bh-planner-mobile{display:none!important}}@media(max-width:700px){.bh-planner-actions{flex-direction:row;flex-wrap:wrap}.bh-planner-subscribe-button,.bh-planner-print-button{flex:1 1 0;min-width:0}.bh-planner-calendar-toolbar{grid-template-columns:1fr 1fr;}.bh-planner-calendar-toolbar strong{grid-column:1/-1;grid-row:1;order:-1;margin-bottom:4px}.bh-planner-calendar-toolbar a{ text-align:center }.bh-planner-search-location{max-width:none}.bh-timetable-header,.bh-timetable-body{min-width:0}.bh-planner-timetable-desktop{display:none}.bh-planner-mobile{display:block}}
+.bh-timetable-body{min-width:0!important}.bh-timetable-header{min-width:0!important}.bh-timetable-event{break-inside:avoid}.bh-planner-mobile{display:none!important}}
+/* Mobile calendar improvements */
+@media(max-width:700px){
+  .bh-weekly-planner-v2{padding-left:10px!important;padding-right:10px!important;overflow-x:hidden}
+  .bh-planner-calendar-toolbar{display:grid!important;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+  .bh-planner-calendar-toolbar button{min-height:42px;padding:8px 10px!important;font-size:13px!important}
+  .bh-planner-calendar-title{font-size:17px!important;text-align:center;line-height:1.2}
+  .bh-planner-search{display:flex!important;flex-direction:column;gap:8px}
+  .bh-planner-search input,.bh-planner-search select{width:100%!important;min-height:42px!important;font-size:16px!important;box-sizing:border-box}
+  .bh-planner-mobile{display:block!important}
+  .bh-planner-mobile-day{margin-bottom:10px!important;border-radius:12px!important;overflow:hidden}
+  .bh-planner-mobile-day-header{padding:11px 12px!important;font-size:15px!important}
+  .bh-planner-mobile-event{margin:8px!important;padding:10px!important;border-radius:10px!important}
+  .bh-planner-mobile-event strong{font-size:14px!important;line-height:1.3!important}
+  .bh-planner-mobile-event span,.bh-planner-mobile-event b,.bh-planner-mobile-event small{font-size:12px!important;line-height:1.35!important}
+  .bh-planner-mobile-event a{display:block!important;min-height:42px;padding:10px!important;box-sizing:border-box}
+  .bh-planner-actions{gap:8px!important;margin-top:14px!important;padding:12px!important}
+  .bh-planner-subscribe-button,.bh-planner-print-button{min-height:44px!important;padding:10px 9px!important;font-size:13px!important;line-height:1.2!important}
+  .bh-planner-print-footer{display:none!important}
+  .bh-timetable{display:none!important}
+}
+@media(max-width:700px){.bh-planner-actions{flex-direction:row;flex-wrap:wrap}.bh-planner-subscribe-button,.bh-planner-print-button{flex:1 1 0;min-width:0}.bh-planner-calendar-toolbar{grid-template-columns:1fr 1fr;}.bh-planner-calendar-toolbar strong{grid-column:1/-1;grid-row:1;order:-1;margin-bottom:4px}.bh-planner-calendar-toolbar a{ text-align:center }.bh-planner-search-location{max-width:none}.bh-timetable-header,.bh-timetable-body{min-width:0}.bh-planner-timetable-desktop{display:none}.bh-planner-mobile{display:block}}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',function(){

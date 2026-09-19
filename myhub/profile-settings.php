@@ -154,6 +154,7 @@ function bubbahub_profile_handle_child_action() {
     $dob      = bubbahub_profile_date_value( isset( $_POST['child_date_of_birth'] ) ? wp_unslash( $_POST['child_date_of_birth'] ) : '' );
     $due      = bubbahub_profile_date_value( isset( $_POST['child_due_date'] ) ? wp_unslash( $_POST['child_due_date'] ) : '' );
     $avatar   = isset( $_POST['avatar_url'] ) ? esc_url_raw( wp_unslash( $_POST['avatar_url'] ) ) : '';
+    $ask_specialist = ! empty( $_POST['ask_specialist'] );
 
     if ( ! $name ) return array( 'error' => 'Please enter the child\'s name.' );
     if ( ! in_array( $status, array( 'born', 'expecting' ), true ) ) $status = 'born';
@@ -194,6 +195,7 @@ function bubbahub_profile_handle_child_action() {
     bubbahub_profile_update_field( $child_id, 'child_date_of_birth', $dob );
     bubbahub_profile_update_field( $child_id, 'child_due_date', $due );
     bubbahub_profile_update_field( $child_id, 'avatar_url', $avatar );
+    bubbahub_profile_update_field( $child_id, 'ask_specialist', $ask_specialist ? 1 : 0 );
 
     /* Keep the existing age-group logic used by family suggestions in sync. */
     $age_group = bubbahub_profile_age_group( $dob );
@@ -243,10 +245,16 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
 
     $name = $get( 'child_name', $child_id ? get_the_title( $child_id ) : '' );
     $nickname = $get( 'child_nickname' );
-    $status = $get( 'child_status', 'born' );
+    $status = $get( 'child_status', '' );
+    if ( ! $child_id ) {
+        $requested_profile_type = isset( $_GET['bh_profile_type'] ) ? sanitize_key( wp_unslash( $_GET['bh_profile_type'] ) ) : 'born';
+        $status = 'expecting' === $requested_profile_type ? 'expecting' : 'born';
+    }
+    if ( ! $status ) $status = 'born';
     $dob = $get( 'child_date_of_birth' );
     $due = $get( 'child_due_date' );
     $avatar = $get( 'avatar_url' );
+    $ask_specialist = (bool) $get( 'ask_specialist', 0 );
     $nap = $get( 'nap_schedule', array() );
 
     $dob = bubbahub_profile_date_value( $dob );
@@ -257,10 +265,16 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
         <div class="bh-profile-header">
             <div>
                 <span class="bh-profile-kicker">FAMILY PROFILE</span>
-                <h2><?php echo $editing ? 'Edit Child Profile' : 'Add a Child'; ?></h2>
+                <h2><?php
+                    if ( $editing ) {
+                        echo 'expecting' === $status ? 'Edit Bump Profile' : 'Edit Child Profile';
+                    } else {
+                        echo 'expecting' === $status ? 'Add a Bump' : 'Add a Child';
+                    }
+                ?></h2>
                 <p>This information is saved to the child profile used by My Hub and group suggestions.</p>
             </div>
-            <a class="bh-profile-back" href="<?php echo esc_url( remove_query_arg( array( 'bh_add_child', 'child_id' ) ) ); ?>">‹ Back to Account Settings</a>
+            <a class="bh-profile-back" href="<?php echo esc_url( remove_query_arg( array( 'bh_add_child', 'bh_profile_type', 'child_id' ) ) ); ?>">‹ Back to Account Settings</a>
         </div>
 
         <?php if ( ! empty( $message['success'] ) ) : ?><div class="bh-profile-success">✓ <?php echo esc_html( $message['success'] ); ?></div><?php endif; ?>
@@ -274,9 +288,13 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
 
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3>About your child</h3><span>Core profile</span></div>
-                <div class="bh-profile-grid two">
-                    <label class="bh-profile-type-field"><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Expecting / Pregnancy</option></select></label>
-                </div>
+                <?php if ( $editing ) : ?>
+                    <div class="bh-profile-grid two">
+                        <label class="bh-profile-type-field"><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Bump / Pregnancy</option></select></label>
+                    </div>
+                <?php else : ?>
+                    <input type="hidden" name="child_status" value="<?php echo esc_attr( $status ); ?>">
+                <?php endif; ?>
                 <div class="bh-profile-grid two bh-child-fields">
                     <label><span>Name</span><input name="child_name" value="<?php echo esc_attr( $name ); ?>" required></label>
                     <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="Optional"></label>
@@ -289,6 +307,10 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                     <label><span>Profile photo URL</span><input name="avatar_url_expecting" type="url" value="<?php echo esc_attr( $avatar ); ?>" placeholder="Optional"></label>
                     <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>"></label>
                 </div>
+                <label class="bh-profile-specialist-check">
+                    <input type="checkbox" name="ask_specialist" value="1" <?php checked( $ask_specialist ); ?>>
+                    <span><strong>Ask A Specialist a question about this <?php echo 'expecting' === $status ? 'baby' : 'child'; ?></strong><small>Tick this to flag that you would like specialist support relating to this profile.</small></span>
+                </label>
             </div>
 
             <div class="bh-profile-card bh-child-only-section">
@@ -353,7 +375,7 @@ function bubbahub_account_settings_shortcode() {
         <div class="bh-account-grid">
             <a class="bh-account-card" href="<?php echo esc_url( $um_url ); ?>"><span class="bh-account-icon">👤</span><div><h3>Ultimate Member Account</h3><p>Update your name, email, password, privacy and account details using Ultimate Member.</p></div><span>→</span></a>
             <a class="bh-account-card" href="<?php echo esc_url( $payment_url ); ?>"><span class="bh-account-icon">💳</span><div><h3>Payments & invoices</h3><p>View your Bubba Hub bookings and payment activity.</p></div><span>→</span></a>
-            <a class="bh-account-card" href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1' ) ); ?>"><span class="bh-account-icon">👶</span><div><h3>Child profiles</h3><p><?php echo esc_html( count( $children ) ); ?> child profile<?php echo 1 === count( $children ) ? '' : 's'; ?> saved. Add, edit or update family information.</p></div><span>→</span></a>
+            <div class="bh-account-card bh-account-card-static"><span class="bh-account-icon">👶</span><div><h3>Family profiles</h3><p><?php echo esc_html( count( $children ) ); ?> profile<?php echo 1 === count( $children ) ? '' : 's'; ?> saved. Manage your children and bumps.</p></div><span>→</span></div>
         </div>
 
         <div class="bh-profile-card">
@@ -367,7 +389,13 @@ function bubbahub_account_settings_shortcode() {
         <?php endif; ?>
 
         <div class="bh-profile-card">
-            <div class="bh-profile-card-heading"><h3>Child profiles</h3><a href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1' ) ); ?>">＋ Add child</a></div>
+            <div class="bh-profile-card-heading bh-family-profile-heading">
+                <div><h3>Family profiles</h3><span>Add children or an expecting bump separately.</span></div>
+                <div class="bh-family-profile-add-buttons">
+                    <a class="bh-profile-add-child" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'born' ) ) ); ?>">＋ Child</a>
+                    <a class="bh-profile-add-bump" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'expecting' ) ) ); ?>">＋ Bump</a>
+                </div>
+            </div>
             <?php if ( $children ) : ?>
                 <div class="bh-account-children-list">
                     <?php foreach ( $children as $child ) :

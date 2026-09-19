@@ -19,32 +19,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf package bubbahub-directory-wordpress-ready.zip
-          mkdir -p package/directory
-          rsync -a --exclude='.git' --exclude='.github' --exclude='package' ./ package/directory/
 
-          test -f package/directory/directory.php
-          test -f package/directory/modules/core/bubbahub-advanced-search.php
-          test -f package/directory/myhub/myhub-v2.php
-          test -f package/directory/myhub/myhub-weekly-planner-v2.php
+          rm -f bubbahub-directory-wordpress-ready.zip
 
-          echo "Packaging directory contents:"
-          find package/directory -type f | wc -l
+          git archive             --format=zip             --prefix=directory/             -o bubbahub-directory-wordpress-ready.zip             HEAD             -- . ':(exclude).github' ':(exclude)package'
 
-          cd package
-          set +e
-          zip -r ../bubbahub-directory-wordpress-ready.zip directory
-          zip_rc=$?
-          set -e
-          echo "zip exit code: $zip_rc"
-          if [ "$zip_rc" -ne 0 ]; then
-            exit "$zip_rc"
+          test -s bubbahub-directory-wordpress-ready.zip
+
+          unzip -t bubbahub-directory-wordpress-ready.zip
+
+          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/directory.php'
+          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/modules/core/bubbahub-advanced-search.php'
+          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/myhub/myhub-v2.php'
+          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/myhub/myhub-weekly-planner-v2.php'
+
+          if unzip -l bubbahub-directory-wordpress-ready.zip | grep -q '^.* directory/.github/'; then
+            echo 'ERROR: .github files were included in the deployment ZIP'
+            exit 1
           fi
 
-          echo "Testing ZIP integrity:"
-          unzip -t ../bubbahub-directory-wordpress-ready.zip
-          echo "ZIP size:"
-          ls -lh ../bubbahub-directory-wordpress-ready.zip
+          echo 'WordPress-ready ZIP validated successfully'
+          ls -lh bubbahub-directory-wordpress-ready.zip
 
       - name: Upload WordPress-ready ZIP
         uses: actions/upload-artifact@v4

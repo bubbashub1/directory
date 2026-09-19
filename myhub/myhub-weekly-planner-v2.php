@@ -489,7 +489,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           $calendar_days = array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday');
           ?>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-region">Region</label><select id="bh-calendar-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($calendar_regions)) foreach($calendar_regions as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['region'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
-          <div class="bh-calendar-filter-option"><label for="bh-calendar-town">Town</label><select id="bh-calendar-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($calendar_towns)) foreach($calendar_towns as $t): ?><option value="<?php echo esc_attr($calendar_filters['town']??'',$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-town">Town</label><select id="bh-calendar-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($calendar_towns)) foreach($calendar_towns as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['town']??'',$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-category">Category</label><select id="bh-calendar-category" name="bh_category"><option value="">All categories</option><?php foreach((array)$calendar_categories as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['category'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-day">Day</label><select id="bh-calendar-day" name="bh_day"><option value="">Any day</option><?php foreach($calendar_days as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar_filters['day'],$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-term">Term Time</label><select id="bh-calendar-term" name="bh_term_time"><option value="">Any term</option><option value="yes" <?php selected($calendar_filters['term_time'],'yes'); ?>>Term time only</option><option value="no" <?php selected($calendar_filters['term_time'],'no'); ?>>Not term time only</option></select></div>
@@ -1084,4 +1084,143 @@ document.addEventListener('DOMContentLoaded',function(){
 </style>
 <style>
 .bh-planner-view-switcher{display:inline-flex;border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-view-link{padding:8px 14px!important;border:0!important;border-right:1px solid #dadce0!important;border-radius:0!important;color:#3c4043!important;background:#fff!important;text-decoration:none!important;font-size:13px!important;font-weight:500!important}.bh-planner-view-link:last-child{border-right:0!important}.bh-planner-view-link.is-active{background:#e8f0fe!important;color:#1a73e8!important}.bh-planner-calendar-nav{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%}.bh-planner-calendar-nav a{min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:8px 13px!important;border:1px solid #dadce0!important;border-radius:4px!important;background:#fff!important;color:#3c4043!important;text-decoration:none!important}.bh-planner-calendar-nav strong{text-align:center;font-size:18px!important;font-weight:400!important}.bh-planner-list-view{border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-list-row{display:grid;grid-template-columns:80px 90px minmax(180px,1.5fr) minmax(140px,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #e8eaed}.bh-planner-list-row:last-child{border-bottom:0}.bh-planner-list-date{display:flex;flex-direction:column;line-height:1.1}.bh-planner-list-date strong{font-size:11px;text-transform:uppercase;color:#70757a}.bh-planner-list-date span{font-size:15px;font-weight:600}.bh-planner-list-time{font-size:13px;font-weight:600}.bh-planner-list-name{text-decoration:none!important;color:#3c4043!important}.bh-planner-list-name strong{display:block}.bh-planner-list-name small{display:block;color:#70757a}.bh-planner-list-venue{font-size:12px;color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-list-add{font-size:11px;padding:6px 8px;border:1px solid #dadce0;border-radius:5px;color:#3c4043;text-decoration:none!important}.bh-planner-month-view{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-month-day{min-height:125px;padding:7px;border-right:1px solid #e8eaed;border-bottom:1px solid #e8eaed;box-sizing:border-box}.bh-planner-month-day:nth-child(7n){border-right:0}.bh-planner-month-date{font-size:12px;font-weight:600;margin-bottom:5px}.bh-planner-month-today .bh-planner-month-date{display:flex;width:25px;height:25px;border-radius:50%;align-items:center;justify-content:center;background:#1a73e8;color:#fff}.bh-planner-month-outside{background:#f8f9fa}.bh-planner-month-outside .bh-planner-month-date{color:#9aa0a6}.bh-planner-month-items{display:grid;gap:3px}.bh-planner-month-event{display:block;padding:3px 5px;border-radius:3px;background:#1a73e8;color:#fff!important;text-decoration:none!important;font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:700px){.bh-planner-view-switcher{width:100%;display:flex}.bh-planner-view-link{flex:1;text-align:center;padding:8px 4px!important}.bh-planner-calendar-nav{grid-template-columns:1fr 1fr}.bh-planner-calendar-nav strong{grid-column:1/-1;grid-row:1}.bh-planner-calendar-nav a{grid-row:2}.bh-planner-list-row{grid-template-columns:60px 1fr;gap:6px 10px}.bh-planner-list-name,.bh-planner-list-venue,.bh-planner-list-add{grid-column:1/-1}.bh-planner-list-add{text-align:center}.bh-planner-month-view{grid-template-columns:repeat(7,minmax(90px,1fr));overflow-x:auto}.bh-planner-month-day{min-width:90px;min-height:105px}}@media print{.bh-planner-view-switcher,.bh-planner-calendar-nav,.bh-planner-list-view,.bh-planner-month-view{display:none!important}}
+
+/* Calendar directory/search controls */
+.bh-weekly-planner-v2 .bh-calendar-view-switcher{
+  display:flex;
+  align-items:center;
+  gap:0;
+  width:max-content;
+  max-width:100%;
+  margin:0 0 16px;
+  border:1px solid #d9e7e2;
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 3px 12px rgba(39,48,58,.05);
+}
+.bh-weekly-planner-v2 .bh-calendar-view-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  min-width:132px;
+  padding:10px 18px;
+  border:0;
+  border-right:1px solid #d9e7e2;
+  background:#fff;
+  color:#3c4043;
+  text-decoration:none!important;
+  font-size:14px;
+  font-weight:800;
+}
+.bh-weekly-planner-v2 .bh-calendar-view-link:last-child{border-right:0}
+.bh-weekly-planner-v2 .bh-calendar-view-link:hover{background:#f2f8f5}
+.bh-weekly-planner-v2 .bh-calendar-view-link.is-active{background:#5f9183;color:#fff!important}
+
+.bh-weekly-planner-v2 .bh-calendar-search-form{
+  display:grid;
+  grid-template-columns:minmax(240px,1.5fr) minmax(220px,1fr) auto;
+  gap:10px;
+  align-items:end;
+  margin:0 0 18px;
+  padding:16px;
+  border:1px solid #e1ebe8;
+  border-radius:18px;
+  background:linear-gradient(180deg,#f8fbfa 0%,#f5f9f7 100%);
+  box-shadow:0 4px 18px rgba(39,48,58,.045);
+}
+.bh-weekly-planner-v2 .bh-calendar-search-form input,
+.bh-weekly-planner-v2 .bh-calendar-search-form select{
+  width:100%;
+  min-height:48px;
+  padding:10px 13px;
+  border:1px solid #dfe8e5;
+  border-radius:13px;
+  background:#fff;
+  color:#27303a;
+  font:inherit;
+  box-shadow:0 2px 7px rgba(39,48,58,.025);
+}
+.bh-weekly-planner-v2 .bh-calendar-search-form input:focus,
+.bh-weekly-planner-v2 .bh-calendar-search-form select:focus{
+  outline:0;
+  border-color:#9bc8bf;
+  box-shadow:0 0 0 3px rgba(105,171,160,.14);
+}
+.bh-weekly-planner-v2 .bh-calendar-location-control{display:flex;gap:6px}
+.bh-weekly-planner-v2 .bh-calendar-location-control input{flex:1}
+.bh-weekly-planner-v2 .bh-calendar-use-location{
+  flex:0 0 48px;
+  min-width:48px!important;
+  padding:0!important;
+  border:1px solid #dfe8e5!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  color:#27303a!important;
+  cursor:pointer;
+}
+.bh-weekly-planner-v2 .bh-calendar-search-actions{display:flex;gap:8px}
+.bh-weekly-planner-v2 .bh-calendar-search-actions button{
+  min-height:48px;
+  padding:0 16px;
+  border-radius:13px;
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+}
+.bh-weekly-planner-v2 .bh-calendar-search-button{
+  border:0;
+  background:#f28b7b;
+  color:#fff;
+  box-shadow:0 3px 10px rgba(39,48,58,.07);
+}
+.bh-weekly-planner-v2 .bh-calendar-advanced-toggle{
+  border:1px solid #d9e7e2;
+  background:#eef5f2;
+  color:#27303a;
+}
+.bh-weekly-planner-v2 .bh-calendar-advanced-search{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  padding:14px;
+  border:1px solid #dfe8e5;
+  border-radius:15px;
+  background:rgba(255,255,255,.72);
+}
+.bh-weekly-planner-v2 .bh-calendar-advanced-search[hidden]{display:none}
+.bh-weekly-planner-v2 .bh-calendar-filter-option{min-width:0}
+.bh-weekly-planner-v2 .bh-calendar-filter-option label{
+  display:block;
+  margin:0 0 6px;
+  color:#52615c;
+  font-size:11px;
+  font-weight:800;
+}
+.bh-weekly-planner-v2 .screen-reader-text{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+@media(max-width:900px){
+  .bh-weekly-planner-v2 .bh-calendar-search-form{grid-template-columns:1fr 1fr}
+  .bh-weekly-planner-v2 .bh-calendar-search-actions{grid-column:1/-1}
+  .bh-weekly-planner-v2 .bh-calendar-advanced-search{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .bh-weekly-planner-v2 .bh-calendar-view-switcher{width:100%}
+  .bh-weekly-planner-v2 .bh-calendar-view-link{flex:1;min-width:0;padding:10px 8px;font-size:13px}
+  .bh-weekly-planner-v2 .bh-calendar-search-form{grid-template-columns:1fr;padding:12px;border-radius:16px}
+  .bh-weekly-planner-v2 .bh-calendar-search-actions{grid-column:1;display:grid;grid-template-columns:1fr 1fr}
+  .bh-weekly-planner-v2 .bh-calendar-search-actions button{width:100%;padding:0 10px}
+  .bh-weekly-planner-v2 .bh-calendar-advanced-search{grid-template-columns:1fr;padding:10px}
+}
 </style>

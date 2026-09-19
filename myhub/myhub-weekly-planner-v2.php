@@ -8,62 +8,95 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
 
 function bubbahub_myhub_planner_v2_weekly_schedule_rows( $post_id ) {
-    $value = function_exists( 'get_field' ) ? get_field( 'weekly_schedule', $post_id, false ) : get_post_meta( $post_id, 'weekly_schedule', true );
+    $value = function_exists( 'get_field' ) ? get_field( 'weekly_schedule', $post_id ) : get_post_meta( $post_id, 'weekly_schedule', true );
 
+    // ACF repeater values can arrive as arrays, serialized strings, or JSON.
     if ( is_string( $value ) ) {
         $unserialized = maybe_unserialize( $value );
         if ( is_array( $unserialized ) ) {
             $value = $unserialized;
         } else {
             $decoded = json_decode( $value, true );
-            if ( JSON_ERROR_NONE === json_last_error() ) $value = $decoded;
+            if ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded ) ) {
+                $value = $decoded;
+            }
         }
     }
+
     if ( ! is_array( $value ) ) return array();
 
     $day_names = array(
-        'monday'=>'Monday','mon'=>'Monday','tuesday'=>'Tuesday','tue'=>'Tuesday',
-        'wednesday'=>'Wednesday','wed'=>'Wednesday','thursday'=>'Thursday','thu'=>'Thursday',
-        'friday'=>'Friday','fri'=>'Friday','saturday'=>'Saturday','sat'=>'Saturday',
+        'monday'=>'Monday','mon'=>'Monday',
+        'tuesday'=>'Tuesday','tue'=>'Tuesday',
+        'wednesday'=>'Wednesday','wed'=>'Wednesday',
+        'thursday'=>'Thursday','thu'=>'Thursday',
+        'friday'=>'Friday','fri'=>'Friday',
+        'saturday'=>'Saturday','sat'=>'Saturday',
         'sunday'=>'Sunday','sun'=>'Sunday',
     );
+
     $rows = array();
 
     foreach ( $value as $row ) {
         if ( ! is_array( $row ) ) continue;
-        $day_key = strtolower( trim( (string) ( $row['day_name'] ?? '' ) ) );
-        if ( ! isset( $day_names[$day_key] ) || ! empty( $row['is_closed'] ) ) continue;
+
+        $raw_day = $row['day_name'] ?? $row['day'] ?? $row['weekday'] ?? '';
+        $day_key = strtolower( trim( (string) $raw_day ) );
+
+        // Some ACF select values may contain labels such as "Thursday".
+        if ( ! isset( $day_names[$day_key] ) ) {
+            $day_key = strtolower( preg_replace( '/[^a-z]/', '', $day_key ) );
+        }
+        if ( ! isset( $day_names[$day_key] ) ) continue;
+
+        $closed = $row['is_closed'] ?? false;
+        if ( $closed === true || $closed === 1 || $closed === '1' || strtolower((string)$closed) === 'yes' ) continue;
 
         $sessions = $row['sessions'] ?? array();
-        if ( ! is_array( $sessions ) ) $sessions = array( $sessions );
+
+        if ( is_string( $sessions ) ) {
+            $decoded = json_decode( $sessions, true );
+            if ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded ) ) {
+                $sessions = $decoded;
+            } else {
+                $sessions = maybe_unserialize( $sessions );
+            }
+        }
+
+        if ( ! is_array( $sessions ) ) {
+            $sessions = array( $sessions );
+        }
 
         foreach ( $sessions as $session ) {
-            $start = ''; $end = ''; $label = '';
-            if ( is_array( $session ) ) {
-                $start = trim( (string) ( $session['start_time'] ?? $session['start'] ?? $session['from'] ?? '' ) );
-                $end   = trim( (string) ( $session['end_time'] ?? $session['end'] ?? $session['to'] ?? '' ) );
-                $label = trim( (string) ( $session['session_label'] ?? $session['label'] ?? '' ) );
-            } elseif ( is_string( $session ) ) {
-                if ( preg_match( '/(\d{1,2}:\d{2})\s*(?:[-–—]|to)\s*(\d{1,2}:\d{2})/i', $session, $m ) ) {
-                    $start = $m[1]; $end = $m[2];
-                } elseif ( preg_match( '/\d{1,2}:\d{2}/', $session, $m ) ) {
-                    $start = $m[0];
-                }
+            if ( ! is_array( $session ) ) continue;
+
+            $start = trim( (string) ( $session['start_time'] ?? $session['start'] ?? $session['from'] ?? '' ) );
+            $end   = trim( (string) ( $session['end_time'] ?? $session['end'] ?? $session['to'] ?? '' ) );
+            $label = trim( (string) ( $session['session_label'] ?? $session['label'] ?? $session['name'] ?? '' ) );
+
+            // Accept both HH:MM and HH:MM:SS.
+            if ( preg_match( '/^(\\d{1,2}:\\d{2})(?::\\d{2})?$/', $start, $m ) ) {
+                $start = $m[1];
+            } else {
+                continue;
             }
 
-            if ( ! preg_match( '/^\d{1,2}:\d{2}$/', $start ) ) continue;
-            if ( $end && ! preg_match( '/^\d{1,2}:\d{2}$/', $end ) ) $end = '';
+            if ( $end && preg_match( '/^(\\d{1,2}:\\d{2})(?::\\d{2})?$/', $end, $m ) ) {
+                $end = $m[1];
+            } elseif ( $end ) {
+                $end = '';
+            }
 
             $rows[$day_names[$day_key]][] = array(
-                'start'=>$start,
-                'end'=>$end,
-                'label'=>$label,
+                'start' => $start,
+                'end'   => $end,
+                'label' => $label,
             );
         }
     }
+
     return $rows;
 }
-
 function bubbahub_myhub_planner_v2_region_ids( $group_id ) {
     $ids = array();
     if ( taxonomy_exists( 'region' ) ) {

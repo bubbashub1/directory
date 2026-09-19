@@ -186,23 +186,67 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $days_ahead = 7 ) {
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if(!is_user_logged_in()) return '<div class="bh-planner-empty">Please log in to use your weekly planner.</div>';
 
-    $rows=bubbahub_myhub_planner_v2_schedule_occurrences(7);
+    $rows=bubbahub_myhub_planner_v2_schedule_occurrences(14);
     $days=array('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday');
-    $by=array_fill_keys($days,array());
-
-    foreach($rows as $row){
-        $ts=strtotime($row['date'].' '.$row['start']);
-        if(!$ts) continue;
-        $end_ts=$row['end'] ? strtotime($row['date'].' '.$row['end']) : $ts+3600;
-        if($end_ts < $ts) $end_ts=strtotime('+1 day',$end_ts);
-
-        $day=wp_date('l',$ts);
-        $row['calendar_url']='https://calendar.google.com/calendar/render?action=TEMPLATE&text='.rawurlencode($row['title']).'&dates='.rawurlencode(wp_date('Ymd\THis',$ts)).'/'.rawurlencode(wp_date('Ymd\THis',$end_ts)).'&details='.rawurlencode('Bubba Hub: '.$row['url']).'&location='.rawurlencode($row['venue_address'] ?: $row['venue']);
-        $by[$day][]=$row;
+    $now_ts = current_time('timestamp');
+    $week_start_ts = strtotime('monday this week', $now_ts);
+    $week_dates = array();
+    foreach($days as $i=>$day){
+        $week_dates[$day] = wp_date('Y-m-d', strtotime('+'.$i.' days', $week_start_ts));
     }
 
-    foreach($by as &$entries) usort($entries,function($a,$b){return ($a['date'].' '.$a['start']) <=> ($b['date'].' '.$b['start']);});
-    unset($entries);
+    // Keep the timetable focused on the current Monday-Sunday week.
+    $week_by = array_fill_keys($days,array());
+    foreach($rows as $row){
+        $row_date = $row['date'];
+        foreach($week_dates as $day=>$date){
+            if($row_date === $date){
+                $week_by[$day][] = $row;
+                break;
+            }
+        }
+    }
+
+    // Work out a sensible vertical time range from the sessions.
+    $min_minutes = 8 * 60;
+    $max_minutes = 20 * 60;
+    foreach($week_by as $entries){
+        foreach($entries as $item){
+            $st = strtotime($item['date'].' '.$item['start']);
+            $en = $item['end'] ? strtotime($item['date'].' '.$item['end']) : $st + 3600;
+            if($st) $min_minutes = min($min_minutes, ((int)wp_date('H',$st))*60 + (int)wp_date('i',$st));
+            if($en) $max_minutes = max($max_minutes, ((int)wp_date('H',$en))*60 + (int)wp_date('i',$en));
+        }
+    }
+    $grid_start = max(6 * 60, floor($min_minutes / 60) * 60);
+    $grid_end = min(23 * 60, ceil($max_minutes / 60) * 60);
+    if($grid_end <= $grid_start) $grid_end = $grid_start + 12 * 60;
+    $grid_hours = max(1, (int)(($grid_end - $grid_start) / 60));
+
+    // Add calendar URLs and simple collision lanes for desktop events.
+    foreach($week_by as $day=>$entries){
+        usort($week_by[$day],function($a,$b){return ($a['date'].' '.$a['start']) <=> ($b['date'].' '.$b['start']);});
+        $lanes = array();
+        foreach($week_by[$day] as $idx=>&$item){
+            $ts=strtotime($item['date'].' '.$item['start']);
+            $end_ts=$item['end'] ? strtotime($item['date'].' '.$item['end']) : $ts+3600;
+            if($end_ts < $ts) $end_ts=strtotime('+1 day',$end_ts);
+            $item['calendar_url']='https://calendar.google.com/calendar/render?action=TEMPLATE&text='.rawurlencode($item['title']).'&dates='.rawurlencode(wp_date('Ymd\\THis',$ts)).'/'.rawurlencode(wp_date('Ymd\\THis',$end_ts)).'&details='.rawurlencode('Bubba Hub: '.$item['url']).'&location='.rawurlencode($item['venue_address'] ?: $item['venue']);
+            $start_m = ((int)wp_date('H',$ts))*60 + (int)wp_date('i',$ts);
+            $end_m = ((int)wp_date('H',$end_ts))*60 + (int)wp_date('i',$end_ts);
+            $lane = 0;
+            while(isset($lanes[$lane]) && $lanes[$lane] > $start_m) $lane++;
+            $lanes[$lane] = $end_m;
+            $item['lane'] = $lane;
+            $item['lane_count'] = count($lanes);
+        }
+        unset($item);
+        // Make all events in an overlapping cluster use the same lane count.
+        foreach($week_by[$day] as &$item){
+            $item['lane_count'] = max(1, count($lanes));
+        }
+        unset($item);
+    }
 
     $account_url=add_query_arg('bh_account_settings','1',home_url('/my-hub/'));
 
@@ -229,43 +273,123 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           </label>
         </div>
       </div>
-      <div class="bh-planner-simple-note">Choose a region to see the groups running on each day.</div>
+      <div class="bh-planner-simple-note">Your groups are shown in a weekly timetable. On mobile, tap a day to open or close it.</div>
 
-      <div class="bh-planner-results">
-      <?php foreach($days as $day): ?><div class="bh-planner-day">
-        <div class="bh-planner-day-accordion">
-          <div class="bh-planner-day-title"><?php echo esc_html($day); ?><span class="bh-planner-day-chevron" aria-hidden="true">⌄</span></div>
-          <div class="bh-planner-day-items">
-          <?php if(!empty($by[$day])): foreach($by[$day] as $item):
-              $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']);
-          ?>
-            <div class="bh-planner-item-wrap" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>">
-              <div class="bh-planner-item">
-                <a class="bh-planner-listing-link" href="<?php echo esc_url($item['url']); ?>">
-                  <span class="bh-planner-thumb"><?php if($item['image']): ?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else: ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
-                  <span class="bh-planner-item-main">
-                    <strong><?php echo esc_html($item['title']); ?></strong>
-                    <?php if($item['label']): ?><span class="bh-planner-session-label"><?php echo esc_html($item['label']); ?></span><?php endif; ?>
-                    <span class="bh-planner-time"><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></span>
-                    <span class="bh-planner-location">📍 <?php echo esc_html($item['venue'] ?: 'Location to be confirmed'); ?></span>
-                  </span>
-                </a>
-              </div>
+      <div class="bh-planner-timetable-desktop">
+        <div class="bh-timetable-header">
+          <div class="bh-timetable-time-head">TIME</div>
+          <?php foreach($days as $day): ?>
+            <div class="bh-timetable-day-head">
+              <strong><?php echo esc_html(substr($day,0,3)); ?></strong>
+              <span><?php echo esc_html(wp_date('j M', strtotime($week_dates[$day]))); ?></span>
             </div>
-          <?php endforeach; else: ?><div class="bh-planner-empty">No matching sessions.</div><?php endif; ?>
-          </div>
+          <?php endforeach; ?>
         </div>
-      </div><?php endforeach; ?>
+        <div class="bh-timetable-body" style="--bh-grid-hours:<?php echo esc_attr($grid_hours); ?>;">
+          <div class="bh-timetable-times">
+            <?php for($h=$grid_start;$h<=$grid_end;$h+=60): ?>
+              <span style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"><?php echo esc_html(sprintf('%02d:00',floor($h/60))); ?></span>
+            <?php endfor; ?>
+          </div>
+          <?php foreach($days as $day): ?>
+            <div class="bh-timetable-column" data-day="<?php echo esc_attr($day); ?>">
+              <?php for($h=$grid_start;$h<$grid_end;$h+=60): ?><div class="bh-timetable-hour-line" style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"></div><?php endfor; ?>
+              <?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item):
+                $start_ts=strtotime($item['date'].' '.$item['start']);
+                $end_ts=$item['end'] ? strtotime($item['date'].' '.$item['end']) : $start_ts+3600;
+                if($end_ts < $start_ts) $end_ts=strtotime('+1 day',$end_ts);
+                $start_m=((int)wp_date('H',$start_ts))*60+(int)wp_date('i',$start_ts);
+                $end_m=((int)wp_date('H',$end_ts))*60+(int)wp_date('i',$end_ts);
+                $top=max(0,$start_m-$grid_start);
+                $height=max(42,$end_m-$start_m);
+                $lane_count=max(1,(int)$item['lane_count']);
+                $lane=(int)$item['lane'];
+                $left=($lane*100/$lane_count);
+                $width=100/$lane_count;
+                $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']);
+              ?>
+                <div class="bh-timetable-event bh-planner-filter-item" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>" style="top:<?php echo esc_attr($top); ?>px;height:<?php echo esc_attr($height); ?>px;left:<?php echo esc_attr($left); ?>%;width:<?php echo esc_attr($width); ?>%;">
+                  <a href="<?php echo esc_url($item['url']); ?>">
+                    <strong><?php echo esc_html($item['title']); ?></strong>
+                    <?php if($item['label']): ?><span><?php echo esc_html($item['label']); ?></span><?php endif; ?>
+                    <b><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></b>
+                    <small><?php echo esc_html($item['venue'] ?: 'Location to be confirmed'); ?></small>
+                  </a>
+                </div>
+              <?php endforeach; else: ?>
+                <div class="bh-timetable-empty">No groups</div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
       </div>
 
+      <div class="bh-planner-mobile">
+        <?php foreach($days as $day): ?>
+          <details class="bh-planner-mobile-day">
+            <summary>
+              <span><strong><?php echo esc_html($day); ?></strong><small><?php echo esc_html(wp_date('j F',strtotime($week_dates[$day]))); ?></small></span>
+              <span class="bh-planner-mobile-count"><?php echo esc_html(count($week_by[$day])); ?></span>
+            </summary>
+            <div class="bh-planner-mobile-items">
+              <?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item):
+                $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']);
+              ?>
+                <div class="bh-planner-item-wrap bh-planner-filter-item" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>">
+                  <div class="bh-planner-item">
+                    <a class="bh-planner-listing-link" href="<?php echo esc_url($item['url']); ?>">
+                      <span class="bh-planner-thumb"><?php if($item['image']): ?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else: ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
+                      <span class="bh-planner-item-main">
+                        <strong><?php echo esc_html($item['title']); ?></strong>
+                        <?php if($item['label']): ?><span class="bh-planner-session-label"><?php echo esc_html($item['label']); ?></span><?php endif; ?>
+                        <span class="bh-planner-time"><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></span>
+                        <span class="bh-planner-location">📍 <?php echo esc_html($item['venue'] ?: 'Location to be confirmed'); ?></span>
+                      </span>
+                    </a>
+                  </div>
+                </div>
+              <?php endforeach; else: ?><div class="bh-planner-empty">No groups</div><?php endif; ?>
+            </div>
+          </details>
+        <?php endforeach; ?>
+      </div>
+
+
 <style>
-.bh-planner-simple-note{margin:0 0 20px;padding:14px 18px;border:1px solid #e6e6e6;border-radius:14px;background:#fff;font-size:14px}
-.bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}
+.bh-planner-simple-note{margin:0 0 18px;padding:12px 16px;border:1px solid #e6e6e6;border-radius:12px;background:#fff;font-size:14px}
+.bh-planner-search{margin:0 0 18px;padding:16px;border:1px solid #e6e6e6;border-radius:16px;background:#fff}
 .bh-planner-search-row{display:flex;gap:12px;align-items:end}
 .bh-planner-search-location{display:flex;flex-direction:column;gap:6px;max-width:420px}
 .bh-planner-search-row label span{font-weight:700;font-size:13px}
-.bh-planner-search-row select{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
-.bh-planner-day-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.bh-planner-search-row select{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px;background:#fff}
+.bh-planner-timetable-desktop{border:1px solid #d9d9d9;border-radius:12px;overflow:auto;background:#fff}
+.bh-timetable-header{display:grid;grid-template-columns:58px repeat(7,minmax(120px,1fr));min-width:900px;background:#fafafa;border-bottom:1px solid #d9d9d9}
+.bh-timetable-time-head{padding:9px 5px;font-size:10px;color:#777;border-right:1px solid #ddd;text-align:center}
+.bh-timetable-day-head{padding:8px 5px;text-align:center;border-right:1px solid #ddd;display:flex;flex-direction:column;gap:2px}
+.bh-timetable-day-head strong{font-size:13px}
+.bh-timetable-day-head span{font-size:11px;color:#777}
+.bh-timetable-body{display:grid;grid-template-columns:58px repeat(7,minmax(120px,1fr));min-width:900px;height:calc(var(--bh-grid-hours) * 60px);position:relative}
+.bh-timetable-times{position:relative;border-right:1px solid #ddd;background:#fff}
+.bh-timetable-times span{position:absolute;left:0;right:0;transform:translateY(-7px);font-size:10px;color:#777;text-align:center}
+.bh-timetable-column{position:relative;border-right:1px solid #ddd;background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#e9e9e9 59px,#e9e9e9 60px)}
+.bh-timetable-hour-line{position:absolute;left:0;right:0;border-top:1px solid #ececec;pointer-events:none}
+.bh-timetable-event{position:absolute;box-sizing:border-box;padding:2px;border-radius:6px;overflow:hidden;min-width:0}
+.bh-timetable-event a{display:flex;flex-direction:column;height:100%;padding:7px 8px;background:#dceff1;border:1px solid #9bc8cc;border-radius:5px;color:inherit;text-decoration:none!important;overflow:hidden}
+.bh-timetable-event strong{font-size:12px;line-height:1.2}
+.bh-timetable-event span{font-size:10px;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bh-timetable-event b{font-size:10px;line-height:1.2;margin-top:3px}
+.bh-timetable-event small{font-size:9px;line-height:1.2;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bh-timetable-empty{padding:12px;text-align:center;color:#aaa;font-size:11px}
+.bh-planner-mobile{display:none}
+.bh-planner-mobile-day{border:1px solid #e4e4e4;border-radius:12px;background:#fff;margin:0 0 9px;overflow:hidden}
+.bh-planner-mobile-day summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:13px 15px}
+.bh-planner-mobile-day summary::-webkit-details-marker{display:none}
+.bh-planner-mobile-day summary > span:first-child{display:flex;flex-direction:column;gap:2px}
+.bh-planner-mobile-day summary strong{font-size:15px}
+.bh-planner-mobile-day summary small{font-size:11px;color:#777}
+.bh-planner-mobile-count{min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f1f1;font-size:11px;font-weight:700}
+.bh-planner-mobile-day[open] summary{border-bottom:1px solid #eee}
+.bh-planner-mobile-items{padding:10px;display:grid;gap:9px}
 .bh-planner-item-wrap{margin:0}
 .bh-planner-item{height:100%;border:1px solid #e7e7e7;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
 .bh-planner-listing-link{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none!important}
@@ -280,7 +404,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 @media(max-width:700px){
   .bh-planner-search-row{display:block}
   .bh-planner-search-location{max-width:none}
-  .bh-planner-day-items{grid-template-columns:1fr}
+  .bh-timetable-header,.bh-timetable-body{min-width:0}
+  .bh-planner-timetable-desktop{display:none}
+  .bh-planner-mobile{display:block}
 }
 </style>
 
@@ -291,27 +417,39 @@ document.addEventListener('DOMContentLoaded',function(){
     if(!location) return;
 
     function applyRegion(){
-      var loc=location?location.value:'';
-      planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
+      var loc=location.value||'';
+      planner.querySelectorAll('.bh-planner-filter-item').forEach(function(item){
         var locs=(item.getAttribute('data-planner-location-ids')||'').split(',').filter(Boolean);
-        var show = !loc || locs.indexOf(String(loc)) !== -1;
-        item.hidden = !show;
-        item.style.display = show ? '' : 'none';
+        var show=!loc || locs.indexOf(String(loc))!==-1;
+        item.hidden=!show;
+        item.style.display=show?'':'none';
       });
-      planner.querySelectorAll('.bh-planner-day').forEach(function(day){
-        var items=day.querySelectorAll('.bh-planner-item-wrap');
-        var visible=Array.from(items).some(function(x){return !x.hidden;});
-        var empty=day.querySelector('.bh-planner-live-empty');
+
+      planner.querySelectorAll('.bh-timetable-column').forEach(function(column){
+        var visible=Array.from(column.querySelectorAll('.bh-timetable-event')).some(function(x){return !x.hidden;});
+        var empty=column.querySelector('.bh-timetable-live-empty');
         if(!empty){
           empty=document.createElement('div');
-          empty.className='bh-planner-empty bh-planner-live-empty';
-          empty.textContent='No groups running in this region.';
-          day.querySelector('.bh-planner-day-items').appendChild(empty);
+          empty.className='bh-timetable-empty bh-timetable-live-empty';
+          empty.textContent='No groups';
+          column.appendChild(empty);
+        }
+        empty.hidden=visible;
+      });
+
+      planner.querySelectorAll('.bh-planner-mobile-day').forEach(function(day){
+        var visible=Array.from(day.querySelectorAll('.bh-planner-item-wrap')).some(function(x){return !x.hidden;});
+        var empty=day.querySelector('.bh-planner-mobile-live-empty');
+        if(!empty){
+          empty=document.createElement('div');
+          empty.className='bh-planner-empty bh-planner-mobile-live-empty';
+          empty.textContent='No groups in this region.';
+          day.querySelector('.bh-planner-mobile-items').appendChild(empty);
         }
         empty.hidden=visible;
       });
     }
-    if(location) location.addEventListener('change',applyRegion);
+    location.addEventListener('change',applyRegion);
     applyRegion();
   });
 });

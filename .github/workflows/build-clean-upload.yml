@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf package
+          rm -rf package bubbahub-directory-wordpress-ready.zip
           mkdir -p package/directory
           rsync -a --exclude='.git' --exclude='.github' --exclude='package' ./ package/directory/
 
@@ -28,10 +28,49 @@ jobs:
           test -f package/directory/myhub/myhub-v2.php
           test -f package/directory/myhub/myhub-weekly-planner-v2.php
 
-          cd package
-          zip -qr ../bubbahub-directory-wordpress-ready.zip directory
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
 
-          unzip -t ../bubbahub-directory-wordpress-ready.zip >/dev/null
+          source = Path("package/directory")
+          output = Path("bubbahub-directory-wordpress-ready.zip")
+
+          files = [p for p in source.rglob("*") if p.is_file()]
+          print(f"Packaging {len(files)} files")
+
+          with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+              for path in files:
+                  zf.write(path, path.as_posix())
+
+          print(f"Created {output} ({output.stat().st_size} bytes)")
+          PY
+
+          python3 - <<'PY'
+          from zipfile import ZipFile
+
+          output = "bubbahub-directory-wordpress-ready.zip"
+          with ZipFile(output) as zf:
+              bad = zf.testzip()
+              names = zf.namelist()
+
+          if bad:
+              raise SystemExit(f"ZIP integrity check failed at: {bad}")
+
+          required = [
+              "directory/directory.php",
+              "directory/modules/core/bubbahub-advanced-search.php",
+              "directory/myhub/myhub-v2.php",
+              "directory/myhub/myhub-weekly-planner-v2.php",
+          ]
+
+          missing = [name for name in required if name not in names]
+          if missing:
+              raise SystemExit("ZIP validation missing: " + ", ".join(missing))
+
+          print(f"ZIP integrity OK; {len(names)} entries validated")
+          PY
+
+          unzip -l bubbahub-directory-wordpress-ready.zip | sed -n '1,25p'
 
       - name: Upload WordPress-ready ZIP
         uses: actions/upload-artifact@v4

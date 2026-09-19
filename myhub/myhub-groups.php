@@ -157,6 +157,8 @@ function bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array())
     return array_slice(array_values(array_unique(array_map('absint',array_keys($scored)))),0,24);
 }
 function bubbahub_myhub_groups_ajax(){
+    /* AJAX responses must be pure JSON even if another plugin/theme emitted a warning or notice. */
+    if ( ob_get_length() ) { ob_clean(); }
     if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);
     try{
         $type=isset($_POST['type'])?sanitize_key(wp_unslash($_POST['type'])):'favourite';
@@ -170,9 +172,11 @@ function bubbahub_myhub_groups_ajax(){
             $ids=bubbahub_myhub_groups_suggested_ids($exclude,$selected);
         }elseif($type==='recently_viewed'){$ids=bubbahub_myhub_groups_clean_ids($recent);}
         $html='';foreach(array_slice($ids,0,24) as $id)$html.=bubbahub_myhub_groups_card($id);
+        if ( ob_get_length() ) { ob_clean(); }
         wp_send_json_success(array('html'=>$html,'count'=>count($ids)));
     }catch(Throwable $e){
         if(defined('WP_DEBUG')&&WP_DEBUG)error_log('BubbaHub My Hub groups AJAX: '.$e->getMessage());
+        if ( ob_get_length() ) { ob_clean(); }
         wp_send_json_error(array('message'=>'Groups could not be loaded.','code'=>'myhub_groups_exception'),500);
     }
 }

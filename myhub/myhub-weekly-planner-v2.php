@@ -420,7 +420,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       <div class="bh-planner-print-header"><img src="https://staging.bubbahub.co.uk/wp-content/uploads/2026/09/logobubbhub-removebg-preview-150x150.png" alt="Bubba Hub"><div><strong>Bubba Hub</strong><span>Created by Bubba Hub SW</span><span>www.bubbahub.co.uk</span><span>Printed: <?php echo esc_html( wp_date( 'j F Y' ) ); ?></span></div></div>
 
       <?php if(in_array($view,array('week','today'),true)): ?>
-      <div class="bh-planner-timetable-desktop">
+      <div class="bh-planner-timetable-desktop bh-planner-days-<?php echo esc_attr(count($display_days)); ?>">
         <div class="bh-timetable-header"><div class="bh-timetable-time-head">TIME</div>
           <?php foreach($display_days as $day): ?><div class="bh-timetable-day-head<?php echo $display_dates[$day] === wp_date('Y-m-d', current_time('timestamp' )) ? ' bh-timetable-day-head-today' : ''; ?>"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j',strtotime($display_dates[$day]))); ?></span></div><?php endforeach; ?>
         </div>
@@ -461,7 +461,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
       <?php if(in_array($view,array('week','today'),true)): ?>
       <div class="bh-planner-mobile">
-        <?php foreach($display_days as $day): ?><div class="bh-planner-mobile-day"><div class="bh-planner-mobile-day-heading"><span><strong><?php echo esc_html($day); ?></strong><small><?php echo esc_html(wp_date('j F',strtotime($week_dates[$day]))); ?></small></span><span class="bh-planner-mobile-count"><?php echo esc_html(count($week_by[$day])); ?></span></div>
+        <?php foreach($display_days as $day): ?><div class="bh-planner-mobile-day"><div class="bh-planner-mobile-day-heading"><span><strong><?php echo esc_html($day); ?></strong><small><?php echo esc_html(wp_date('j F',strtotime($display_dates[$day]))); ?></small></span><span class="bh-planner-mobile-count"><?php echo esc_html(count($week_by[$day])); ?></span></div>
           <div class="bh-planner-mobile-items"><?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item): $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']); ?>
             <div class="bh-planner-item-wrap bh-planner-filter-item" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>"><div class="bh-planner-item"><a class="bh-planner-listing-link" href="<?php echo esc_url($item['url']); ?>"><span class="bh-planner-thumb"><?php if($item['image']): ?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else: ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span><span class="bh-planner-item-main"><strong><?php echo esc_html($item['title']); ?></strong><?php if($item['label']): ?><span class="bh-planner-session-label"><?php echo esc_html($item['label']); ?></span><?php endif; ?><span class="bh-planner-time"><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></span><span class="bh-planner-location">📍 <?php echo esc_html($item['venue']?:'Location to be confirmed'); ?></span></span></a><a class="bh-planner-mobile-calendar-link" href="<?php echo esc_url($item['calendar_url']); ?>">+ Add to Calendar</a></div></div>
           <?php endforeach; endif; ?></div>
@@ -584,6 +584,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
   .bh-planner-print-page-end{display:block!important;height:0!important;break-after:page!important;page-break-after:always!important}
 }
 
+/* Alternate view grid sizing */
+.bh-planner-days-1 .bh-timetable-header,
+.bh-planner-days-1 .bh-timetable-body{grid-template-columns:58px minmax(220px,1fr)!important;min-width:0!important}
+.bh-planner-days-1 .bh-timetable-column{min-width:0!important}
+.bh-planner-days-7 .bh-timetable-header,
+.bh-planner-days-7 .bh-timetable-body{grid-template-columns:58px repeat(7,minmax(120px,1fr))}
 /* Category colour coding */
 .bh-timetable-event.bh-category-baby,.bh-timetable-event.bh-category-babies{--bh-cat:#4285f4}.bh-timetable-event.bh-category-toddler,.bh-timetable-event.bh-category-toddlers{--bh-cat:#34a853}.bh-timetable-event.bh-category-pregnancy,.bh-timetable-event.bh-category-antenatal,.bh-timetable-event.bh-category-postnatal{--bh-cat:#a142f4}.bh-timetable-event.bh-category-sensory,.bh-timetable-event.bh-category-music,.bh-timetable-event.bh-category-dance{--bh-cat:#fbbc04}.bh-timetable-event.bh-category-forest-school,.bh-timetable-event.bh-category-forest-schools{--bh-cat:#0f9d58}.bh-timetable-event.bh-category-support,.bh-timetable-event.bh-category-wellbeing{--bh-cat:#00acc1}.bh-timetable-event{--bh-cat:#1a73e8}.bh-timetable-event>a:first-child{background:var(--bh-cat)!important;border-left-color:color-mix(in srgb,var(--bh-cat),#000 22%)!important}
 @media print{.bh-weekly-planner-v2{break-after:avoid!important;page-break-after:avoid!important}.bh-planner-timetable-desktop{break-before:avoid!important;break-after:avoid!important;page-break-before:avoid!important;page-break-after:avoid!important}.bh-timetable-column-many{min-width:0!important}.bh-timetable-event{font-size:9px!important}.bh-timetable-event>a:first-child{padding:3px 4px!important}.bh-timetable-event>a:first-child strong{font-size:9px!important}.bh-timetable-event>a:first-child span,.bh-timetable-event>a:first-child b{font-size:8px!important}.bh-timetable-event>a:first-child small{font-size:7px!important}}

@@ -313,6 +313,47 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if('today'===$view){$view_start=$requested_date;$view_end=$requested_date;}
     elseif('month'===$view){$month_tmp=strtotime(wp_date('Y-m-01',strtotime($requested_date)));$view_start=bubbahub_myhub_planner_v2_get_week_start(wp_date('Y-m-d',$month_tmp));$view_end=wp_date('Y-m-d',strtotime('+6 days',strtotime(bubbahub_myhub_planner_v2_get_week_start(wp_date('Y-m-t',$month_tmp)))));}
     $rows = bubbahub_myhub_planner_v2_schedule_occurrences($view_start,$view_end);
+
+    // Use the same Advanced Search filter set as the Directory so the two
+    // views stay in sync when families move between Directory and Calendar.
+    $calendar_filters = function_exists('bubbahub_advanced_search_filters_from_request')
+        ? bubbahub_advanced_search_filters_from_request($_GET)
+        : array('search'=>'','region'=>'','town'=>'','age'=>array(),'price'=>'','location'=>'','category'=>'','day'=>'','term_time'=>'','acf'=>array(),'lat'=>0,'lng'=>0,'radius'=>25,'paged'=>1);
+
+    $calendar_filter_active = ! empty($calendar_filters['search'])
+        || ! empty($calendar_filters['region'])
+        || ! empty($calendar_filters['town'])
+        || ! empty($calendar_filters['age'])
+        || ! empty($calendar_filters['price'])
+        || ! empty($calendar_filters['location'])
+        || ! empty($calendar_filters['category'])
+        || ! empty($calendar_filters['day'])
+        || ! empty($calendar_filters['term_time'])
+        || ! empty($calendar_filters['acf'])
+        || ( ! empty($calendar_filters['lat']) && ! empty($calendar_filters['lng']) );
+
+    if ( $calendar_filter_active && function_exists('bubbahub_advanced_search_query') ) {
+        $calendar_query = bubbahub_advanced_search_query($calendar_filters, 250);
+        $calendar_ids = $calendar_query instanceof WP_Query ? array_map('absint', (array) $calendar_query->posts) : array();
+
+        $rows = array_values(array_filter($rows, function($row) use ($calendar_ids, $calendar_filters) {
+            if ( ! in_array(absint($row['group_id'] ?? 0), $calendar_ids, true) ) return false;
+
+            if ( ! empty($calendar_filters['day']) ) {
+                $row_day = strtolower(wp_date('l', strtotime($row['date'] ?? '')));
+                if ( $row_day !== strtolower($calendar_filters['day']) ) return false;
+            }
+
+            if ( ! empty($calendar_filters['term_time']) ) {
+                $is_term = ! empty($row['term_time_only']);
+                if ( 'yes' === $calendar_filters['term_time'] && ! $is_term ) return false;
+                if ( 'no' === $calendar_filters['term_time'] && $is_term ) return false;
+            }
+
+            return true;
+        }));
+    }
+
     $days=array('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday');
     $week_dates=array();
     foreach($days as $i=>$day) $week_dates[$day]=wp_date('Y-m-d',strtotime('+'.$i.' days',$week_start_ts));
@@ -378,13 +419,31 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         unset($item);
     }
 
-    $planner_base_url = remove_query_arg( array( 'bh_view', 'bh_week' ), get_permalink() );
+    $planner_base_url = remove_query_arg( array( 'bh_view', 'bh_week', 'bh_planner_mode' ), get_permalink() );
     if ( ! $planner_base_url ) $planner_base_url = home_url( '/my-hub/' );
-    $account_url=add_query_arg('bh_account_settings','1',home_url('/my-hub/'));
+
+    // Keep all shared search parameters on Calendar navigation.
+    $calendar_query_args = array(
+        'bh_search'     => ! empty($calendar_filters['search']) ? $calendar_filters['search'] : false,
+        'bh_location'   => ! empty($calendar_filters['location']) ? $calendar_filters['location'] : false,
+        'bh_region'     => ! empty($calendar_filters['region']) ? $calendar_filters['region'] : false,
+        'bh_town'       => ! empty($calendar_filters['town']) ? $calendar_filters['town'] : false,
+        'bh_category'   => ! empty($calendar_filters['category']) ? $calendar_filters['category'] : false,
+        'bh_day'        => ! empty($calendar_filters['day']) ? $calendar_filters['day'] : false,
+        'bh_term_time'  => ! empty($calendar_filters['term_time']) ? $calendar_filters['term_time'] : false,
+        'bh_age'        => ! empty($calendar_filters['age']) ? $calendar_filters['age'] : false,
+        'bh_price'      => ! empty($calendar_filters['price']) ? $calendar_filters['price'] : false,
+        'bh_radius'     => ! empty($calendar_filters['radius']) ? $calendar_filters['radius'] : false,
+        'bh_lat'        => ! empty($calendar_filters['lat']) ? $calendar_filters['lat'] : false,
+        'bh_lng'        => ! empty($calendar_filters['lng']) ? $calendar_filters['lng'] : false,
+        'bh_acf'        => ! empty($calendar_filters['acf']) ? $calendar_filters['acf'] : false,
+    );
+    $planner_base_url = add_query_arg($calendar_query_args, $planner_base_url);
+
     $prev_date='month'===$view?wp_date('Y-m-d',strtotime('-1 month',strtotime($requested_date))):wp_date('Y-m-d',strtotime('-7 days',strtotime($requested_date)));
     $next_date='month'===$view?wp_date('Y-m-d',strtotime('+1 month',strtotime($requested_date))):wp_date('Y-m-d',strtotime('+7 days',strtotime($requested_date)));
-    $prev=add_query_arg(array('bh_week'=>$prev_date,'bh_view'=>'planner'),$planner_base_url);
-    $next=add_query_arg(array('bh_week'=>$next_date,'bh_view'=>'planner'),$planner_base_url);
+    $prev=add_query_arg(array('bh_week'=>$prev_date,'bh_view'=>'planner','bh_planner_mode'=>$view),$planner_base_url);
+    $next=add_query_arg(array('bh_week'=>$next_date,'bh_view'=>'planner','bh_planner_mode'=>$view),$planner_base_url);
     $today=add_query_arg(array('bh_week'=>$today_date,'bh_view'=>'planner','bh_planner_mode'=>'today'),$planner_base_url);
     $view_urls=array();foreach(array('list','today','week','month') as $v)$view_urls[$v]=add_query_arg(array('bh_week'=>$requested_date,'bh_view'=>'planner','bh_planner_mode'=>$v),$planner_base_url);
     $month_ts=strtotime(wp_date('Y-m-01',strtotime($requested_date)));$month_label=wp_date('F Y',$month_ts);
@@ -394,8 +453,56 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">
       <div class="bh-myhub-section-heading">
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
-        <a class="bh-weekly-planner-preferences" href="<?php echo esc_url($account_url); ?>">Update Preferences →</a>
       </div>
+
+      <div class="bh-calendar-view-switcher" aria-label="Directory views">
+        <a class="bh-calendar-view-link" href="<?php echo esc_url( remove_query_arg( array( 'bh_view', 'bh_week', 'bh_planner_mode' ) ) ); ?>">Directory</a>
+        <span class="bh-calendar-view-link is-active" aria-current="page">Calendar</span>
+      </div>
+
+      <form class="bh-calendar-search-form" method="get">
+        <input type="hidden" name="bh_view" value="planner">
+        <input type="hidden" name="bh_planner_mode" value="<?php echo esc_attr($view); ?>">
+        <input type="hidden" name="bh_week" value="<?php echo esc_attr($requested_date); ?>">
+        <div class="bh-calendar-search-main">
+          <label class="screen-reader-text" for="bh-calendar-search">Search groups</label>
+          <input id="bh-calendar-search" name="bh_search" type="search" value="<?php echo esc_attr($calendar_filters['search']); ?>" placeholder="Search by group, class or area">
+        </div>
+        <div class="bh-calendar-search-location">
+          <label class="screen-reader-text" for="bh-calendar-location">Location</label>
+          <div class="bh-calendar-location-control">
+            <input id="bh-calendar-location" name="bh_location" type="search" value="<?php echo esc_attr($calendar_filters['location']); ?>" placeholder="Town, postcode or area">
+            <button type="button" class="bh-calendar-use-location" aria-label="Use my location" title="Use my location">⌖</button>
+          </div>
+        </div>
+        <div class="bh-calendar-search-actions">
+          <button type="submit" class="bh-calendar-search-button">Search</button>
+          <button type="button" class="bh-calendar-advanced-toggle" aria-expanded="false">Advanced search <span aria-hidden="true">⌄</span></button>
+        </div>
+        <div class="bh-calendar-advanced-search" hidden>
+          <?php
+          $calendar_regions = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>0));
+          $calendar_towns = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>!empty($calendar_filters['region']) ? (int)term_exists($calendar_filters['region'],'region') : 0));
+          $calendar_cat_tax = function_exists('bubbahub_advanced_search_category_tax') ? bubbahub_advanced_search_category_tax() : '';
+          $calendar_categories = $calendar_cat_tax ? get_terms(array('taxonomy'=>$calendar_cat_tax,'hide_empty'=>false)) : array();
+          $calendar_acf = function_exists('bubbahub_advanced_search_acf_fields') ? bubbahub_advanced_search_acf_fields() : array();
+          $calendar_days = array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday');
+          ?>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-region">Region</label><select id="bh-calendar-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($calendar_regions)) foreach($calendar_regions as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['region'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-town">Town</label><select id="bh-calendar-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($calendar_towns)) foreach($calendar_towns as $t): ?><option value="<?php echo esc_attr($calendar_filters['town']??'',$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-category">Category</label><select id="bh-calendar-category" name="bh_category"><option value="">All categories</option><?php foreach((array)$calendar_categories as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['category'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-day">Day</label><select id="bh-calendar-day" name="bh_day"><option value="">Any day</option><?php foreach($calendar_days as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar_filters['day'],$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-term">Term Time</label><select id="bh-calendar-term" name="bh_term_time"><option value="">Any term</option><option value="yes" <?php selected($calendar_filters['term_time'],'yes'); ?>>Term time only</option><option value="no" <?php selected($calendar_filters['term_time'],'no'); ?>>Not term time only</option></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-age">Age Range</label><select id="bh-calendar-age" name="bh_age"><option value="">All ages</option><?php if(function_exists('bubbahub_directory_age_values')) foreach((array)bubbahub_directory_age_values() as $v): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar_filters['age'],$v); ?>><?php echo esc_html($v); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-price">Price</label><select id="bh-calendar-price" name="bh_price"><option value="">Any price</option><option value="free" <?php selected($calendar_filters['price'],'free'); ?>>Free</option><option value="paid" <?php selected($calendar_filters['price'],'paid'); ?>>Paid</option></select></div>
+          <?php foreach((array)$calendar_acf as $name=>$field): $choices=$field['choices']??array(); if('true_false'===$field['type']) $choices=array('1'=>'Yes','0'=>'No'); ?>
+            <div class="bh-calendar-filter-option"><label for="bh-calendar-acf-<?php echo esc_attr($name); ?>"><?php echo esc_html($field['label']?:ucwords(str_replace('_',' ',$name))); ?></label><select id="bh-calendar-acf-<?php echo esc_attr($name); ?>" name="bh_acf[<?php echo esc_attr($name); ?>]"><option value="">Any</option><?php foreach((array)$choices as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar_filters['acf'][$name]??'',$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></div>
+          <?php endforeach; ?>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-radius">Search radius</label><select id="bh-calendar-radius" name="bh_radius"><option value="5" <?php selected((string)$calendar_filters['radius'],'5'); ?>>5 miles</option><option value="10" <?php selected((string)$calendar_filters['radius'],'10'); ?>>10 miles</option><option value="25" <?php selected((string)$calendar_filters['radius'],'25'); ?>>25 miles</option><option value="50" <?php selected((string)$calendar_filters['radius'],'50'); ?>>50 miles</option></select></div>
+        </div>
+        <input type="hidden" name="bh_lat" value="<?php echo esc_attr($calendar_filters['lat']); ?>">
+        <input type="hidden" name="bh_lng" value="<?php echo esc_attr($calendar_filters['lng']); ?>">
+      </form>
 
       <div class="bh-planner-calendar-toolbar">
         <div class="bh-planner-view-switcher">
@@ -406,17 +513,6 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <strong><?php echo esc_html('month'===$view?$month_label:('today'===$view?wp_date('l, j F Y',strtotime($requested_date)):wp_date('j M',strtotime($week_dates['Monday'])).' – '.wp_date('j M Y',strtotime($week_dates['Sunday'])))); ?></strong>
           <a href="<?php echo esc_url($next); ?>">Next →</a>
         </div>
-      </div>
-
-      <div class="bh-planner-search">
-        <label class="bh-planner-search-location"><span>Choose Region</span>
-          <select class="bh-planner-location-select">
-            <option value="">All regions</option>
-            <?php if(taxonomy_exists('region')){ $terms=get_terms(array('taxonomy'=>'region','hide_empty'=>false,'number'=>200,'orderby'=>'name','order'=>'ASC')); if(!is_wp_error($terms)) foreach($terms as $term): ?>
-              <option value="<?php echo esc_attr($term->term_id); ?>"><?php echo esc_html($term->name); ?></option>
-            <?php endforeach; } ?>
-          </select>
-        </label>
       </div>
 
       <div class="bh-planner-print-header"><img src="https://staging.bubbahub.co.uk/wp-content/uploads/2026/09/logobubbhub-removebg-preview-150x150.png" alt="Bubba Hub"><div><strong>Bubba Hub</strong><span>Created by Bubba Hub SW</span><span>www.bubbahub.co.uk</span><span>Printed: <?php echo esc_html( wp_date( 'j F Y' ) ); ?></span></div></div>
@@ -895,7 +991,43 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
-    var location=planner.querySelector('.bh-planner-location-select'); if(!location)return;
+    var location=planner.querySelector('.bh-planner-location-select');
+    var searchForm=planner.querySelector('.bh-calendar-search-form');
+    var advancedToggle=planner.querySelector('.bh-calendar-advanced-toggle');
+    var advancedPanel=planner.querySelector('.bh-calendar-advanced-search');
+
+    if(advancedToggle&&advancedPanel){
+      advancedToggle.addEventListener('click',function(){
+        var open=advancedToggle.getAttribute('aria-expanded')==='true';
+        advancedToggle.setAttribute('aria-expanded',open?'false':'true');
+        advancedPanel.hidden=open;
+      });
+    }
+
+    if(searchForm){
+      var locationButton=searchForm.querySelector('.bh-calendar-use-location');
+      if(locationButton){
+        locationButton.addEventListener('click',function(){
+          if(!navigator.geolocation)return;
+          locationButton.disabled=true;
+          locationButton.textContent='…';
+          navigator.geolocation.getCurrentPosition(function(pos){
+            var lat=searchForm.querySelector('[name="bh_lat"]');
+            var lng=searchForm.querySelector('[name="bh_lng"]');
+            if(lat)lat.value=pos.coords.latitude;
+            if(lng)lng.value=pos.coords.longitude;
+            locationButton.disabled=false;
+            locationButton.textContent='✓';
+            searchForm.submit();
+          },function(){
+            locationButton.disabled=false;
+            locationButton.textContent='⌖';
+          },{enableHighAccuracy:false,timeout:10000,maximumAge:300000});
+        });
+      }
+    }
+
+    if(!location)return;
     function applyRegion(){
       var loc=location.value||'';
       planner.querySelectorAll('.bh-planner-filter-item').forEach(function(item){

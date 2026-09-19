@@ -39,6 +39,7 @@ if ( ! function_exists( 'bubbahub_myhub_safe_require' ) ) {
 bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-groups.php', 'groups' );
 bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-planner.php', 'planner' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2.php', 'weekly planner v2' );
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-calendar-sync.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-calendar-sync.php', 'calendar sync' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2-assets.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2-assets.php', 'weekly planner assets' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php', 'my hub v2' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'profile-settings.php', 'profile settings' );

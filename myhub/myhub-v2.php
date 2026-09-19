@@ -479,6 +479,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                 </label>
 
                                 <div class="bh-myhub-child-actions">
+                                    <a class="bh-myhub-child-specialist" href="<?php echo esc_url( add_query_arg( array( 'child_id' => $child->ID ), home_url( '/support/' ) ) . '#ask-specialist' ); ?>">Ask A Specialist about <?php echo esc_html( $name ); ?></a>
                                     <a href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => 1, 'child_id' => $child->ID ), get_permalink() ) ); ?>">Edit profile</a>
                                 </div>
                             </article>

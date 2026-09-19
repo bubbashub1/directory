@@ -457,7 +457,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
   .bh-planner-mobile-day{margin-bottom:10px!important;border-radius:12px!important;overflow:hidden}
   .bh-planner-mobile-day-header{padding:11px 12px!important;font-size:15px!important}
   .bh-planner-mobile-event{margin:8px!important;padding:10px!important;border-radius:10px!important}
-  .bh-planner-mobile-event strong{font-size:14px!important;line-height:1.3!important}
+  .bh-planner-mobile-event strong{font-size:14px!important;line-height:1.3!important;overflow-wrap:anywhere;word-break:break-word}
+  .bh-planner-mobile-event,.bh-planner-mobile-event a{white-space:normal!important;overflow-wrap:anywhere;word-break:break-word}
   .bh-planner-mobile-event span,.bh-planner-mobile-event b,.bh-planner-mobile-event small{font-size:12px!important;line-height:1.35!important}
   .bh-planner-mobile-event a{display:block!important;min-height:42px;padding:10px!important;box-sizing:border-box}
   .bh-planner-actions{gap:8px!important;margin-top:14px!important;padding:12px!important}

@@ -4,3 +4,79 @@
  .bh-profile-header .bh-profile-back{display:flex;align-items:center;width:100%;padding:11px 13px;border:1px solid rgba(250,237,205,.35);border-radius:12px;font-size:12px;line-height:1.2;}
  .bh-myhub-account-settings{display:flex!important;width:100%;justify-content:center;align-items:center;margin-top:14px;}
 }
+
+/* Family profile actions: separate Child / Bump creation */
+.bh-family-profile-heading{
+  align-items:center;
+}
+.bh-family-profile-heading>div:first-child h3{margin-bottom:4px}
+.bh-family-profile-heading>div:first-child>span{
+  display:block;
+  color:#6e7b83;
+  font-size:12px;
+  font-weight:600;
+}
+.bh-family-profile-add-buttons{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.bh-family-profile-add-buttons a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:9px 15px;
+  border-radius:11px;
+  text-decoration:none;
+  font-weight:800;
+  border:1px solid transparent;
+}
+.bh-profile-add-child{
+  background:#5f9183;
+  color:#fff!important;
+}
+.bh-profile-add-bump{
+  background:#f4e8ef;
+  color:#5a3f50!important;
+  border-color:#ead5e0!important;
+}
+.bh-profile-add-child:hover,.bh-profile-add-bump:hover{filter:brightness(.97)}
+.bh-account-card-static{cursor:default}
+.bh-profile-specialist-check{
+  display:flex!important;
+  align-items:flex-start;
+  gap:12px;
+  margin-top:18px;
+  padding:14px 15px;
+  border:1px solid #dce8e3;
+  border-radius:14px;
+  background:#f7faf8;
+  cursor:pointer;
+}
+.bh-profile-specialist-check input{
+  width:19px!important;
+  height:19px;
+  flex:0 0 19px;
+  margin:2px 0 0!important;
+  accent-color:#5f9183;
+}
+.bh-profile-specialist-check span{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.bh-profile-specialist-check strong{
+  font-size:14px;
+  color:#24313a;
+}
+.bh-profile-specialist-check small{
+  color:#6e7b83;
+  font-size:12px;
+  line-height:1.45;
+}
+@media(max-width:620px){
+  .bh-family-profile-heading{align-items:flex-start}
+  .bh-family-profile-add-buttons{width:100%}
+  .bh-family-profile-add-buttons a{flex:1}
+}

@@ -321,30 +321,15 @@ function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if ( ! is_user_logged_in() ) return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
 
-    $children = bubbahub_myhub_planner_v2_child_ids();
     $rows = bubbahub_myhub_planner_v2_schedule_occurrences( 7 );
-    $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
     $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
-        // Location is selected from the Group region taxonomy.
-        // The planner search controls filter the generated timetable.
-        $matching = array();
-        foreach ( $children as $index => $child_id ) {
-            // Location and keyword are filtered by the planner search UI.
-            // Do not pre-filter this seven-day feed using older saved preferences.
-            if ( ! bubbahub_myhub_planner_v2_child_matches_group( $row['group_id'], $child_id ) ) continue;
-            $matching[] = $index + 1;
-        }
-        if ( ! $matching ) continue;
         $ts = strtotime( $row['date'] . ' ' . $row['start'] );
         if ( ! $ts ) continue;
         $end_ts = strtotime( $row['date'] . ' ' . ( $row['end'] ?: $row['start'] ) );
         $day = wp_date( 'l', $ts );
-        $row['child_numbers'] = $matching;
-        $row['is_all'] = count( $children ) > 1 && count( $matching ) === count( $children );
-        $row['indicator'] = $row['is_all'] ? 'All' : ( count( $matching ) === 1 ? 'Child ' . $matching[0] : 'Children' );
         $row['calendar_url'] = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' . rawurlencode( $row['title'] ) . '&dates=' . rawurlencode( wp_date( 'Ymd\THis', $ts ) ) . '/' . rawurlencode( wp_date( 'Ymd\THis', $end_ts ) ) . '&details=' . rawurlencode( 'Bubba Hub: ' . $row['url'] ) . '&location=' . rawurlencode( $row['venue_address'] ?: $row['venue'] );
         $by[ $day ][] = $row;
     }
@@ -365,9 +350,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
       <div class="bh-planner-search">
         <div class="bh-planner-search-row">
-          <label class="bh-planner-search-location"><span>Choose Location</span>
+          <label class="bh-planner-search-location"><span>Choose Region</span>
             <select class="bh-planner-location-select">
-              <option value="">Any location</option>
+              <option value="">All regions</option>
               <?php
               if ( taxonomy_exists( 'region' ) ) {
                   $planner_location_terms = get_terms( array( 'taxonomy' => 'region', 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
@@ -377,36 +362,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
               <?php endforeach; } ?>
             </select>
           </label>
-          <label class="bh-planner-search-keywords"><span>Search</span>
-            <input type="search" class="bh-planner-keyword-search" placeholder="Search groups, activities or tags..." autocomplete="off">
-            <div class="bh-planner-search-suggestions" hidden></div>
-          </label>
-          <label class="bh-planner-search-filter"><span>Filter</span>
-            <span class="bh-planner-toggle"><input type="checkbox" class="bh-planner-free-groups"> Free Groups</span>
-          </label>
-          <label class="bh-planner-search-filter"><span>&nbsp;</span>
-            <span class="bh-planner-toggle"><input type="checkbox" class="bh-planner-term-time"> Term Time</span>
-          </label>
-          <button type="button" class="bh-planner-search-save">Save</button>
         </div>
-        <p class="bh-planner-search-hint">Search by activity or tag, such as music, messy play, baby massage or Forest School.</p>
       </div>
-
-      <?php if ( $children ) :
-        ?>
-        <details class="bh-planner-child-filter-mobile">
-          <summary>Children <span>All · <?php echo esc_html( count( $children ) ); ?> child<?php echo count( $children ) === 1 ? '' : 'ren'; ?></span></summary>
-          <div class="bh-planner-child-options">
-            <button type="button" class="active" data-planner-child-filter="all">All</button>
-            <?php foreach ( $children as $index => $child_id ) : ?><?php $child_name = bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_name' ); $child_label = $child_name ? $child_name : 'Child ' . ( $index + 1 ); ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>"><?php echo esc_html( $child_label ); ?></button><?php endforeach; ?>
-          </div>
-        </details>
-        <div class="bh-planner-child-filter-desktop">
-          <strong>Show</strong>
-          <button type="button" class="active" data-planner-child-filter="all">All</button>
-          <?php foreach ( $children as $index => $child_id ) : ?><?php $child_name = bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_name' ); $child_label = $child_name ? $child_name : 'Child ' . ( $index + 1 ); ?><button type="button" data-planner-child-filter="<?php echo esc_attr( $index + 1 ); ?>"><?php echo esc_html( $child_label ); ?></button><?php endforeach; ?>
-        </div>
-      <?php endif; ?>
+      <div class="bh-planner-simple-note">Choose a region to see the groups running on each day.</div>
 
       <div class="bh-planner-results">
       <?php foreach ( $days as $day ) : ?><div class="bh-planner-day">
@@ -428,37 +386,13 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             if ( ! empty( $item['venue_address'] ) ) $planner_search_parts[] = $item['venue_address'];
             $planner_search_text = strtolower( wp_strip_all_tags( implode( ' ', array_map( 'strval', $planner_search_parts ) ) ) );
           ?>
-          <div class="bh-planner-item-wrap" data-planner-children="<?php echo esc_attr( implode( ',', $item['child_numbers'] ) ); ?>" data-planner-free="<?php
-              $bh_free = false;
-              foreach ( array( 'price', '_price', 'cost', 'session_price' ) as $bh_key ) {
-                  $bh_val = strtolower( trim( wp_strip_all_tags( (string) get_post_meta( (int) $item['group_id'], $bh_key, true ) ) ) );
-                  if ( '' === $bh_val || in_array( $bh_val, array( '0', '0.00', 'free', '£0', '£0.00', 'from £0' ), true ) ) { $bh_free = true; break; }
-              }
-              echo $bh_free ? '1' : '0';
-          ?>" data-planner-term-time="<?php
-              $bh_term = false;
-              foreach ( array( 'term_time', '_term_time', 'term-time', 'school_term_time', 'term_time_only' ) as $bh_key ) {
-                  $bh_val = get_post_meta( (int) $item['group_id'], $bh_key, true );
-                  if ( is_array( $bh_val ) ) $bh_val = implode( ' ', $bh_val );
-                  $bh_val = strtolower( trim( wp_strip_all_tags( (string) $bh_val ) ) );
-                  if ( in_array( $bh_val, array( '1', 'yes', 'true', 'on', 'term time', 'term-time' ), true ) ) { $bh_term = true; break; }
-              }
-              echo $bh_term ? '1' : '0';
-          ?>" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-tags="<?php
-              $planner_tag_terms = array();
-              foreach ( get_object_taxonomies( 'group' ) as $planner_tag_tax ) {
-                  $planner_terms = wp_get_post_terms( (int) $item['group_id'], $planner_tag_tax, array( 'fields' => 'names' ) );
-                  if ( ! is_wp_error( $planner_terms ) ) $planner_tag_terms = array_merge( $planner_tag_terms, $planner_terms );
-              }
-              echo esc_attr( implode( '|', array_values( array_unique( array_map( 'strval', $planner_tag_terms ) ) ) ) );
-          ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
+          <div class="bh-planner-item-wrap" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>">
             <div class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>">
               <a class="bh-planner-listing-link" href="<?php echo esc_url( $item['url'] ); ?>">
               <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
               <span class="bh-planner-item-main"><strong><?php echo esc_html( $item['title'] ); ?></strong><span class="bh-planner-location">📍 <?php echo esc_html( $item['venue'] ?: 'Location to be confirmed' ); ?></span></span>
-              <span class="bh-planner-child-indicator"><?php echo esc_html( $item['indicator'] ); ?></span>
-              </a>
-              <span class="bh-planner-calendar-wrap"><a class="bh-planner-calendar" href="<?php echo esc_url( $item['calendar_url'] ); ?>" target="_blank" rel="noopener" aria-label="Add <?php echo esc_attr( $item['title'] ); ?> to calendar">＋ Add to calendar</a><span class="bh-planner-calendar-note">Add it to your calendar and share it with family.</span></span>
+                            </a>
+              </span>
             </div>
           </div>
         <?php endforeach; else : ?><div class="bh-planner-empty">No matching sessions today.</div><?php endif; ?>
@@ -468,114 +402,45 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       </div>
 
 
+
 <style>
-.bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}.bh-planner-search-row{display:flex;gap:12px;align-items:end}.bh-planner-search-row label{flex:1;display:flex;flex-direction:column;gap:6px}.bh-planner-search-row label span{font-weight:700;font-size:13px}.bh-planner-search-row select,.bh-planner-search-row input{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}.bh-planner-search-save{min-height:44px;padding:0 20px;border:0;border-radius:10px;cursor:pointer}.bh-planner-search-save.is-saved{opacity:.8}.bh-planner-search-suggestions{position:absolute;z-index:20;background:#fff;border:1px solid #ddd;border-radius:10px;margin-top:72px;box-shadow:0 5px 20px rgba(0,0,0,.08);overflow:hidden}.bh-planner-search-suggestions button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:#fff;cursor:pointer}.bh-planner-search-hint{margin:8px 0 0;font-size:12px;opacity:.7}@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-row label{margin-bottom:10px}.bh-planner-search-save{width:100%}.bh-planner-search-suggestions{position:relative;margin-top:-5px;width:100%}}
-.bh-planner-search-filter{flex:0 0 auto;display:flex;flex-direction:column;gap:6px}.bh-planner-toggle{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-weight:600;white-space:nowrap}.bh-planner-toggle input{width:18px;height:18px}.bh-planner-search-row select,.bh-planner-search-row input,.bh-planner-toggle,.bh-planner-search-save{touch-action:manipulation}@media(max-width:700px){.bh-planner-search-row label{width:100%}.bh-planner-search-filter{width:100%}.bh-planner-toggle{width:100%;box-sizing:border-box}.bh-planner-search-save{display:block;min-height:48px;font-size:16px}}</style>
+.bh-planner-simple-note{margin:0 0 20px;padding:14px 18px;border:1px solid #e6e6e6;border-radius:14px;background:#fff;font-size:14px}
+.bh-planner-search{margin:0 0 20px;padding:18px;border:1px solid #e6e6e6;border-radius:18px;background:#fff}
+.bh-planner-search-row{display:flex;gap:12px;align-items:end}
+.bh-planner-search-location{display:flex;flex-direction:column;gap:6px;max-width:420px}
+.bh-planner-search-row label span{font-weight:700;font-size:13px}
+.bh-planner-search-row select{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-location{max-width:none}}
+</style>
+
       <script>
       document.addEventListener('DOMContentLoaded',function(){
         document.querySelectorAll('.bh-weekly-planner-v2').forEach(function(planner){
           var location=planner.querySelector('.bh-planner-location-select');
-          var input=planner.querySelector('.bh-planner-keyword-search');
-          var suggestions=planner.querySelector('.bh-planner-search-suggestions');
-          var save=planner.querySelector('.bh-planner-search-save');
-          var tags=[];
-          planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(el){
-            (el.getAttribute('data-planner-tags')||'').split('|').forEach(function(t){ t=t.trim(); if(t) tags.push(t); });
-          });
-          var freeGroups=planner.querySelector('.bh-planner-free-groups'), termTime=planner.querySelector('.bh-planner-term-time');
-          var selectedChild='all', savedKeyword='', savedLocation='';
-          try { savedKeyword=localStorage.getItem('bh_planner_keyword')||''; savedLocation=localStorage.getItem('bh_planner_location')||''; } catch(e){}
-          if(input) input.value=savedKeyword;
-          if(location) location.value=savedLocation;
-
-          function renderSuggestions(){
-            if(!suggestions||!input)return;
-            var q=input.value.toLowerCase().trim();
-            if(!q){suggestions.hidden=true;suggestions.innerHTML='';return;}
-            var seen={},matches=tags.filter(function(t){var k=t.toLowerCase();return k.indexOf(q)!==-1&&!seen[k]&&(seen[k]=true);}).slice(0,8);
-            suggestions.innerHTML=matches.map(function(t){return '<button type="button" data-suggest="'+t.replace(/"/g,'&quot;')+'">'+t+'</button>';}).join('');
-            suggestions.hidden=!matches.length;
-          }
-
-          function applyFilters(){
+          function applyRegion(){
             var loc=location?location.value:'';
-            var q=input?input.value.toLowerCase().trim():'';
-            var words=q?q.split(/\s+/).filter(Boolean):[];
-            var freeOnly=!!(freeGroups&&freeGroups.checked), termOnly=!!(termTime&&termTime.checked);
             planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(item){
-              var kids=(item.getAttribute('data-planner-children')||'').split(',').filter(Boolean);
               var locs=(item.getAttribute('data-planner-location-ids')||'').split(',').filter(Boolean);
-              var text=item.getAttribute('data-planner-search')||'';
-              var childOk=selectedChild==='all'||kids.indexOf(selectedChild)!==-1;
-              var locationOk=!loc||locs.indexOf(String(loc))!==-1;
-              var keywordOk=!words.length||words.every(function(word){return text.indexOf(word)!==-1;});
-              var freeOk=!freeOnly||item.getAttribute('data-planner-free')==='1';
-              var termOk=!termOnly||item.getAttribute('data-planner-term-time')==='1';
-              item.hidden=!(childOk&&locationOk&&keywordOk&&freeOk&&termOk);
+              item.hidden=!!loc && locs.indexOf(String(loc))===-1;
             });
             planner.querySelectorAll('.bh-planner-day').forEach(function(day){
               var items=day.querySelectorAll('.bh-planner-item-wrap');
               var visible=Array.from(items).some(function(x){return !x.hidden;});
-              day.hidden=false;
               var empty=day.querySelector('.bh-planner-live-empty');
               if(!empty){
                 empty=document.createElement('div');
                 empty.className='bh-planner-empty bh-planner-live-empty';
-                empty.textContent='No matching sessions today.';
+                empty.textContent='No groups running in this region.';
                 day.querySelector('.bh-planner-day-items').appendChild(empty);
               }
               empty.hidden=visible;
             });
           }
-
-          function lockSearch(){
-            if(input) input.disabled=false;
-            if(location) location.disabled=false;
-            if(save){save.textContent='Saved';save.classList.add('is-saved');}
-          }
-          function editSearch(){
-            if(input) input.disabled=false;
-            if(location) location.disabled=false;
-            if(save){save.textContent='Save';save.classList.remove('is-saved');}
-            if(input) input.focus();
-          }
-
-          if(input) input.addEventListener('input',function(){renderSuggestions();applyFilters();});
-          if(location) location.addEventListener('change',applyFilters);
-          if(freeGroups) freeGroups.addEventListener('change',applyFilters);
-          if(termTime) termTime.addEventListener('change',applyFilters);
-          if(suggestions) suggestions.addEventListener('click',function(e){
-            var b=e.target.closest('[data-suggest]');
-            if(!b)return;
-            input.value=b.getAttribute('data-suggest');
-            suggestions.hidden=true;
-            applyFilters();
-          });
-          if(save) save.addEventListener('click',function(){
-            if(save.classList.contains('is-saved')){editSearch();return;}
-            try{
-              localStorage.setItem('bh_planner_keyword',input?input.value:'');
-              localStorage.setItem('bh_planner_location',location?location.value:'');
-            }catch(e){}
-            lockSearch();
-            applyFilters();
-          });
-
-          planner.querySelectorAll('[data-planner-child-filter]').forEach(function(button){
-            button.addEventListener('click',function(){
-              selectedChild=button.getAttribute('data-planner-child-filter')||'all';
-              planner.querySelectorAll('[data-planner-child-filter]').forEach(function(b){
-                b.classList.toggle('active',b.getAttribute('data-planner-child-filter')===selectedChild);
-              });
-              applyFilters();
-            });
-          });
-
-          applyFilters();
-          if(savedKeyword||savedLocation) lockSearch();
+          if(location) location.addEventListener('change',applyRegion);
+          applyRegion();
         });
       });
       </script>
-    </section>
+  </section>
     <?php return ob_get_clean();
 }

@@ -286,6 +286,10 @@ function bubbahub_support_public() {
       <section class="bh-support-panel bh-support-question" id="ask-specialist">
         <div class="bh-support-section-head"><h2>Ask A Specialist</h2><p>Send your question directly to verified specialists offering support in your area based on your postcode.</p></div>
         <?php if(!empty($_GET['support_sent'])): ?><div class="bh-support-success">Thank you. Your question has been sent to relevant Bubba Hub leaders and specialists.</div><?php endif; ?>
+        <?php
+        $support_child_id = ! empty( $_GET['child_id'] ) ? absint( $_GET['child_id'] ) : 0;
+        $support_child = $support_child_id ? bubbahub_support_child_profile_data( $support_child_id ) : array();
+        ?>
         <form method="post">
           <input type="hidden" name="bh_support_action" value="ask">
           <?php wp_nonce_field('bh_support_question','bh_support_question_nonce'); ?>
@@ -296,6 +300,7 @@ function bubbahub_support_public() {
           </div>
           <p><label>YOUR EMAIL ADDRESS</label><input type="email" name="support_email" placeholder="Enter your email so specialists can reply to you..." required><small>We need your email to send the specialist's response back to you.</small></p>
           <p><label>YOUR QUESTION</label><textarea name="support_question" rows="5" placeholder="Describe what you're experiencing or ask your specific question..." required></textarea></p>
+          <?php if ( ! empty( $support_child ) ) echo bubbahub_support_child_profile_markup( $support_child ); ?>
           <button class="bh-support-button" type="submit">Send to Local Specialists</button>
         </form>
       </section>

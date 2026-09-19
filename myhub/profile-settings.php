@@ -109,10 +109,8 @@ function bubbahub_profile_handle_child_post() {
     $result = bubbahub_profile_handle_child_action();
     if ( empty( $result ) ) return;
 
-    // Child and bump add/save/delete actions always return to My Hub.
-    // Do not trust or reuse a posted/referer URL here, because the form can be
-    // opened inline from My Hub or loaded from another account page.
-    $return_to = home_url( '/my-hub/' );
+    $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
+    if ( ! $return_to ) $return_to = home_url( '/my-hub/' );
 
     $return_to = remove_query_arg( array( 'child_saved', 'child_error' ), $return_to );
     if ( ! empty( $result['success'] ) ) {
@@ -304,7 +302,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <?php wp_nonce_field( 'bh_profile_child_save', 'bh_profile_child_nonce' ); ?>
             <input type="hidden" name="bh_profile_child_action" value="save">
             <input type="hidden" name="child_id" value="<?php echo esc_attr( $child_id ); ?>">
-            <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( home_url( '/my-hub/' ) ); ?>">
+            <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( wp_unslash( wp_get_referer() ? wp_get_referer() : home_url( '/my-hub/' ) ) ); ?>">
 
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3><?php echo 'expecting' === $status ? 'About your bump' : 'About your child'; ?></h3><span>Core profile</span></div>

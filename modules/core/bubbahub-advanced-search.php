@@ -207,8 +207,8 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
     if('bubbahub_directory'!==$tag)return false;
 
     /*
-     * The Planner is now a Directory view rather than a My Hub section.
-     * Keep the directory itself public, but protect the planner data behind
+     * The Calendar is now a Directory view rather than a My Hub section.
+     * Keep the directory itself public, but protect the calendar data behind
      * WordPress authentication. The planner shortcode performs the same
      * check, while this gate also prevents its navigation/data being exposed
      * through the Directory view.
@@ -217,7 +217,7 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
     if ( 'planner' === $directory_view ) {
         if ( ! is_user_logged_in() ) {
             $login_url = wp_login_url( home_url( add_query_arg( array( 'bh_view' => 'planner' ), wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ) ) ) );
-            return '<section class="bh-directory-member-view"><div class="bh-directory-member-card"><span class="bh-directory-member-kicker">BUBBA HUB PLANNER</span><h2>Your family planner is for registered members</h2><p>Please log in or create a free Bubba Hub account to use the Planner.</p><p><a class="bh-directory-member-login" href="' . esc_url( $login_url ) . '">Log in to continue</a></p></div></section>';
+            return '<section class="bh-directory-member-view"><div class="bh-directory-member-card"><span class="bh-directory-member-kicker">BUBBA HUB CALENDAR</span><h2>Your family planner is for registered members</h2><p>Please log in or create a free Bubba Hub account to use the Calendar.</p><p><a class="bh-directory-member-login" href="' . esc_url( $login_url ) . '">Log in to continue</a></p></div></section>';
         }
 
         $planner = function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' )
@@ -229,7 +229,7 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
         <section class="bh-directory-planner-view">
             <div class="bh-directory-view-switcher" aria-label="Directory views">
                 <a class="bh-directory-view-link" href="<?php echo esc_url( remove_query_arg( array( 'bh_view', 'bh_week' ) ) ); ?>">Directory</a>
-                <span class="bh-directory-view-link is-active" aria-current="page">Planner</span>
+                <span class="bh-directory-view-link is-active" aria-current="page">Calendar</span>
             </div>
             <?php echo $planner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         </section>
@@ -260,7 +260,7 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
         </div>
         <input type="hidden" name="bh_lat" value=""><input type="hidden" name="bh_lng" value="">
       </form>
-      <div class="bh-directory-toolbar"><strong class="bh-result-count"><?php echo esc_html(number_format_i18n($q->found_posts));?> groups</strong><div class="bh-directory-toolbar-actions"><button type="button" class="bh-view-toggle" data-view="grid">Grid / Map</button><?php if ( is_user_logged_in() ) : ?><a class="bh-directory-planner-link" href="<?php echo esc_url( add_query_arg( array( "bh_view" => "planner" ), remove_query_arg( array( "bh_view", "bh_week", "bh_planner_mode" ) ) ) ); ?>">My Planner</a><?php endif; ?></div></div>
+      <div class="bh-directory-toolbar"><strong class="bh-result-count"><?php echo esc_html(number_format_i18n($q->found_posts));?> groups</strong><div class="bh-directory-toolbar-actions"><button type="button" class="bh-view-toggle" data-view="grid">Grid / Map</button><span class="bh-directory-view-link is-active" aria-current="page">Directory</span><?php if ( is_user_logged_in() ) : ?><a class="bh-directory-view-link" href="<?php echo esc_url( add_query_arg( array( "bh_view" => "planner" ), remove_query_arg( array( "bh_view", "bh_week", "bh_planner_mode" ) ) ) ); ?>">Calendar</a><?php else : ?><a class="bh-directory-view-link" href="<?php echo esc_url( wp_login_url( add_query_arg( array( "bh_view" => "planner" ), remove_query_arg( array( "bh_view", "bh_week", "bh_planner_mode" ) ) ) ) ); ?>">Calendar</a><?php endif; ?></div></div>
       <div class="bh-directory-content"><div class="bh-directory-results"><?php echo bubbahub_directory_render_cards($q);?><?php echo bubbahub_directory_render_pagination($q);?></div><div class="bh-directory-map" aria-label="Group map"></div></div>
     </div>
     <?php return ob_get_clean();

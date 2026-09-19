@@ -361,15 +361,6 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <a href="<?php echo esc_url($next); ?>">Next →</a>
       </div>
 
-      <div class="bh-planner-subscribe">
-        <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">Subscribe to Calendar</a>
-        <span>Add the Bubba Hub planner to your phone calendar and keep upcoming sessions together.</span>
-      </div>
-
-      <div class="bh-planner-print-row">
-        <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Planner</button>
-      </div>
-
       <div class="bh-planner-search">
         <label class="bh-planner-search-location"><span>Choose Region</span>
           <select class="bh-planner-location-select">
@@ -411,6 +402,11 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <?php endforeach; else: ?><div class="bh-planner-empty">No groups</div><?php endif; ?></div>
         </div><?php endforeach; ?>
       </div>
+
+      <div class="bh-planner-actions">
+        <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">Subscribe to Calendar</a>
+        <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Planner</button>
+      </div>
 <style>
 .bh-planner-search{margin:0 0 18px;padding:16px;border:1px solid #e6e6e6;border-radius:16px;background:#fff}
 .bh-planner-search-row{display:flex;gap:12px;align-items:end}
@@ -422,7 +418,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-planner-calendar-toolbar a{padding:8px 12px;border:1px solid #ddd;border-radius:9px;background:#fff;text-decoration:none!important;font-size:13px}
 .bh-planner-calendar-toolbar strong{text-align:center;font-size:15px}
 .bh-planner-today{font-weight:700}
-.bh-planner-print-row{margin:0 0 18px;text-align:right}.bh-planner-print-button{padding:10px 16px;border:1px solid #ddd;border-radius:9px;background:#fff;font-weight:700;cursor:pointer}.bh-planner-subscribe{display:flex;align-items:center;gap:12px;margin:0 0 18px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:14px;background:#fff}.bh-planner-subscribe-button{display:inline-block;padding:10px 16px;border-radius:9px;text-decoration:none!important;font-weight:700;border:1px solid #ddd;background:#fff;white-space:nowrap}.bh-planner-subscribe span{font-size:13px;color:#666}.bh-planner-search{margin:0 0 18px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:14px;background:#fff}
+.bh-planner-actions{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 0;padding:16px;border:1px solid #e6e6e6;border-radius:14px;background:#fff}.bh-planner-print-button,.bh-planner-subscribe-button{display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;border:1px solid #ddd;border-radius:9px;background:#fff;font-weight:700;cursor:pointer;text-decoration:none!important;white-space:nowrap}.bh-planner-search{margin:0 0 18px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:14px;background:#fff}
 .bh-planner-search-location{display:flex;flex-direction:column;gap:6px;max-width:420px}.bh-planner-search-row label span,.bh-planner-search-location>span{font-weight:700;font-size:13px}
 .bh-planner-search-row select,.bh-planner-search select{min-height:42px;padding:9px 12px;border:1px solid #ddd;border-radius:9px;background:#fff}
 .bh-planner-timetable-desktop{border:1px solid #d9d9d9;border-radius:12px;overflow:auto;background:#fff}
@@ -437,7 +433,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-timetable-event strong{font-size:12px;line-height:1.2}.bh-timetable-event span{font-size:10px;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-timetable-event b{font-size:10px;line-height:1.2;margin-top:3px}.bh-timetable-event small{font-size:9px;line-height:1.2;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-calendar-link{display:block!important;margin:3px 0 0!important;padding:4px 5px!important;border-radius:5px!important;background:#fff!important;border:1px solid #ddd!important;font-size:9px!important;line-height:1.1!important;text-align:center;text-decoration:none!important;color:inherit!important}
 .bh-timetable-empty{padding:12px;text-align:center;color:#aaa;font-size:11px}
 .bh-planner-mobile{display:none}.bh-weekly-planner-v2{padding-bottom:50px}.bh-planner-mobile-day{border:1px solid #e4e4e4;border-radius:12px;background:#fff;margin:0 0 9px;overflow:hidden}.bh-planner-mobile-day-heading{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #eee}.bh-planner-mobile-day-heading>span:first-child{display:flex;flex-direction:column;gap:2px}.bh-planner-mobile-day-heading strong{font-size:15px}.bh-planner-mobile-day-heading small{font-size:11px;color:#777}.bh-planner-mobile-count{min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f1f1;font-size:11px;font-weight:700}.bh-planner-mobile-items{padding:10px;display:grid;gap:9px}.bh-planner-item-wrap{margin:0}.bh-planner-item{height:100%;border:1px solid #e7e7e7;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}.bh-planner-mobile-calendar-link{display:block;margin:0 10px 10px;padding:7px 10px;border:1px solid #ddd;border-radius:8px;text-align:center;text-decoration:none!important;font-size:12px;font-weight:700}.bh-planner-listing-link{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none!important}.bh-planner-thumb{width:58px;height:58px;min-width:58px;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f3f3}.bh-planner-thumb img{width:100%;height:100%;object-fit:cover;display:block}.bh-planner-placeholder{font-size:22px;opacity:.45}.bh-planner-item-main{display:flex;flex-direction:column;min-width:0;line-height:1.3}.bh-planner-item-main strong{font-size:14px;line-height:1.25}.bh-planner-session-label{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-time{font-size:12px;font-weight:700;margin-top:2px}.bh-planner-location{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media print{body *{visibility:hidden!important}.bh-weekly-planner-v2,.bh-weekly-planner-v2 *{visibility:visible!important}.bh-weekly-planner-v2{position:static!important;width:100%!important;padding:0!important}.bh-planner-calendar-toolbar a,.bh-planner-search,.bh-planner-subscribe,.bh-planner-print-row,.bh-weekly-planner-preferences{display:none!important}.bh-planner-timetable-desktop{display:block!important;overflow:visible!important;border:1px solid #999!important}.bh-timetable-body{min-width:0!important}.bh-timetable-header{min-width:0!important}.bh-timetable-event{break-inside:avoid}.bh-planner-mobile{display:none!important}}@media(max-width:700px){.bh-planner-subscribe{align-items:stretch;flex-direction:column}.bh-planner-subscribe-button{text-align:center}.bh-planner-calendar-toolbar{grid-template-columns:1fr 1fr;}.bh-planner-calendar-toolbar strong{grid-column:1/-1;grid-row:1;order:-1;margin-bottom:4px}.bh-planner-calendar-toolbar a{ text-align:center }.bh-planner-search-location{max-width:none}.bh-timetable-header,.bh-timetable-body{min-width:0}.bh-planner-timetable-desktop{display:none}.bh-planner-mobile{display:block}}
+@media print{body *{visibility:hidden!important}.bh-weekly-planner-v2,.bh-weekly-planner-v2 *{visibility:visible!important}.bh-weekly-planner-v2{position:static!important;width:100%!important;padding:0!important}.bh-planner-calendar-toolbar a,.bh-planner-search,.bh-planner-actions,.bh-weekly-planner-preferences{display:none!important}.bh-planner-timetable-desktop{display:block!important;overflow:visible!important;border:1px solid #999!important}.bh-timetable-body{min-width:0!important}.bh-timetable-header{min-width:0!important}.bh-timetable-event{break-inside:avoid}.bh-planner-mobile{display:none!important}}@media(max-width:700px){.bh-planner-actions{flex-direction:row;flex-wrap:wrap}.bh-planner-subscribe-button,.bh-planner-print-button{flex:1 1 0;min-width:0}.bh-planner-calendar-toolbar{grid-template-columns:1fr 1fr;}.bh-planner-calendar-toolbar strong{grid-column:1/-1;grid-row:1;order:-1;margin-bottom:4px}.bh-planner-calendar-toolbar a{ text-align:center }.bh-planner-search-location{max-width:none}.bh-timetable-header,.bh-timetable-body{min-width:0}.bh-planner-timetable-desktop{display:none}.bh-planner-mobile{display:block}}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',function(){

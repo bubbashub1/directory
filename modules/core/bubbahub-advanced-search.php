@@ -205,6 +205,37 @@ function bubbahub_advanced_search_ajax(){
 }
 function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
     if('bubbahub_directory'!==$tag)return false;
+
+    /*
+     * The Planner is now a Directory view rather than a My Hub section.
+     * Keep the directory itself public, but protect the planner data behind
+     * WordPress authentication. The planner shortcode performs the same
+     * check, while this gate also prevents its navigation/data being exposed
+     * through the Directory view.
+     */
+    $directory_view = isset($_GET['bh_view']) ? sanitize_key(wp_unslash($_GET['bh_view'])) : 'grid';
+    if ( 'planner' === $directory_view ) {
+        if ( ! is_user_logged_in() ) {
+            $login_url = wp_login_url( home_url( add_query_arg( array( 'bh_view' => 'planner' ), wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ) ) ) );
+            return '<section class="bh-directory-member-view"><div class="bh-directory-member-card"><span class="bh-directory-member-kicker">BUBBA HUB PLANNER</span><h2>Your family planner is for registered members</h2><p>Please log in or create a free Bubba Hub account to use the Planner.</p><p><a class="bh-directory-member-login" href="' . esc_url( $login_url ) . '">Log in to continue</a></p></div></section>';
+        }
+
+        $planner = function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' )
+            ? bubbahub_myhub_weekly_planner_v2_shortcode()
+            : '<div class="bh-directory-member-card"><h2>Planner unavailable</h2><p>Please try again shortly.</p></div>';
+
+        ob_start();
+        ?>
+        <section class="bh-directory-planner-view">
+            <div class="bh-directory-view-switcher" aria-label="Directory views">
+                <a class="bh-directory-view-link" href="<?php echo esc_url( remove_query_arg( array( 'bh_view', 'bh_week' ) ) ); ?>">Directory</a>
+                <span class="bh-directory-view-link is-active" aria-current="page">Planner</span>
+            </div>
+            <?php echo $planner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
     $f=bubbahub_advanced_search_filters_from_request($_GET);
     $q=bubbahub_advanced_search_query($f,12);
     $regions=get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>0));$towns=get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>!empty($f['region']) ? (int)term_exists($f['region'],'region') : 0));$cat_tax=bubbahub_advanced_search_category_tax();$categories=$cat_tax?get_terms(array('taxonomy'=>$cat_tax,'hide_empty'=>false)):array();$acf=bubbahub_advanced_search_acf_fields();

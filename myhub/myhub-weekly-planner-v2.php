@@ -294,8 +294,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $by = array_fill_keys( $days, array() );
 
     foreach ( $rows as $row ) {
-        // Location is now controlled by the saved Location taxonomy preference.
-        // The old Town/City + radius filter must not remove planner sessions.
+        // Location is selected from the Group region taxonomy.
+        // The planner search controls filter the generated timetable.
         $matching = array();
         foreach ( $children as $index => $child_id ) {
             // Location and keyword are filtered by the planner search UI.
@@ -335,8 +335,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             <select class="bh-planner-location-select">
               <option value="">Any location</option>
               <?php
-              if ( taxonomy_exists( 'location' ) ) {
-                  $planner_location_terms = get_terms( array( 'taxonomy' => 'location', 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
+              if ( taxonomy_exists( 'region' ) ) {
+                  $planner_location_terms = get_terms( array( 'taxonomy' => 'region', 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
                   if ( ! is_wp_error( $planner_location_terms ) ) foreach ( $planner_location_terms as $planner_location_term ) :
               ?>
                 <option value="<?php echo esc_attr( $planner_location_term->term_id ); ?>"><?php echo esc_html( $planner_location_term->name ); ?></option>
@@ -381,7 +381,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <?php
-            $planner_location_ids = taxonomy_exists( 'location' ) ? wp_get_post_terms( (int) $item['group_id'], 'location', array( 'fields' => 'ids' ) ) : array();
+            $planner_location_ids = taxonomy_exists( 'region' ) ? wp_get_post_terms( (int) $item['group_id'], 'region', array( 'fields' => 'ids' ) ) : array();
             if ( is_wp_error( $planner_location_ids ) ) $planner_location_ids = array();
             $planner_location_ids = array_values( array_unique( array_map( 'absint', $planner_location_ids ) ) );
             $planner_search_parts = array( $item['title'] );

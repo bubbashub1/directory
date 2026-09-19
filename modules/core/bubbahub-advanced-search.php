@@ -260,7 +260,7 @@ function bubbahub_advanced_search_shortcode($output,$tag,$attr,$m){
         </div>
         <input type="hidden" name="bh_lat" value=""><input type="hidden" name="bh_lng" value="">
       </form>
-      <div class="bh-directory-toolbar"><strong class="bh-result-count"><?php echo esc_html(number_format_i18n($q->found_posts));?> groups</strong><button type="button" class="bh-view-toggle" data-view="grid">Grid / Map</button></div>
+      <div class="bh-directory-toolbar"><strong class="bh-result-count"><?php echo esc_html(number_format_i18n($q->found_posts));?> groups</strong><div class="bh-directory-toolbar-actions"><button type="button" class="bh-view-toggle" data-view="grid">Grid / Map</button><?php if ( is_user_logged_in() ) : ?><a class="bh-directory-planner-link" href="<?php echo esc_url( add_query_arg( array( "bh_view" => "planner" ), remove_query_arg( array( "bh_view", "bh_week", "bh_planner_mode" ) ) ) ); ?>">My Planner</a><?php endif; ?></div></div>
       <div class="bh-directory-content"><div class="bh-directory-results"><?php echo bubbahub_directory_render_cards($q);?><?php echo bubbahub_directory_render_pagination($q);?></div><div class="bh-directory-map" aria-label="Group map"></div></div>
     </div>
     <?php return ob_get_clean();

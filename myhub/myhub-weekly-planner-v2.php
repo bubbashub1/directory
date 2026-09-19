@@ -404,7 +404,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       </div>
 
       <div class="bh-planner-actions">
-        <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">Subscribe to Calendar</a>
+        <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">📅 Subscribe to Calendar</a>
         <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Planner</button>
       </div>
 <style>

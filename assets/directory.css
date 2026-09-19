@@ -181,3 +181,63 @@
   .bh-directory-view-link{flex:1}
   .bh-directory-member-card{padding:24px 18px}
 }
+
+/* Bubba Hub Directory / Calendar segmented navigation */
+.bh-directory .bh-directory-toolbar-actions{
+  display:flex;
+  align-items:center;
+  gap:0;
+  flex-wrap:nowrap;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-view-toggle{
+  margin-right:10px;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link{
+  min-width:116px;
+  min-height:42px;
+  padding:9px 16px;
+  border:1px solid #d9e7e2;
+  border-right:0;
+  border-radius:0;
+  background:#fff;
+  color:#3c4043;
+  box-shadow:none;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link:first-of-type{
+  border-radius:13px 0 0 13px;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link:last-child{
+  border-right:1px solid #d9e7e2;
+  border-radius:0 13px 13px 0;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link.is-active{
+  background:#5f9183;
+  border-color:#5f9183;
+  color:#fff!important;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link:hover{
+  background:#eef5f2;
+  color:#27303a;
+}
+.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link.is-active:hover{
+  background:#5f9183;
+  color:#fff!important;
+}
+@media(max-width:600px){
+  .bh-directory .bh-directory-toolbar-actions{
+    display:grid;
+    grid-template-columns:auto 1fr 1fr;
+    width:100%;
+    gap:0;
+  }
+  .bh-directory .bh-directory-toolbar-actions .bh-view-toggle{
+    width:100%;
+    margin-right:8px;
+  }
+  .bh-directory .bh-directory-toolbar-actions .bh-directory-view-link{
+    width:100%;
+    min-width:0;
+    padding:9px 8px;
+    font-size:12px;
+  }
+}

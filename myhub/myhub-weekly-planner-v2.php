@@ -30,9 +30,17 @@ function bubbahub_myhub_planner_v2_child_ids() {
 
 function bubbahub_myhub_planner_v2_weekly_schedule_rows( $post_id ) {
     $value = function_exists( 'get_field' ) ? get_field( 'weekly_schedule', $post_id, false ) : get_post_meta( $post_id, 'weekly_schedule', true );
+
+    // ACF repeater values can arrive as an array, JSON, or a serialized PHP array.
+    // Normalise the value before reading the day/session rows.
     if ( is_string( $value ) ) {
-        $decoded = json_decode( $value, true );
-        if ( JSON_ERROR_NONE === json_last_error() ) $value = $decoded;
+        $unserialized = maybe_unserialize( $value );
+        if ( is_array( $unserialized ) ) {
+            $value = $unserialized;
+        } else {
+            $decoded = json_decode( $value, true );
+            if ( JSON_ERROR_NONE === json_last_error() ) $value = $decoded;
+        }
     }
     if ( ! is_array( $value ) ) return array();
 
@@ -318,6 +326,25 @@ function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
     return true;
 }
 
+function bubbahub_myhub_planner_v2_region_ids( $group_id ) {
+    $ids = array();
+
+    // Prefer the region assigned directly to the group.
+    if ( taxonomy_exists( 'region' ) ) {
+        $terms = wp_get_post_terms( (int) $group_id, 'region', array( 'fields' => 'ids' ) );
+        if ( ! is_wp_error( $terms ) ) $ids = array_merge( $ids, array_map( 'absint', (array) $terms ) );
+    }
+
+    // Some listings inherit their region from the linked venue, so include that too.
+    $venue_id = function_exists( 'bubbahub_group_venue_id' ) ? absint( bubbahub_group_venue_id( $group_id ) ) : 0;
+    if ( $venue_id && taxonomy_exists( 'region' ) ) {
+        $terms = wp_get_post_terms( $venue_id, 'region', array( 'fields' => 'ids' ) );
+        if ( ! is_wp_error( $terms ) ) $ids = array_merge( $ids, array_map( 'absint', (array) $terms ) );
+    }
+
+    return array_values( array_unique( array_filter( $ids ) ) );
+}
+
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if ( ! is_user_logged_in() ) return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
 
@@ -373,9 +400,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <?php
-            $planner_location_ids = taxonomy_exists( 'region' ) ? wp_get_post_terms( (int) $item['group_id'], 'region', array( 'fields' => 'ids' ) ) : array();
-            if ( is_wp_error( $planner_location_ids ) ) $planner_location_ids = array();
-            $planner_location_ids = array_values( array_unique( array_map( 'absint', $planner_location_ids ) ) );
+            $planner_location_ids = bubbahub_myhub_planner_v2_region_ids( (int) $item['group_id'] );
             $planner_search_parts = array( $item['title'] );
             $planner_search_parts[] = get_post_field( 'post_content', (int) $item['group_id'] );
             foreach ( get_object_taxonomies( get_post_type( (int) $item['group_id'] ) ) as $planner_tax_name ) {

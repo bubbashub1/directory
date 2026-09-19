@@ -229,3 +229,60 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-myhub-child-select{margin-top:10px;font-size:12px;line-height:1.3;align-items:flex-start;}
  .bh-myhub-child-select input{margin-top:2px;flex:0 0 auto;}
 }
+
+
+/* Child carousel controls sit beneath the card viewport. */
+.bh-myhub-family-carousel{
+ display:block;
+}
+.bh-myhub-family-viewport{
+ width:100%;
+ min-width:0;
+ overflow:hidden;
+}
+.bh-myhub-family-carousel .bh-myhub-family-grid{
+ width:100%;
+}
+.bh-myhub-family-carousel-controls{
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ gap:10px;
+ margin-top:10px;
+}
+.bh-myhub-family-carousel-controls .bh-myhub-carousel-arrow{
+ flex:0 0 36px;
+ width:36px;
+ height:36px;
+ font-size:23px;
+}
+.bh-myhub-child-actions .bh-myhub-edit-profile{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:5px;
+ font-weight:800;
+ text-decoration:none;
+}
+.bh-myhub-edit-profile span{
+ font-size:16px;
+ line-height:1;
+}
+@media(max-width:620px){
+ .bh-myhub-family-carousel-controls{
+   margin-top:8px;
+   gap:8px;
+ }
+ .bh-myhub-family-carousel-controls .bh-myhub-carousel-arrow{
+   flex-basis:32px;
+   width:32px;
+   height:32px;
+   font-size:21px;
+ }
+ .bh-myhub-child-actions{
+   align-items:flex-end;
+ }
+ .bh-myhub-child-actions .bh-myhub-edit-profile{
+   margin-left:auto;
+ }
+}

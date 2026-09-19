@@ -114,3 +114,70 @@
 /* Advanced Search: keep labels accessible without adding visible overlay/title text. */
 .bh-directory .bh-search-form label.screen-reader-text{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
 .bh-directory .bh-advanced-search .bh-filter-title{display:none!important;}
+
+
+/* Registered-member Planner view */
+.bh-directory-toolbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bh-directory-planner-link,
+.bh-directory-view-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:8px 14px;
+  border:1px solid #dfe8e5;
+  border-radius:12px;
+  background:#fbfdfc;
+  color:var(--bh-text);
+  text-decoration:none;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  box-shadow:0 2px 8px rgba(39,48,58,.035);
+}
+.bh-directory-planner-link:hover,
+.bh-directory-view-link:hover{background:#eef5f2;border-color:#cbdcd7}
+.bh-directory-planner-view{width:100%}
+.bh-directory-view-switcher{display:flex;justify-content:flex-end;gap:8px;margin:0 0 12px}
+.bh-directory-view-link.is-active{background:#eef5f2;border-color:#c6ddd6}
+.bh-directory-member-view{display:flex;justify-content:center;padding:35px 12px}
+.bh-directory-member-card{
+  width:min(620px,100%);
+  padding:30px;
+  border:1px solid #dfe8e5;
+  border-radius:20px;
+  background:linear-gradient(180deg,#fbfdfc 0%,#f4f9f7 100%);
+  box-shadow:0 6px 24px rgba(39,48,58,.06);
+  text-align:center;
+}
+.bh-directory-member-kicker{
+  display:block;
+  margin-bottom:7px;
+  color:#6a8f87;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.bh-directory-member-card h2{margin:0 0 8px;font-size:25px;line-height:1.2}
+.bh-directory-member-card p{margin:8px 0;color:var(--bh-muted)}
+.bh-directory-member-login{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:46px;
+  padding:10px 18px;
+  border-radius:14px;
+  background:#f28b7b;
+  color:#fff!important;
+  text-decoration:none!important;
+  font-weight:800;
+  box-shadow:0 3px 10px rgba(39,48,58,.07);
+}
+@media(max-width:600px){
+  .bh-directory-toolbar-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .bh-directory-toolbar-actions>*{width:100%;text-align:center}
+  .bh-directory-view-switcher{justify-content:stretch}
+  .bh-directory-view-link{flex:1}
+  .bh-directory-member-card{padding:24px 18px}
+}

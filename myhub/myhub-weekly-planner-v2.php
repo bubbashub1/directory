@@ -334,7 +334,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
     if ( $calendar_filter_active && function_exists('bubbahub_advanced_search_query') ) {
         $calendar_query = bubbahub_advanced_search_query($calendar_filters, 250);
-        $calendar_ids = $calendar_query instanceof WP_Query ? array_map('absint', (array) $calendar_query->posts) : array();
+        $calendar_ids = $calendar_query instanceof WP_Query ? array_map('absint', wp_list_pluck((array) $calendar_query->posts, 'ID')) : array();
 
         $rows = array_values(array_filter($rows, function($row) use ($calendar_ids, $calendar_filters) {
             if ( ! in_array(absint($row['group_id'] ?? 0), $calendar_ids, true) ) return false;

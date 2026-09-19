@@ -418,12 +418,14 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                             $status = bubbahub_myhub_v3_child_field( $child->ID, 'child_status', 'born' );
                             $dob    = bubbahub_myhub_v3_child_field( $child->ID, 'child_date_of_birth' );
                             $due    = bubbahub_myhub_v3_child_field( $child->ID, 'child_due_date' );
+                            $avatar  = bubbahub_myhub_v3_child_field( $child->ID, 'avatar_url' );
+                            $gender  = bubbahub_myhub_v3_child_field( $child->ID, 'child_gender' );
                             $is_expecting = ( 'expecting' === sanitize_key( $status ) && ! empty( $due ) );
                             $initial = function_exists( 'mb_substr' ) ? mb_substr( (string) $name, 0, 1 ) : substr( (string) $name, 0, 1 );
                             ?>
                             <article class="bh-myhub-child-card">
                                 <div class="bh-myhub-child-top">
-                                    <div class="bh-myhub-avatar"><?php echo esc_html( strtoupper( $initial ) ); ?></div>
+                                    <div class="bh-myhub-avatar"><?php if ( $avatar ) : ?><img src="<?php echo esc_url( $avatar ); ?>" alt="<?php echo esc_attr( $name ); ?>"><?php else : ?><?php echo esc_html( strtoupper( $initial ) ); ?><?php endif; ?></div>
                                     <div>
                                         <h3><?php echo esc_html( $name ); ?></h3>
                                         <?php if ( $is_expecting ) : ?>

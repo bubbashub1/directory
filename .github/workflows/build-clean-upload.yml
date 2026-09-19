@@ -28,12 +28,14 @@ jobs:
 
           unzip -t bubbahub-directory-wordpress-ready.zip
 
-          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/directory.php'
-          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/modules/core/bubbahub-advanced-search.php'
-          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/myhub/myhub-v2.php'
-          unzip -l bubbahub-directory-wordpress-ready.zip | grep -F 'directory/myhub/myhub-weekly-planner-v2.php'
+          unzip -l bubbahub-directory-wordpress-ready.zip > zip-listing.txt
 
-          if unzip -l bubbahub-directory-wordpress-ready.zip | grep -q '^.* directory/.github/'; then
+          grep -F 'directory/directory.php' zip-listing.txt
+          grep -F 'directory/modules/core/bubbahub-advanced-search.php' zip-listing.txt
+          grep -F 'directory/myhub/myhub-v2.php' zip-listing.txt
+          grep -F 'directory/myhub/myhub-weekly-planner-v2.php' zip-listing.txt
+
+          if grep -q 'directory/.github/' zip-listing.txt; then
             echo 'ERROR: .github files were included in the deployment ZIP'
             exit 1
           fi

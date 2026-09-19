@@ -109,8 +109,10 @@ function bubbahub_profile_handle_child_post() {
     $result = bubbahub_profile_handle_child_action();
     if ( empty( $result ) ) return;
 
-    $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
-    if ( ! $return_to ) $return_to = home_url( '/my-hub/' );
+    // Child and bump add/save/delete actions always return to My Hub.
+    // Do not trust or reuse a posted/referer URL here, because the form can be
+    // opened inline from My Hub or loaded from another account page.
+    $return_to = home_url( '/my-hub/' );
 
     $return_to = remove_query_arg( array( 'child_saved', 'child_error' ), $return_to );
     if ( ! empty( $result['success'] ) ) {

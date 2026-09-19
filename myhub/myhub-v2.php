@@ -497,12 +497,12 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 </div>
             </section>
 
-            <section class="bh-myhub-section">
+            <section class="bh-myhub-section bh-myhub-your-groups-section">
                 <div class="bh-myhub-section-heading">
-                    <div><div class="bh-myhub-kicker">YOUR LOCAL ACTIVITIES</div><h2>Your Groups</h2><p>Recently viewed, favourites and visited groups.</p></div>
+                    <div><div class="bh-myhub-kicker">YOUR LOCAL ACTIVITIES</div><h2>Your Groups</h2><p>Saved, recently viewed, visited and suggested groups — all together in one place.</p></div>
                 </div>
-                <div class="bh-myhub-groups-row">
-                    <?php foreach ( array( 'recently_viewed' => 'Recently Viewed', 'favourite' => '♡ Fav Groups', 'visited' => '✓ Visited Groups' ) as $type => $title ) : ?>
+                <div class="bh-myhub-groups-row bh-myhub-your-groups-row">
+                    <?php foreach ( array( 'favourite' => '♡ Saved Groups', 'recently_viewed' => 'Recently Viewed', 'visited' => '✓ Visited Groups', 'suggested' => '✨ Suggested Groups' ) as $type => $title ) : ?>
                         <div class="bh-myhub-group-column">
                             <div class="bh-myhub-group-column-head">
                                 <h3><?php echo esc_html( $title ); ?></h3>
@@ -515,14 +515,6 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
             </section>
 
             <?php echo bubbahub_myhub_v3_support_requests( $uid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-
-            <section class="bh-myhub-section bh-myhub-suggested-section">
-                <div class="bh-myhub-section-heading">
-                    <div><div class="bh-myhub-kicker">PERSONALISED FOR YOUR FAMILY</div><h2>Suggested Groups For Your Family</h2><p>Matched using your saved preferences and selected children's age ranges.</p></div>
-                </div>
-                <div class="bh-myhub-group-widget bh-myhub-suggested-widget" data-myhub-group-widget data-group-type="suggested" data-view-more="1"><div class="bh-myhub-groups-loading">Building your suggestions…</div></div>
-                <div class="bh-myhub-suggested-more"><a class="bh-myhub-button secondary" href="<?php echo esc_url( home_url( '/my-groups/?group_view=suggested' ) ); ?>">View all suggested groups →</a></div>
-            </section>
 
 
         </div>

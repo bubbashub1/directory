@@ -99,6 +99,23 @@
       "allow_in_bindings": 0
     },
     {
+      "key": "field_bh_ask_specialist",
+      "label": "Ask A Specialist",
+      "name": "ask_specialist",
+      "aria-label": "",
+      "type": "true_false",
+      "instructions": "Tick if you would like to ask a specialist a question about this child or baby if expecting.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "100", "class": "", "id": "" },
+      "message": "Ask A Specialist a question about this child (baby if expecting)",
+      "default_value": 0,
+      "ui": 1,
+      "ui_on_text": "Yes",
+      "ui_off_text": "No",
+      "allow_in_bindings": 0
+    },
+    {
       "key": "field_bh_ofsted_rating",
       "label": "Ofsted Rating",
       "name": "ofsted_rating",

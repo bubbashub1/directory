@@ -302,7 +302,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <?php wp_nonce_field( 'bh_profile_child_save', 'bh_profile_child_nonce' ); ?>
             <input type="hidden" name="bh_profile_child_action" value="save">
             <input type="hidden" name="child_id" value="<?php echo esc_attr( $child_id ); ?>">
-            <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( wp_unslash( wp_get_referer() ? wp_get_referer() : home_url( '/my-hub/' ) ) ); ?>">
+            <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( home_url( '/my-hub/' ) ); ?>">
 
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3><?php echo 'expecting' === $status ? 'About your bump' : 'About your child'; ?></h3><span>Core profile</span></div>

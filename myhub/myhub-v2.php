@@ -195,100 +195,6 @@ if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
     }
 }
 
-if ( ! function_exists( 'bubbahub_myhub_v3_support_requests' ) ) {
-    function bubbahub_myhub_v3_support_requests( $uid ) {
-        $uid = absint( $uid );
-        if ( ! $uid || ! post_type_exists( 'bh_support_request' ) ) {
-            return '';
-        }
-
-        $requests = get_posts( array(
-            'post_type'      => 'bh_support_request',
-            'post_status'    => 'publish',
-            'author'         => $uid,
-            'posts_per_page' => 30,
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-            'no_found_rows'  => true,
-        ) );
-
-        $support_url = home_url( '/support/' );
-        ob_start();
-        ?>
-        <section class="bh-myhub-section bh-myhub-support-section">
-            <div class="bh-myhub-section-heading">
-                <div>
-                    <div class="bh-myhub-kicker">SUPPORT &amp; GUIDANCE</div>
-                    <h2>My Support Requests</h2>
-                    <p>Keep track of questions you've sent to Bubba Hub specialists and any replies you've received.</p>
-                </div>
-                <a class="bh-myhub-button" href="<?php echo esc_url( $support_url . '#ask-specialist' ); ?>">＋ Ask A Specialist</a>
-            </div>
-
-            <?php if ( ! $requests ) : ?>
-                <div class="bh-myhub-support-empty">
-                    <div class="bh-myhub-support-empty-icon">✉</div>
-                    <div>
-                        <h3>No support requests yet</h3>
-                        <p>When you use <strong>Ask A Specialist</strong> in Support &amp; Guidance, your requests and replies will appear here.</p>
-                        <a class="bh-myhub-button secondary" href="<?php echo esc_url( $support_url . '#ask-specialist' ); ?>">Ask A Specialist</a>
-                    </div>
-                </div>
-            <?php else : ?>
-                <div class="bh-myhub-support-list">
-                    <?php foreach ( $requests as $request ) :
-                        $request_id = absint( $request->ID );
-                        $topic      = sanitize_text_field( get_post_meta( $request_id, '_bh_support_topic', true ) );
-                        $status     = sanitize_key( get_post_meta( $request_id, '_bh_support_status', true ) );
-                        $status_label = 'replied' === $status ? 'Reply received' : 'Sent';
-                        $replies    = get_post_meta( $request_id, '_bh_support_replies', true );
-                        $replies    = is_array( $replies ) ? $replies : array();
-                        $subject    = $topic ? 'Support: ' . $topic : get_the_title( $request_id );
-                        ?>
-                        <article class="bh-myhub-support-thread <?php echo $replies ? 'has-replies' : ''; ?>">
-                            <div class="bh-myhub-support-thread-head">
-                                <div class="bh-myhub-support-mail-icon" aria-hidden="true">✉</div>
-                                <div class="bh-myhub-support-thread-title">
-                                    <h3><?php echo esc_html( $subject ); ?></h3>
-                                    <div class="bh-myhub-support-thread-meta">
-                                        <span>To: Bubba Hub Support</span>
-                                        <span><?php echo esc_html( get_the_date( 'j M Y, H:i', $request_id ) ); ?></span>
-                                    </div>
-                                </div>
-                                <span class="bh-myhub-support-status <?php echo $replies ? 'is-replied' : ''; ?>"><?php echo esc_html( $status_label ); ?></span>
-                            </div>
-
-                            <div class="bh-myhub-support-message bh-myhub-support-message-user">
-                                <div class="bh-myhub-support-message-head">
-                                    <strong>From: You</strong>
-                                    <time datetime="<?php echo esc_attr( get_post_time( 'c', true, $request_id ) ); ?>"><?php echo esc_html( get_the_date( 'j M Y, H:i', $request_id ) ); ?></time>
-                                </div>
-                                <div class="bh-myhub-support-message-body"><?php echo wpautop( esc_html( get_post_field( 'post_content', $request_id ) ) ); ?></div>
-                            </div>
-
-                            <?php foreach ( $replies as $reply ) :
-                                $reply_name = ! empty( $reply['name'] ) ? sanitize_text_field( $reply['name'] ) : 'Bubba Hub Specialist';
-                                $reply_text = isset( $reply['reply'] ) ? (string) $reply['reply'] : '';
-                                $reply_time = ! empty( $reply['time'] ) ? $reply['time'] : '';
-                                ?>
-                                <div class="bh-myhub-support-message bh-myhub-support-message-reply">
-                                    <div class="bh-myhub-support-message-head">
-                                        <strong>From: <?php echo esc_html( $reply_name ); ?></strong>
-                                        <?php if ( $reply_time ) : ?><time datetime="<?php echo esc_attr( $reply_time ); ?>"><?php echo esc_html( wp_date( 'j M Y, H:i', strtotime( $reply_time ) ) ); ?></time><?php endif; ?>
-                                    </div>
-                                    <div class="bh-myhub-support-message-body"><?php echo wpautop( esc_html( $reply_text ) ); ?></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
-        <?php
-        return ob_get_clean();
-    }
-}
-
 if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
     function bubbahub_myhub_v3_render() {
         if ( ! is_user_logged_in() ) {
@@ -476,8 +382,6 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 <div class="bh-myhub-group-widget bh-myhub-suggested-widget" data-myhub-group-widget data-group-type="suggested" data-view-more="1"><div class="bh-myhub-groups-loading">Building your suggestions…</div></div>
                 <div class="bh-myhub-suggested-more"><a class="bh-myhub-button secondary" href="<?php echo esc_url( home_url( '/my-groups/?group_view=suggested' ) ); ?>">View all suggested groups →</a></div>
             </section>
-
-            <?php echo bubbahub_myhub_v3_support_requests( $uid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
 
         </div>

@@ -150,13 +150,19 @@ function bubbahub_profile_handle_child_action() {
 
     $name     = isset( $_POST['child_name'] ) ? sanitize_text_field( wp_unslash( $_POST['child_name'] ) ) : '';
     $nickname = isset( $_POST['child_nickname'] ) ? sanitize_text_field( wp_unslash( $_POST['child_nickname'] ) ) : '';
+    $gender   = isset( $_POST['child_gender'] ) ? sanitize_key( wp_unslash( $_POST['child_gender'] ) ) : '';
     $status   = isset( $_POST['child_status'] ) ? sanitize_key( wp_unslash( $_POST['child_status'] ) ) : 'born';
     $dob      = bubbahub_profile_date_value( isset( $_POST['child_date_of_birth'] ) ? wp_unslash( $_POST['child_date_of_birth'] ) : '' );
     $due      = bubbahub_profile_date_value( isset( $_POST['child_due_date'] ) ? wp_unslash( $_POST['child_due_date'] ) : '' );
     $avatar   = isset( $_POST['avatar_url'] ) ? esc_url_raw( wp_unslash( $_POST['avatar_url'] ) ) : '';
-    $ask_specialist = ! empty( $_POST['ask_specialist'] );
 
-    if ( ! $name ) return array( 'error' => 'Please enter the child\'s name.' );
+    if ( ! in_array( $gender, array( 'girl', 'boy', 'prefer-not-to-say', 'other', '' ), true ) ) $gender = '';
+    if ( 'expecting' === $status ) {
+        $name = $nickname;
+        if ( ! $name ) return array( 'error' => 'Please enter a nickname for the bump.' );
+    } elseif ( ! $name ) {
+        return array( 'error' => 'Please enter the child\'s name.' );
+    }
     if ( ! in_array( $status, array( 'born', 'expecting' ), true ) ) $status = 'born';
 
     if ( 'expecting' === $status ) {
@@ -191,11 +197,23 @@ function bubbahub_profile_handle_child_action() {
     /* Existing ACF structure used by My Hub v2. */
     bubbahub_profile_update_field( $child_id, 'child_name', $name );
     bubbahub_profile_update_field( $child_id, 'child_nickname', $nickname );
+    bubbahub_profile_update_field( $child_id, 'child_gender', 'expecting' === $status ? '' : $gender );
     bubbahub_profile_update_field( $child_id, 'child_status', $status );
     bubbahub_profile_update_field( $child_id, 'child_date_of_birth', $dob );
     bubbahub_profile_update_field( $child_id, 'child_due_date', $due );
+    /* Optional image upload. Keep the existing image when no new file is selected. */
+    if ( ! empty( $_FILES['child_photo']['name'] ) ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        $attachment_id = media_handle_upload( 'child_photo', $child_id );
+        if ( is_wp_error( $attachment_id ) ) {
+            return array( 'error' => 'The profile was saved, but the photo could not be uploaded. ' . $attachment_id->get_error_message() );
+        }
+        $avatar = wp_get_attachment_url( $attachment_id );
+        bubbahub_profile_update_field( $child_id, 'avatar_id', absint( $attachment_id ) );
+    }
     bubbahub_profile_update_field( $child_id, 'avatar_url', $avatar );
-    bubbahub_profile_update_field( $child_id, 'ask_specialist', $ask_specialist ? 1 : 0 );
 
     /* Keep the existing age-group logic used by family suggestions in sync. */
     $age_group = bubbahub_profile_age_group( $dob );
@@ -245,6 +263,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
 
     $name = $get( 'child_name', $child_id ? get_the_title( $child_id ) : '' );
     $nickname = $get( 'child_nickname' );
+    $gender = $get( 'child_gender' );
     $status = $get( 'child_status', '' );
     if ( ! $child_id ) {
         $requested_profile_type = isset( $_GET['bh_profile_type'] ) ? sanitize_key( wp_unslash( $_GET['bh_profile_type'] ) ) : 'born';
@@ -280,14 +299,14 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
         <?php if ( ! empty( $message['success'] ) ) : ?><div class="bh-profile-success">✓ <?php echo esc_html( $message['success'] ); ?></div><?php endif; ?>
         <?php if ( ! empty( $message['error'] ) ) : ?><div class="bh-profile-error">⚠ <?php echo esc_html( $message['error'] ); ?></div><?php endif; ?>
 
-        <form method="post" class="bh-profile-form">
+        <form method="post" class="bh-profile-form" enctype="multipart/form-data">
             <?php wp_nonce_field( 'bh_profile_child_save', 'bh_profile_child_nonce' ); ?>
             <input type="hidden" name="bh_profile_child_action" value="save">
             <input type="hidden" name="child_id" value="<?php echo esc_attr( $child_id ); ?>">
             <input type="hidden" name="bh_profile_return_to" value="<?php echo esc_url( wp_unslash( wp_get_referer() ? wp_get_referer() : home_url( '/my-hub/' ) ) ); ?>">
 
             <div class="bh-profile-card">
-                <div class="bh-profile-card-heading"><h3>About your child</h3><span>Core profile</span></div>
+                <div class="bh-profile-card-heading"><h3><?php echo 'expecting' === $status ? 'About your bump' : 'About your child'; ?></h3><span>Core profile</span></div>
                 <?php if ( $editing ) : ?>
                     <div class="bh-profile-grid two">
                         <label class="bh-profile-type-field"><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Bump / Pregnancy</option></select></label>
@@ -297,20 +316,15 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                 <?php endif; ?>
                 <div class="bh-profile-grid two bh-child-fields">
                     <label><span>Name</span><input name="child_name" value="<?php echo esc_attr( $name ); ?>" required></label>
-                    <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="Optional"></label>
-                    <label><span>Profile photo URL</span><input name="avatar_url" type="url" value="<?php echo esc_attr( $avatar ); ?>" placeholder="Optional"></label>
-                    <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>"></label>
+                    <label><span>Gender</span><select name="child_gender"><option value="">Select gender</option><option value="girl" <?php selected( $gender, 'girl' ); ?>>Girl</option><option value="boy" <?php selected( $gender, 'boy' ); ?>>Boy</option><option value="other" <?php selected( $gender, 'other' ); ?>>Other</option><option value="prefer-not-to-say" <?php selected( $gender, 'prefer-not-to-say' ); ?>>Prefer not to say</option></select></label>
+                    <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
+                    <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>" required></label>
                 </div>
                 <div class="bh-profile-grid two bh-expecting-fields">
-                    <label><span>Name</span><input name="child_name_expecting" value="<?php echo esc_attr( $name ); ?>" required></label>
-                    <label><span>Nickname</span><input name="child_nickname_expecting" value="<?php echo esc_attr( $nickname ); ?>" placeholder="Optional"></label>
-                    <label><span>Profile photo URL</span><input name="avatar_url_expecting" type="url" value="<?php echo esc_attr( $avatar ); ?>" placeholder="Optional"></label>
-                    <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>"></label>
+                    <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="e.g. Baby Bear" required></label>
+                    <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
+                    <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>" required></label>
                 </div>
-                <label class="bh-profile-specialist-check">
-                    <input type="checkbox" name="ask_specialist" value="1" <?php checked( $ask_specialist ); ?>>
-                    <span><strong>Ask A Specialist a question about this <?php echo 'expecting' === $status ? 'baby' : 'child'; ?></strong><small>Tick this to flag that you would like specialist support relating to this profile.</small></span>
-                </label>
             </div>
 
             <div class="bh-profile-card bh-child-only-section">

@@ -250,10 +250,23 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-planner-search-location{display:flex;flex-direction:column;gap:6px;max-width:420px}
 .bh-planner-search-row label span{font-weight:700;font-size:13px}
 .bh-planner-search-row select{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
-.bh-planner-item-main{display:flex;flex-direction:column}
-.bh-planner-session-label{font-size:13px;opacity:.8}
-.bh-planner-time{font-weight:700}
-@media(max-width:700px){.bh-planner-search-row{display:block}.bh-planner-search-location{max-width:none}}
+.bh-planner-day-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.bh-planner-item-wrap{margin:0}
+.bh-planner-item{height:100%;border:1px solid #e7e7e7;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.bh-planner-listing-link{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none!important}
+.bh-planner-thumb{width:58px;height:58px;min-width:58px;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f3f3}
+.bh-planner-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.bh-planner-placeholder{font-size:22px;opacity:.45}
+.bh-planner-item-main{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.bh-planner-item-main strong{font-size:14px;line-height:1.25}
+.bh-planner-session-label{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bh-planner-time{font-size:12px;font-weight:700;margin-top:2px}
+.bh-planner-location{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){
+  .bh-planner-search-row{display:block}
+  .bh-planner-search-location{max-width:none}
+  .bh-planner-day-items{grid-template-columns:1fr}
+}
 </style>
 
 <script>

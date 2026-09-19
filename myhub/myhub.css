@@ -318,3 +318,23 @@ body.bh-baby-modal-open{overflow:hidden}
  .bh-myhub-family-add-buttons{width:100%;}
  .bh-myhub-family-add-buttons a{flex:1;min-height:38px;padding:8px 10px;font-size:12px;}
 }
+
+
+/* My Hub family controls: use a true horizontal sliding bar rather than side arrows. */
+.bh-myhub-family-carousel{display:block!important;position:relative!important;}
+.bh-myhub-family-viewport{width:100%;min-width:0;overflow:hidden;}
+.bh-myhub-family-carousel .bh-myhub-family-grid{width:100%;max-width:100%;margin:0;padding:4px 4px 14px;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:auto;}
+.bh-myhub-family-carousel .bh-myhub-family-grid::-webkit-scrollbar{height:12px;}
+.bh-myhub-family-carousel .bh-myhub-family-grid::-webkit-scrollbar-thumb{border-radius:999px;background:#b9c9c3;}
+.bh-myhub-family-carousel .bh-myhub-family-grid::-webkit-scrollbar-track{background:#eef2ef;border-radius:999px;}
+.bh-myhub-family-carousel .bh-myhub-family-carousel-controls{display:none!important;}
+.bh-myhub-family-add-buttons{display:flex!important;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.bh-myhub-family-add-buttons a.bh-profile-add-child,.bh-myhub-family-add-buttons a.bh-profile-add-bump{display:inline-flex!important;align-items:center;justify-content:center;min-height:42px;padding:9px 15px;border-radius:12px;background:#5f9183;color:#fff!important;text-decoration:none!important;font-weight:800;white-space:nowrap;visibility:visible!important;opacity:1!important;}
+.bh-myhub-family-add-buttons a.bh-profile-add-bump{background:#d9a8bc;}
+.bh-myhub-groups-track{display:flex;gap:16px;overflow-x:auto;overflow-y:hidden;padding:4px 4px 14px;scroll-snap-type:x proximity;scrollbar-width:auto;-webkit-overflow-scrolling:touch;}
+.bh-myhub-groups-track::-webkit-scrollbar{height:12px;}
+.bh-myhub-groups-track::-webkit-scrollbar-thumb{border-radius:999px;background:#b9c9c3;}
+.bh-myhub-groups-track::-webkit-scrollbar-track{background:#eef2ef;border-radius:999px;}
+.bh-myhub-groups-track>.bh-myhub-group-card{flex:0 0 min(330px,82vw);scroll-snap-align:start;}
+.bh-myhub-groups-track:focus{outline:2px solid #78a99b;outline-offset:2px;}
+@media(max-width:620px){.bh-myhub-family-add-buttons{width:100%;justify-content:stretch;}.bh-myhub-family-add-buttons a{flex:1 1 0;}.bh-myhub-family-carousel .bh-myhub-family-grid{padding-bottom:13px;}.bh-myhub-groups-track>.bh-myhub-group-card{flex-basis:84vw;}}

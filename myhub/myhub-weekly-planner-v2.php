@@ -378,13 +378,15 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         unset($item);
     }
 
+    $planner_base_url = remove_query_arg( array( 'bh_view', 'bh_week' ), get_permalink() );
+    if ( ! $planner_base_url ) $planner_base_url = home_url( '/my-hub/' );
     $account_url=add_query_arg('bh_account_settings','1',home_url('/my-hub/'));
     $prev_date='month'===$view?wp_date('Y-m-d',strtotime('-1 month',strtotime($requested_date))):wp_date('Y-m-d',strtotime('-7 days',strtotime($requested_date)));
     $next_date='month'===$view?wp_date('Y-m-d',strtotime('+1 month',strtotime($requested_date))):wp_date('Y-m-d',strtotime('+7 days',strtotime($requested_date)));
-    $prev=add_query_arg(array('bh_week'=>$prev_date,'bh_view'=>$view),home_url('/my-hub/'));
-    $next=add_query_arg(array('bh_week'=>$next_date,'bh_view'=>$view),home_url('/my-hub/'));
-    $today=add_query_arg(array('bh_week'=>$today_date,'bh_view'=>'today'),home_url('/my-hub/'));
-    $view_urls=array();foreach(array('list','today','week','month') as $v)$view_urls[$v]=add_query_arg(array('bh_week'=>$requested_date,'bh_view'=>$v),home_url('/my-hub/'));
+    $prev=add_query_arg(array('bh_week'=>$prev_date,'bh_view'=>'planner'),$planner_base_url);
+    $next=add_query_arg(array('bh_week'=>$next_date,'bh_view'=>'planner'),$planner_base_url);
+    $today=add_query_arg(array('bh_week'=>$today_date,'bh_view'=>'planner','bh_planner_mode'=>'today'),$planner_base_url);
+    $view_urls=array();foreach(array('list','today','week','month') as $v)$view_urls[$v]=add_query_arg(array('bh_week'=>$requested_date,'bh_view'=>'planner','bh_planner_mode'=>$v),$planner_base_url);
     $month_ts=strtotime(wp_date('Y-m-01',strtotime($requested_date)));$month_label=wp_date('F Y',$month_ts);
     $list_rows=$rows;usort($list_rows,function($a,$b){return ($a['date'].' '.$a['start'])<=>($b['date'].' '.$b['start']);});
 

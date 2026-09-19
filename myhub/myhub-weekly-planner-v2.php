@@ -938,6 +938,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <?php return ob_get_clean();
 }
 
+?>
 <style>
 /* Final planner layout overrides */
 .bh-timetable-event{left:0!important;width:100%!important;}

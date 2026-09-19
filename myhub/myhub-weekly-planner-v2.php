@@ -7,6 +7,34 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
 
+add_action( 'wp_ajax_bubbahub_calendar_filter', 'bubbahub_myhub_calendar_filter_ajax' );
+function bubbahub_myhub_calendar_filter_ajax() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in.' ), 403 );
+    check_ajax_referer( 'bubbahub_calendar_filter', 'nonce' );
+
+    $allowed = array(
+        'bh_view','bh_planner_mode','bh_week','bh_search','bh_location','bh_region','bh_town',
+        'bh_category','bh_day','bh_term_time','bh_age','bh_price','bh_radius','bh_lat','bh_lng','bh_acf'
+    );
+    $request = array();
+    foreach ( $allowed as $key ) {
+        if ( isset( $_POST[ $key ] ) ) {
+            $request[ $key ] = is_array( $_POST[ $key ] )
+                ? wp_unslash( $_POST[ $key ] )
+                : sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+        }
+    }
+    $request['bh_view'] = 'planner';
+    $request['bh_planner_mode'] = isset( $request['bh_planner_mode'] ) ? sanitize_key( $request['bh_planner_mode'] ) : 'week';
+
+    $previous_get = $_GET;
+    $_GET = $request;
+    $html = bubbahub_myhub_weekly_planner_v2_shortcode();
+    $_GET = $previous_get;
+
+    wp_send_json_success( array( 'html' => $html ) );
+}
+
 function bubbahub_myhub_planner_v2_weekly_schedule_rows( $post_id ) {
     $value = function_exists( 'get_field' ) ? get_field( 'weekly_schedule', $post_id ) : get_post_meta( $post_id, 'weekly_schedule', true );
 
@@ -450,7 +478,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $list_rows=$rows;usort($list_rows,function($a,$b){return ($a['date'].' '.$a['start'])<=>($b['date'].' '.$b['start']);});
 
     ob_start(); ?>
-    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">
+    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>">
       <div class="bh-myhub-section-heading">
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
       </div>

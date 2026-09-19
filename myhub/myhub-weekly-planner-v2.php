@@ -28,15 +28,108 @@ function bubbahub_myhub_planner_v2_child_ids() {
     return array_map('absint',get_posts(array('post_type'=>'bh_child','post_status'=>'publish','author'=>get_current_user_id(),'posts_per_page'=>-1,'fields'=>'ids','no_found_rows'=>true)));
 }
 
-function bubbahub_myhub_planner_v2_session_rows( $days_ahead = 7 ) {
-    $now=current_time('timestamp'); $from=wp_date('Y-m-d',$now); $to=wp_date('Y-m-d',strtotime('+'.max(1,(int)$days_ahead).' days',$now));
-    $q=new WP_Query(array('post_type'=>'bh_session','post_status'=>'publish','posts_per_page'=>250,'meta_query'=>array(array('key'=>'_bh_date','value'=>array($from,$to),'compare'=>'BETWEEN','type'=>'DATE')),'orderby'=>'meta_value','meta_key'=>'_bh_date','order'=>'ASC','no_found_rows'=>true));
-    $rows=array();
-    while($q->have_posts()){$q->the_post();$sid=get_the_ID();$gid=absint(get_post_meta($sid,'_bh_group_id',true));if(!$gid||'group'!==get_post_type($gid))continue;$date=get_post_meta($sid,'_bh_date',true);$start=get_post_meta($sid,'_bh_start_time',true);$end=get_post_meta($sid,'_bh_end_time',true);$vid=absint(get_post_meta($sid,'_bh_venue_id',true));$venue_address=$vid?(get_post_meta($vid,'address',true)?:get_post_meta($vid,'street_address',true)):'';
-$coords = function_exists('bubbahub_group_resolve_map') ? bubbahub_group_resolve_map($gid) : null;
-if ( ! $coords && $vid && function_exists('bubbahub_group_resolve_map') ) $coords = bubbahub_group_resolve_map($vid);
-$rows[]=array('session_id'=>$sid,'group_id'=>$gid,'venue_id'=>$vid,'date'=>$date,'start'=>$start,'end'=>$end,'title'=>get_the_title($gid),'url'=>get_permalink($gid),'image'=>get_the_post_thumbnail_url($gid,'thumbnail'),'venue'=>$vid?get_the_title($vid):'','venue_address'=>$venue_address,'lat'=>$coords ? $coords['lat'] : null,'lng'=>$coords ? $coords['lng'] : null);}
-    wp_reset_postdata(); return $rows;
+function bubbahub_myhub_planner_v2_weekly_schedule_rows( $post_id ) {
+    $value = function_exists( 'get_field' ) ? get_field( 'weekly_schedule', $post_id, false ) : get_post_meta( $post_id, 'weekly_schedule', true );
+    if ( is_string( $value ) ) {
+        $decoded = json_decode( $value, true );
+        if ( JSON_ERROR_NONE === json_last_error() ) $value = $decoded;
+    }
+    if ( ! is_array( $value ) ) return array();
+
+    $day_names = array(
+        'monday' => 'Monday', 'mon' => 'Monday', 'tuesday' => 'Tuesday', 'tue' => 'Tuesday',
+        'wednesday' => 'Wednesday', 'wed' => 'Wednesday', 'thursday' => 'Thursday', 'thu' => 'Thursday',
+        'friday' => 'Friday', 'fri' => 'Friday', 'saturday' => 'Saturday', 'sat' => 'Saturday',
+        'sunday' => 'Sunday', 'sun' => 'Sunday',
+    );
+    $rows = array();
+
+    foreach ( $value as $row ) {
+        if ( ! is_array( $row ) ) continue;
+        $day_key = strtolower( trim( (string) ( isset( $row['day_name'] ) ? $row['day_name'] : '' ) ) );
+        if ( ! isset( $day_names[ $day_key ] ) || ! empty( $row['is_closed'] ) ) continue;
+
+        $sessions = isset( $row['sessions'] ) ? $row['sessions'] : array();
+        if ( ! is_array( $sessions ) ) $sessions = array( $sessions );
+
+        foreach ( $sessions as $session ) {
+            $start = ''; $end = '';
+            if ( is_string( $session ) ) {
+                if ( preg_match( '/(\d{1,2}:\d{2})\s*(?:[-–—]|to)\s*(\d{1,2}:\d{2})/i', $session, $m ) ) {
+                    $start = $m[1]; $end = $m[2];
+                } elseif ( preg_match( '/(\d{1,2}:\d{2})/i', $session, $m ) ) $start = $m[1];
+            } elseif ( is_array( $session ) ) {
+                foreach ( array( 'start', 'start_time', 'from', 'time' ) as $key ) {
+                    if ( isset( $session[ $key ] ) && '' !== trim( (string) $session[ $key ] ) ) { $start = trim( (string) $session[ $key ] ); break; }
+                }
+                foreach ( array( 'end', 'end_time', 'to' ) as $key ) {
+                    if ( isset( $session[ $key ] ) && '' !== trim( (string) $session[ $key ] ) ) { $end = trim( (string) $session[ $key ] ); break; }
+                }
+                if ( ! preg_match( '/^\d{1,2}:\d{2}$/', $start ) && preg_match( '/(\d{1,2}:\d{2})\s*(?:[-–—]|to)\s*(\d{1,2}:\d{2})/i', $start, $m ) ) {
+                    $start = $m[1]; if ( ! $end ) $end = $m[2];
+                }
+            }
+            if ( ! preg_match( '/^\d{1,2}:\d{2}$/', $start ) ) continue;
+            if ( $end && ! preg_match( '/^\d{1,2}:\d{2}$/', $end ) ) $end = '';
+            $rows[ $day_names[ $day_key ] ][] = array( 'start' => $start, 'end' => $end );
+        }
+    }
+    return $rows;
+}
+
+function bubbahub_myhub_planner_v2_schedule_occurrences( $days_ahead = 7 ) {
+    $now = current_time( 'timestamp' );
+    $day_map = array( 'Sunday'=>0, 'Monday'=>1, 'Tuesday'=>2, 'Wednesday'=>3, 'Thursday'=>4, 'Friday'=>5, 'Saturday'=>6 );
+    $rows = array();
+
+    $q = new WP_Query( array(
+        'post_type' => 'group', 'post_status' => 'publish', 'posts_per_page' => 250,
+        'orderby' => 'title', 'order' => 'ASC', 'no_found_rows' => true,
+    ) );
+
+    while ( $q->have_posts() ) {
+        $q->the_post();
+        $gid = get_the_ID();
+        $schedule = bubbahub_myhub_planner_v2_weekly_schedule_rows( $gid );
+        if ( ! $schedule ) continue;
+
+        $venue_id = function_exists( 'bubbahub_group_venue_id' ) ? absint( bubbahub_group_venue_id( $gid ) ) : 0;
+        $venue_address = $venue_id ? ( get_post_meta( $venue_id, 'address', true ) ?: get_post_meta( $venue_id, 'street_address', true ) ) : '';
+        $coords = function_exists( 'bubbahub_group_resolve_map' ) ? bubbahub_group_resolve_map( $gid ) : null;
+        if ( ! $coords && $venue_id && function_exists( 'bubbahub_group_resolve_map' ) ) $coords = bubbahub_group_resolve_map( $venue_id );
+
+        foreach ( $schedule as $weekday => $sessions ) {
+            if ( ! isset( $day_map[ $weekday ] ) ) continue;
+            for ( $offset = 0; $offset <= (int) $days_ahead; $offset++ ) {
+                $candidate_ts = strtotime( '+' . $offset . ' days', $now );
+                if ( (int) wp_date( 'w', $candidate_ts ) !== $day_map[ $weekday ] ) continue;
+                $date = wp_date( 'Y-m-d', $candidate_ts );
+
+                foreach ( $sessions as $session ) {
+                    $start = $session['start']; $end = $session['end'];
+                    $start_ts = strtotime( $date . ' ' . $start );
+                    if ( ! $start_ts || $start_ts < $now ) continue;
+                    if ( $end ) {
+                        $end_ts = strtotime( $date . ' ' . $end );
+                        if ( $end_ts && $end_ts < $start_ts ) $end_ts = strtotime( '+1 day', $end_ts );
+                    }
+
+                    $rows[] = array(
+                        'session_id'=>0, 'group_id'=>$gid, 'venue_id'=>$venue_id, 'date'=>$date,
+                        'start'=>$start, 'end'=>$end, 'title'=>get_the_title($gid), 'url'=>get_permalink($gid),
+                        'image'=>function_exists('bubbahub_group_image') ? bubbahub_group_image($gid) : get_the_post_thumbnail_url($gid,'thumbnail'),
+                        'venue'=>$venue_id ? get_the_title($venue_id) : '', 'venue_address'=>$venue_address,
+                        'lat'=>($coords && isset($coords['lat']) ? $coords['lat'] : null),
+                        'lng'=>($coords && isset($coords['lng']) ? $coords['lng'] : null),
+                    );
+                }
+            }
+        }
+    }
+    wp_reset_postdata();
+
+    usort( $rows, function( $a, $b ) { return ( $a['date'].' '.$a['start'] ) <=> ( $b['date'].' '.$b['start'] ); } );
+    return $rows;
 }
 
 function bubbahub_myhub_planner_v2_user_preference_terms() {
@@ -195,69 +288,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if ( ! is_user_logged_in() ) return '<div class="bh-planner-empty">Please log in to use your personalised weekly planner.</div>';
 
     $children = bubbahub_myhub_planner_v2_child_ids();
-    $rows = bubbahub_myhub_planner_v2_session_rows( 7 );
-    /* Supplement generated sessions with published listing hours.
-     * Some groups have generated bh_session records for part of the week while
-     * other days still come from the listing timetable. The old all-or-nothing
-     * fallback meant those timetable days (such as Thursday) disappeared.
-     */
-    $existing_session_keys = array();
-    foreach ( $rows as $existing_row ) {
-        $existing_session_keys[ $existing_row['group_id'] . '|' . $existing_row['date'] . '|' . $existing_row['start'] ] = true;
-    }
-    $today_ts = current_time( 'timestamp' );
-    $day_map = array( 'Sunday'=>0, 'Monday'=>1, 'Tuesday'=>2, 'Wednesday'=>3, 'Thursday'=>4, 'Friday'=>5, 'Saturday'=>6 );
-    $q = new WP_Query( array( 'post_type'=>'group', 'post_status'=>'publish', 'posts_per_page'=>250, 'orderby'=>'title', 'order'=>'ASC', 'no_found_rows'=>true ) );
-    while ( $q->have_posts() ) {
-        $q->the_post();
-        $gid = get_the_ID();
-        $schedule = function_exists( 'bubbahub_myhub_planner_schedule_rows' ) ? bubbahub_myhub_planner_schedule_rows( $gid ) : array();
-        if ( ! $schedule ) continue;
-        $fallback_venue_id = function_exists( 'bubbahub_group_venue_id' ) ? bubbahub_group_venue_id( $gid ) : 0;
-        $coords = function_exists( 'bubbahub_group_resolve_map' ) ? bubbahub_group_resolve_map( $gid ) : null;
-        if ( ! $coords && $fallback_venue_id && function_exists( 'bubbahub_group_resolve_map' ) ) {
-            $coords = bubbahub_group_resolve_map( $fallback_venue_id );
-        }
-        foreach ( $schedule as $weekday => $hours ) {
-            if ( ! isset( $day_map[ $weekday ] ) ) continue;
-            $current_dow = (int) wp_date( 'w', $today_ts );
-            /* Check each day in the planner window so today's weekday and the
-             * following occurrence are both available when appropriate. */
-            for ( $day_offset = 0; $day_offset <= 7; $day_offset++ ) {
-                $candidate_ts = strtotime( '+' . $day_offset . ' days', $today_ts );
-                if ( (int) wp_date( 'w', $candidate_ts ) !== $day_map[ $weekday ] ) continue;
-                $date_ts = $candidate_ts;
-                foreach ( $hours as $hour ) {
-                $start = ''; $end_time = '';
-                if ( preg_match( '/(\\d{1,2}:\\d{2})\\s*(?:[-–—to]+)\\s*(\\d{1,2}:\\d{2})/i', (string) $hour, $m ) ) { $start = $m[1]; $end_time = $m[2]; }
-                elseif ( preg_match( '/(\\d{1,2}:\\d{2})/i', (string) $hour, $m ) ) $start = $m[1];
-                if ( ! $start ) continue;
-                $date = wp_date( 'Y-m-d', $date_ts );
-                $start_ts = strtotime( $date . ' ' . $start );
-                if ( ! $start_ts || $start_ts < $today_ts ) continue;
-                $key = $gid . '|' . $date . '|' . $start;
-                if ( isset( $existing_session_keys[ $key ] ) ) continue;
-                $rows[] = array(
-                    'session_id'=>0, 'group_id'=>$gid, 'venue_id'=>$fallback_venue_id,
-                    'date'=>$date, 'start'=>$start, 'end'=>$end_time,
-                    'title'=>get_the_title($gid), 'url'=>get_permalink($gid),
-                    'image'=>function_exists('bubbahub_group_image') ? bubbahub_group_image($gid) : get_the_post_thumbnail_url($gid,'thumbnail'),
-                    'venue'=>$fallback_venue_id ? get_the_title($fallback_venue_id) : '',
-                    'venue_address'=>$fallback_venue_id ? (get_post_meta($fallback_venue_id,'address',true) ?: get_post_meta($fallback_venue_id,'street_address',true)) : '',
-                    'lat'=>($coords && isset($coords['lat']) ? $coords['lat'] : null),
-                    'lng'=>($coords && isset($coords['lng']) ? $coords['lng'] : null),
-                    'legacy_match'=>true
-                );
-                $existing_session_keys[ $key ] = true;
-            }
-        }
-    }
-    }
-    wp_reset_postdata();
+    $rows = bubbahub_myhub_planner_v2_schedule_occurrences( 7 );
     $prefs = bubbahub_myhub_planner_v2_user_preference_terms();
-    $interest_ids = $prefs['ids'];
-    $location_values = bubbahub_myhub_planner_v2_user_location_values();
-    $location_radius = bubbahub_myhub_planner_v2_user_location_radius();
     $days = array( 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday' );
     $by = array_fill_keys( $days, array() );
 
@@ -303,9 +335,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
             <select class="bh-planner-location-select">
               <option value="">Any location</option>
               <?php
-              $planner_location_tax = function_exists( 'bubbahub_stage2_location_taxonomy' ) ? bubbahub_stage2_location_taxonomy() : '';
-              if ( $planner_location_tax ) {
-                  $planner_location_terms = get_terms( array( 'taxonomy' => $planner_location_tax, 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
+              if ( taxonomy_exists( 'location' ) ) {
+                  $planner_location_terms = get_terms( array( 'taxonomy' => 'location', 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
                   if ( ! is_wp_error( $planner_location_terms ) ) foreach ( $planner_location_terms as $planner_location_term ) :
               ?>
                 <option value="<?php echo esc_attr( $planner_location_term->term_id ); ?>"><?php echo esc_html( $planner_location_term->name ); ?></option>
@@ -350,26 +381,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <div class="bh-planner-day-items">
         <?php if ( ! empty( $by[ $day ] ) ) : foreach ( $by[ $day ] as $item ) : ?>
           <?php
-            $planner_tax = function_exists( 'bubbahub_stage2_location_taxonomy' ) ? bubbahub_stage2_location_taxonomy() : '';
-            /*
-             * Keep the planner's location selector compatible with the archive structure.
-             * Some listings use the dedicated location taxonomy while older/imported listings
-             * use a Region/Area taxonomy (for example /region/wadebridge/).
-             */
-            $planner_location_ids = array();
-            $planner_location_taxonomies = array();
-            foreach ( get_object_taxonomies( 'group', 'objects' ) as $planner_tax_name => $planner_tax_object ) {
-                $planner_tax_haystack = strtolower( $planner_tax_name . ' ' . $planner_tax_object->label . ' ' . $planner_tax_object->name );
-                if ( false !== strpos( $planner_tax_haystack, 'location' ) || false !== strpos( $planner_tax_haystack, 'region' ) || false !== strpos( $planner_tax_haystack, 'area' ) ) {
-                    $planner_location_taxonomies[] = $planner_tax_name;
-                    $planner_terms = wp_get_post_terms( (int) $item['group_id'], $planner_tax_name, array( 'fields' => 'ids' ) );
-                    if ( ! is_wp_error( $planner_terms ) ) $planner_location_ids = array_merge( $planner_location_ids, $planner_terms );
-                    if ( ! is_wp_error( $planner_terms ) && empty( $planner_terms ) && ! empty( $item['venue_id'] ) ) {
-                        $planner_terms = wp_get_post_terms( (int) $item['venue_id'], $planner_tax_name, array( 'fields' => 'ids' ) );
-                        if ( ! is_wp_error( $planner_terms ) ) $planner_location_ids = array_merge( $planner_location_ids, $planner_terms );
-                    }
-                }
-            }
+            $planner_location_ids = taxonomy_exists( 'location' ) ? wp_get_post_terms( (int) $item['group_id'], 'location', array( 'fields' => 'ids' ) ) : array();
+            if ( is_wp_error( $planner_location_ids ) ) $planner_location_ids = array();
             $planner_location_ids = array_values( array_unique( array_map( 'absint', $planner_location_ids ) ) );
             $planner_search_parts = array( $item['title'] );
             $planner_search_parts[] = get_post_field( 'post_content', (int) $item['group_id'] );
@@ -397,7 +410,14 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
                   if ( in_array( $bh_val, array( '1', 'yes', 'true', 'on', 'term time', 'term-time' ), true ) ) { $bh_term = true; break; }
               }
               echo $bh_term ? '1' : '0';
-          ?>">" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
+          ?>" data-planner-location-ids="<?php echo esc_attr( implode( ',', array_map( 'absint', (array) $planner_location_ids ) ) ); ?>" data-planner-tags="<?php
+              $planner_tag_terms = array();
+              foreach ( get_object_taxonomies( 'group' ) as $planner_tag_tax ) {
+                  $planner_terms = wp_get_post_terms( (int) $item['group_id'], $planner_tag_tax, array( 'fields' => 'names' ) );
+                  if ( ! is_wp_error( $planner_terms ) ) $planner_tag_terms = array_merge( $planner_tag_terms, $planner_terms );
+              }
+              echo esc_attr( implode( '|', array_values( array_unique( array_map( 'strval', $planner_tag_terms ) ) ) ) );
+          ?>" data-planner-search="<?php echo esc_attr( $planner_search_text ); ?>">
             <div class="bh-planner-item <?php echo $item['is_all'] ? 'bh-planner-all' : ''; ?>">
               <a class="bh-planner-listing-link" href="<?php echo esc_url( $item['url'] ); ?>">
               <span class="bh-planner-thumb"><?php if ( $item['image'] ) : ?><img src="<?php echo esc_url( $item['image'] ); ?>" alt="" loading="lazy"><?php else : ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span>
@@ -425,7 +445,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           var suggestions=planner.querySelector('.bh-planner-search-suggestions');
           var save=planner.querySelector('.bh-planner-search-save');
           var tags=[];
-          planner.querySelectorAll('.bh-planner-item-main strong').forEach(function(el){ tags.push(el.textContent.trim()); });
+          planner.querySelectorAll('.bh-planner-item-wrap').forEach(function(el){
+            (el.getAttribute('data-planner-tags')||'').split('|').forEach(function(t){ t=t.trim(); if(t) tags.push(t); });
+          });
           var freeGroups=planner.querySelector('.bh-planner-free-groups'), termTime=planner.querySelector('.bh-planner-term-time');
           var selectedChild='all', savedKeyword='', savedLocation='';
           try { savedKeyword=localStorage.getItem('bh_planner_keyword')||''; savedLocation=localStorage.getItem('bh_planner_location')||''; } catch(e){}

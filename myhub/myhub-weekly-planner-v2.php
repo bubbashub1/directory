@@ -372,6 +372,8 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         </label>
       </div>
 
+      <div class="bh-planner-print-header"><img src="https://staging.bubbahub.co.uk/wp-content/uploads/2026/09/logobubbhub-removebg-preview-150x150.png" alt="Bubba Hub"><div><strong>Bubba Hub</strong><span>Created by Bubba Hub SW</span><span>www.bubbahub.co.uk</span><span>Printed: <?php echo esc_html( wp_date( 'j F Y' ) ); ?></span></div></div>
+
       <div class="bh-planner-timetable-desktop">
         <div class="bh-timetable-header"><div class="bh-timetable-time-head">TIME</div>
           <?php foreach($days as $day): ?><div class="bh-timetable-day-head"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j M',strtotime($week_dates[$day]))); ?></span></div><?php endforeach; ?>
@@ -402,8 +404,6 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <?php endforeach; else: ?><div class="bh-planner-empty">No groups</div><?php endif; ?></div>
         </div><?php endforeach; ?>
       </div>
-
-      <div class="bh-planner-print-header"><img src="https://staging.bubbahub.co.uk/wp-content/uploads/2026/09/logobubbhub-removebg-preview-150x150.png" alt="Bubba Hub"><div><strong>Bubba Hub</strong><span>Created by Bubba Hub SW</span><span>www.bubbahub.co.uk</span><span>Printed: <?php echo esc_html( wp_date( 'j F Y' ) ); ?></span></div></div>
 
 <div class="bh-planner-actions">
         <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">📅 Subscribe to Calendar</a>

@@ -34,7 +34,7 @@ function bubbahub_myhub_groups_user_preferences(){
     foreach($locations as $v){
         if(is_object($v)&&isset($v->term_id))$v=$v->term_id;
         if(is_array($v)&&isset($v['term_id']))$v=$v['term_id'];
-        if(is_scalar($v)&&absint($v))$location_out[]=absint($v);
+        if(is_scalar($v)){ $raw=(string)$v; if(absint($raw)) $location_out[]=absint($raw); else { $slug=sanitize_title($raw); if($slug!=='') $location_out[]=$slug; } }
     }
     return array(array_values(array_unique($interest_out)),array_values(array_unique($location_out)));
 }
@@ -143,6 +143,12 @@ function bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array())
     while($q->have_posts()){
         $q->the_post();
         $id=get_the_ID();
+        /* When child ages are available, Age_Range is a hard eligibility check.
+         * Interests and preferred location then rank the age-appropriate groups. */
+        if($ages){
+            $age_value=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,'age_range',bubbahub_directory_get_field($id,'Age_Range','')):get_post_meta($id,'age_range',get_post_meta($id,'Age_Range',true));
+            if(!bubbahub_myhub_groups_age_range_matches($age_value,$ages))continue;
+        }
         $s=bubbahub_myhub_groups_score($id,$interests,$locations,$ages);
         if($s>0)$scored[$id]=$s;
     }

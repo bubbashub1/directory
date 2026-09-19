@@ -327,6 +327,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <?php endif; ?>
             </div>
 
+            <?php if ( 'born' === $status ) : ?>
             <div class="bh-profile-card bh-child-only-section">
                 <div class="bh-profile-card-heading"><h3>Nap schedule</h3><span>Saved per day</span></div>
                 <div class="bh-nap-grid">
@@ -341,6 +342,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                     <?php endforeach; ?>
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="bh-profile-actions">
                 <button type="submit">Save child profile</button>

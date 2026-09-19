@@ -481,10 +481,32 @@ document.addEventListener('DOMContentLoaded',function(){
         item.hidden=!show; item.style.display=show?'':'none';
       });
       planner.querySelectorAll('.bh-timetable-column').forEach(function(column){
-        var visible=Array.from(column.querySelectorAll('.bh-timetable-event')).some(function(x){return !x.hidden});
+        var events=Array.from(column.querySelectorAll('.bh-timetable-event'));
+        var visible=events.filter(function(x){return !x.hidden});
         var empty=column.querySelector('.bh-timetable-live-empty');
         if(!empty){empty=document.createElement('div');empty.className='bh-timetable-empty bh-timetable-live-empty';empty.textContent='No groups';column.appendChild(empty)}
-        empty.hidden=visible;
+        empty.hidden=visible.length>0;
+        if(!visible.length)return;
+
+        // Re-pack the visible events after a location change so they use the
+        // available cell width instead of retaining lanes from hidden groups.
+        var lanes=[];
+        visible.sort(function(a,b){return (parseFloat(a.style.top)||0)-(parseFloat(b.style.top)||0);});
+        visible.forEach(function(item){
+          var top=parseFloat(item.style.top)||0;
+          var height=parseFloat(item.style.height)||0;
+          var bottom=top+height;
+          var lane=0;
+          while(lanes[lane]!==undefined && lanes[lane]>top+0.5)lane++;
+          lanes[lane]=bottom;
+          item.dataset.liveLane=lane;
+        });
+        var laneCount=Math.max(1,lanes.length);
+        visible.forEach(function(item){
+          var lane=parseInt(item.dataset.liveLane||'0',10);
+          item.style.left=(lane*100/laneCount)+'%';
+          item.style.width=(100/laneCount)+'%';
+        });
       });
     }
     location.addEventListener('change',applyRegion);applyRegion();

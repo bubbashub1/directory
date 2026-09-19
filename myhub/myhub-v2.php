@@ -442,7 +442,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                                     ?>
                                     <div class="bh-myhub-tracker pregnancy bh-myhub-antenatal-tracker">
                                         <div class="bh-myhub-tracker-title">🤰 Antenatal Groups Hub</div>
-                                        <strong>Antenatal support and classes for your pregnancy journey</strong>
+                                        <strong>Antenatal Support &amp; Classes</strong>
                                         <?php if ( 'classes' === $antenatal['stage'] ) : ?>
                                             <span>Attend antenatal classes between <?php echo esc_html( wp_date( 'F Y', $antenatal['class_start']->getTimestamp() ) ); ?> and <?php echo esc_html( wp_date( 'F Y', $antenatal['class_end']->getTimestamp() ) ); ?>.</span>
                                         <?php elseif ( 'nearly_time' === $antenatal['stage'] ) : ?>

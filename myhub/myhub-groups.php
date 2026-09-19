@@ -117,7 +117,7 @@ function bubbahub_myhub_groups_scorefunction bubbahub_myhub_groups_score($id,$in
         }
     }
     if($interest_match)$score+=3;
-    $v=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,'age_range',''):get_post_meta($id,'age_range',true);
+    $v=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,'age_range',bubbahub_directory_get_field($id,'Age_Range','')):get_post_meta($id,'age_range',get_post_meta($id,'Age_Range',true));
     if(bubbahub_myhub_groups_age_range_matches($v,$ages))$score+=3;
     return $score;
 }

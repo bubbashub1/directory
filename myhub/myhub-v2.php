@@ -406,7 +406,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                         <h2>My Child Profiles</h2>
                         <p>Manage the children used to personalise your group suggestions.</p>
                     </div>
-                    <a class="bh-myhub-button" href="<?php echo esc_url( add_query_arg( 'bh_add_child', '1', get_permalink() ) ); ?>">＋ Add child</a>
+                    <div class="bh-myhub-family-add-buttons"><a class="bh-profile-add-child" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'born' ), get_permalink() ) ); ?>">＋ Add Child</a><a class="bh-profile-add-bump" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'expecting' ), get_permalink() ) ); ?>">＋ Add Bump</a></div>
                 </div>
 
                 <div class="bh-myhub-family-carousel">

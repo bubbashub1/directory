@@ -192,6 +192,86 @@ function bubbahub_directory_format_value( $value ) {
     }
     return is_scalar( $value ) ? (string) $value : '';
 }
+function bubbahub_directory_age_range_label( $value ) {
+    $ranges = array(
+        '0-3'    => array( 0, 3, 'months' ),
+        '3-6'    => array( 3, 6, 'months' ),
+        '6-9'    => array( 6, 9, 'months' ),
+        '9-12'   => array( 9, 12, 'months' ),
+        '1-3'    => array( 12, 36, 'years' ),
+        '2-4'    => array( 24, 48, 'years' ),
+        '3-5'    => array( 36, 60, 'years' ),
+        '5-plus' => array( 60, null, 'years' ),
+        'all'    => array( 0, null, 'all' ),
+    );
+
+    $values = is_array( $value ) ? $value : array( $value );
+    $min = null;
+    $max = null;
+    $has_open_end = false;
+    $has_all = false;
+
+    foreach ( $values as $raw ) {
+        if ( is_array( $raw ) ) continue;
+        $raw = trim( (string) $raw );
+        if ( '' === $raw ) continue;
+
+        $key = sanitize_title( $raw );
+        if ( isset( $ranges[ $key ] ) ) {
+            $range = $ranges[ $key ];
+        } else {
+            $hay = strtolower( str_replace( '–', '-', $raw ) );
+            if ( false !== strpos( $hay, 'all age' ) || false !== strpos( $hay, 'any age' ) ) {
+                $has_all = true;
+                continue;
+            }
+            if ( preg_match( '/(\\d+)\\s*(?:-|to)\\s*(\\d+)\\s*months?/i', $hay, $m ) ) {
+                $range = array( (int) $m[1], (int) $m[2], 'months' );
+            } elseif ( preg_match( '/(\\d+)\\s*(?:-|to)\\s*(\\d+)\\s*years?/i', $hay, $m ) ) {
+                $range = array( (int) $m[1] * 12, (int) $m[2] * 12, 'years' );
+            } elseif ( preg_match( '/(\\d+)\\s*\\+\\s*(?:years?|yrs?)/i', $hay, $m ) ) {
+                $range = array( (int) $m[1] * 12, null, 'years' );
+            } else {
+                continue;
+            }
+        }
+
+        if ( 'all' === $range[2] ) {
+            $has_all = true;
+            continue;
+        }
+
+        $range_min = (int) $range[0];
+        $range_max = null === $range[1] ? null : (int) $range[1];
+        $min = null === $min ? $range_min : min( $min, $range_min );
+        if ( null === $range_max ) {
+            $has_open_end = true;
+        } else {
+            $max = null === $max ? $range_max : max( $max, $range_max );
+        }
+    }
+
+    if ( $has_all ) return 'All ages';
+    if ( null === $min ) return '';
+
+    if ( $has_open_end ) {
+        $start = $min >= 12 ? floor( $min / 12 ) . ' years' : $min . ' months';
+        return $start . '+';
+    }
+
+    if ( null === $max ) return '';
+
+    // Once a range crosses 12 months, present the whole span in years for a
+    // cleaner Listing Card (e.g. 0-3, 3-6, 1-3 => 0–3 years).
+    if ( $max >= 12 ) {
+        $start_years = floor( $min / 12 );
+        $end_years = floor( $max / 12 );
+        return $start_years . '–' . $end_years . ' years';
+    }
+
+    return $min . '–' . $max . ' months';
+}
+
 function bubbahub_directory_layout() {
     $layout = get_option( 'bubbahub_directory_builder_layout', array() );
     if ( ! is_array( $layout ) || empty( $layout ) ) {
@@ -303,7 +383,9 @@ function bubbahub_directory_render_cards( $query ) {
         }
         $sub_region = bubbahub_directory_sub_region( $id );
         $days = bubbahub_directory_open_days( $id );
-        $age = bubbahub_directory_format_value( bubbahub_directory_get_field( $id, 'age_range', '' ) );
+        $age_value = bubbahub_directory_get_field( $id, 'age_range', '' );
+        if ( '' === $age_value || false === $age_value || null === $age_value ) $age_value = bubbahub_directory_get_field( $id, 'Age_Range', '' );
+        $age = bubbahub_directory_age_range_label( $age_value );
         $price = bubbahub_directory_format_value( bubbahub_directory_get_field( $id, 'price', '' ) );
         // Map coordinates: support the ACF/legacy map field plus standalone lat/lng fields.
         $map = bubbahub_directory_normalise_map( bubbahub_directory_get_field( $id, 'map', '' ) );

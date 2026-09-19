@@ -153,6 +153,16 @@ function bubbahub_support_send_question( $data ) {
     ),true);
     if(is_wp_error($post_id)) return $post_id;
     foreach(array('name','email','topic','region') as $key) update_post_meta($post_id,'_bh_support_'.$key,$data[$key]);
+
+    if ( ! empty( $data['child_id'] ) ) {
+        update_post_meta( $post_id, '_bh_support_child_id', absint( $data['child_id'] ) );
+        update_post_meta( $post_id, '_bh_support_child_consent', 1 );
+        update_post_meta( $post_id, '_bh_support_child_name', sanitize_text_field( $data['child_name'] ) );
+        update_post_meta( $post_id, '_bh_support_child_gender', sanitize_text_field( $data['child_gender'] ) );
+        update_post_meta( $post_id, '_bh_support_child_dob', sanitize_text_field( $data['child_dob'] ) );
+        update_post_meta( $post_id, '_bh_support_child_consent_time', current_time( 'mysql' ) );
+    }
+
     update_post_meta($post_id,'_bh_support_status','sent');
     $matches=bubbahub_support_match_leaders($data['question'],$data['topic'],$data['region']);
     $sent=0;
@@ -162,6 +172,9 @@ function bubbahub_support_send_question( $data ) {
         $reply_url=$leader_page_id ? get_permalink($leader_page_id) : home_url('/leader/');
         $body="A BubbaHub family has asked for support that may match your experience.\n\n";
         $body.="Topic: {$data['topic']}\nArea: {$data['region']}\n\nQuestion:\n{$data['question']}\n\n";
+        if ( ! empty( $data['child_id'] ) && ! empty( $data['child_profile_consent'] ) ) {
+            $body.="Child profile (consent given):\nName: {$data['child_name']}\nGender: {$data['child_gender']}\nDate of birth: {$data['child_dob_label']}\n\n";
+        }
         $body.="Matched areas: ".implode(', ',$match['matched'])."\n\n";
         $body.="Log in to your Leader Portal to reply:\n".$reply_url."\n\nPlease only provide support within your professional/appropriate scope.";
         if(wp_mail($email->user_email,'BubbaHub support question – '.$data['topic'],$body)) $sent++;
@@ -467,7 +480,31 @@ function bubbahub_support_process_question() {
         'region'=>sanitize_text_field(wp_unslash($_POST['support_region']??'')),
         'question'=>sanitize_textarea_field(wp_unslash($_POST['support_question']??'')),
     );
+
+    $child_id = ! empty( $_POST['support_child_id'] ) ? absint( $_POST['support_child_id'] ) : 0;
+    $child = $child_id ? bubbahub_support_child_profile_data( $child_id ) : array();
+    $consent = ! empty( $_POST['support_child_consent'] ) && '1' === (string) $_POST['support_child_consent'];
+
+    if ( $child_id && empty( $child ) ) {
+        wp_safe_redirect( add_query_arg( 'support_error', 'child', wp_get_referer() ?: home_url( '/support/' ) ) );
+        exit;
+    }
+    if ( ! empty( $child ) && ! $consent ) {
+        wp_safe_redirect( add_query_arg( 'support_error', 'consent', wp_get_referer() ?: home_url( '/support/' ) ) );
+        exit;
+    }
+
     if(!$data['name']||!is_email($data['email'])||!$data['topic']||!$data['question']) return;
+
+    if ( ! empty( $child ) ) {
+        $data['child_id'] = $child['id'];
+        $data['child_profile_consent'] = 1;
+        $data['child_name'] = $child['name'];
+        $data['child_gender'] = $child['gender'];
+        $data['child_dob'] = $child['dob'];
+        $data['child_dob_label'] = $child['dob_label'];
+    }
+
     $result=bubbahub_support_send_question($data);
     if(!is_wp_error($result)){ wp_safe_redirect(add_query_arg('support_sent','1',wp_get_referer()?:home_url('/support/'))); exit; }
 }

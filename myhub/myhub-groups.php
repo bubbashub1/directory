@@ -48,12 +48,29 @@ function bubbahub_myhub_groups_age_tokens($selected=array()){
         if($status==='expecting')continue;
         $dob=function_exists('get_field')?get_field('child_date_of_birth',$id):get_post_meta($id,'child_date_of_birth',true);
         if(!$dob)continue;
-        $dob=sanitize_text_field($dob);
-        $b=DateTime::createFromFormat('Y-m-d',$dob);
-        if(!$b)$b=new DateTime($dob);
-        $t=new DateTime('today');
-        if($b>$t)continue;
-        $d=$b->diff($t);
+        // ACF date fields may return Y-m-d or the field's configured display
+        // format (commonly d/m/Y). Never let an invalid saved date abort the
+        // entire My Hub groups request.
+        if ( is_array( $dob ) || is_object( $dob ) ) continue;
+        $dob = trim( (string) $dob );
+        $b = false;
+        foreach ( array( 'Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d' ) as $format ) {
+            $candidate = DateTime::createFromFormat( '!' . $format, $dob );
+            if ( $candidate && $candidate->format( $format ) === $dob ) {
+                $b = $candidate;
+                break;
+            }
+        }
+        if ( ! $b ) {
+            try {
+                $b = new DateTime( $dob );
+            } catch ( Exception $e ) {
+                continue;
+            }
+        }
+        $t = new DateTime( 'today' );
+        if ( $b > $t ) continue;
+        $d = $b->diff( $t );
         $m=((int)$d->y*12)+(int)$d->m;
         $tokens[]=$m;
     }

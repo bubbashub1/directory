@@ -273,7 +273,6 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
     $dob = $get( 'child_date_of_birth' );
     $due = $get( 'child_due_date' );
     $avatar = $get( 'avatar_url' );
-    $ask_specialist = (bool) $get( 'ask_specialist', 0 );
     $nap = $get( 'nap_schedule', array() );
 
     $dob = bubbahub_profile_date_value( $dob );
@@ -308,23 +307,24 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
             <div class="bh-profile-card">
                 <div class="bh-profile-card-heading"><h3><?php echo 'expecting' === $status ? 'About your bump' : 'About your child'; ?></h3><span>Core profile</span></div>
                 <?php if ( $editing ) : ?>
-                    <div class="bh-profile-grid two">
-                        <label class="bh-profile-type-field"><span>Profile type</span><select name="child_status"><option value="born" <?php selected( $status, 'born' ); ?>>Child</option><option value="expecting" <?php selected( $status, 'expecting' ); ?>>Bump / Pregnancy</option></select></label>
-                    </div>
+                    <input type="hidden" name="child_status" value="<?php echo esc_attr( $status ); ?>">
                 <?php else : ?>
                     <input type="hidden" name="child_status" value="<?php echo esc_attr( $status ); ?>">
                 <?php endif; ?>
-                <div class="bh-profile-grid two bh-child-fields">
+<?php if ( 'expecting' === $status ) : ?>
+                <div class="bh-profile-grid two">
+                    <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="e.g. Baby Bear" required></label>
+                    <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
+                    <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>" required></label>
+                </div>
+            <?php else : ?>
+                <div class="bh-profile-grid two">
                     <label><span>Name</span><input name="child_name" value="<?php echo esc_attr( $name ); ?>" required></label>
                     <label><span>Gender</span><select name="child_gender" required><option value="">Select gender</option><option value="girl" <?php selected( $gender, 'girl' ); ?>>Girl</option><option value="boy" <?php selected( $gender, 'boy' ); ?>>Boy</option><option value="other" <?php selected( $gender, 'other' ); ?>>Other</option><option value="prefer-not-to-say" <?php selected( $gender, 'prefer-not-to-say' ); ?>>Prefer not to say</option></select></label>
                     <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
                     <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>" required></label>
                 </div>
-                <div class="bh-profile-grid two bh-expecting-fields">
-                    <label><span>Nickname</span><input name="child_nickname" value="<?php echo esc_attr( $nickname ); ?>" placeholder="e.g. Baby Bear" required></label>
-                    <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
-                    <label><span>Expected due date</span><input name="child_due_date" type="date" value="<?php echo esc_attr( $due ); ?>" required></label>
-                </div>
+            <?php endif; ?>
             </div>
 
             <div class="bh-profile-card bh-child-only-section">

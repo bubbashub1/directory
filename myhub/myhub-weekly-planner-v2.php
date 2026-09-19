@@ -255,9 +255,19 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $range_start, $range_en
                     $date=wp_date('Y-m-d',$ts);
                     if(!bubbahub_myhub_planner_v2_date_matches_recurrence($date,$weekday,$session)) continue;
 
+                    /*
+                     * Recurrence End Date takes precedence when supplied.
+                     * When no End Date is supplied, Term Time Only controls
+                     * whether Devon school holiday dates are used to stop
+                     * occurrences being shown.
+                     */
                     if ( ! empty($session['recurrence_start_date']) && $date < $session['recurrence_start_date'] ) continue;
-                    if ( ! empty($session['recurrence_end_date']) && $date > $session['recurrence_end_date'] ) continue;
-                    if ( ! empty($session['term_time_only']) && !bubbahub_myhub_planner_v2_is_term_time_date($date) ) continue;
+
+                    if ( ! empty($session['recurrence_end_date']) ) {
+                        if ( $date > $session['recurrence_end_date'] ) continue;
+                    } elseif ( ! empty($session['term_time_only']) && !bubbahub_myhub_planner_v2_is_term_time_date($date) ) {
+                        continue;
+                    }
 
                     $key = $gid . '|' . $date;
                     if ( ! isset($rows_by_group_day[$key]) ) {

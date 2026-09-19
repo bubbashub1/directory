@@ -1,0 +1,36 @@
+name: Deploy Directory via Deployer
+
+on:
+  workflow_run:
+    workflows: ["Build Clean Upload ZIP"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Deployer
+        env:
+          DEPLOYER_WEBHOOK: ${{ secrets.DEPLOYER_WEBHOOK }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DEPLOYER_WEBHOOK:-}" ]; then
+            echo "ERROR: DEPLOYER_WEBHOOK repository secret is missing."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error --location \
+            --request GET \
+            --retry 3 \
+            --retry-delay 5 \
+            "${DEPLOYER_WEBHOOK}"
+
+          echo "Deployer request completed successfully."

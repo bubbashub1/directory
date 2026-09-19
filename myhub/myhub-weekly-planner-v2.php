@@ -273,15 +273,49 @@ function bubbahub_myhub_planner_v2_child_age_token( $id ) {
 }
 
 function bubbahub_myhub_planner_v2_child_matches_group( $group_id, $child_id ) {
-    if ( function_exists( 'bubbahub_myhub_planner_age_matches' ) ) {
-        return (bool) bubbahub_myhub_planner_age_matches( $group_id, array( $child_id ) );
+    // The legacy matcher expects exact tokens such as "1-3". Group age ranges are
+    // entered in several perfectly valid formats, so use an overlap check here.
+    $status = sanitize_key( (string) bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_status' ) );
+    $value  = bubbahub_myhub_planner_v2_user_child_field( $group_id, 'age_range' );
+    $hay    = strtolower( is_array( $value ) ? implode( ' ', array_map( 'strval', $value ) ) : (string) $value );
+    $hay    = str_replace( array( '–', '—', '−' ), '-', $hay );
+    $hay    = preg_replace( '/\\s+/', ' ', $hay );
+
+    // If a listing has no age range, don't hide a valid scheduled session.
+    if ( '' === trim( $hay ) ) return true;
+
+    if ( 'expecting' === $status ) {
+        return ( false !== strpos( $hay, 'pregnan' ) || false !== strpos( $hay, 'antenatal' ) || false !== strpos( $hay, 'postnatal' ) || false !== strpos( $hay, 'birth' ) || false !== strpos( $hay, '0-3' ) );
     }
-    $tokens = bubbahub_myhub_planner_v2_child_age_token( $child_id ); if ( ! $tokens ) return false;
-    $value = bubbahub_myhub_planner_v2_user_child_field( $group_id, 'age_range' );
-    $hay = strtolower( is_array( $value ) ? implode( ' ', array_map( 'strval', $value ) ) : (string) $value );
-    if ( ! $hay ) return false;
+
+    $dob = bubbahub_myhub_planner_v2_user_child_field( $child_id, 'child_date_of_birth' );
+    if ( ! $dob ) return true;
+    try { $birth = new DateTime( $dob ); $today = new DateTime( 'today' ); } catch ( Exception $e ) { return true; }
+    if ( $birth > $today ) return true;
+    $months = (int) $birth->diff( $today )->y * 12 + (int) $birth->diff( $today )->m;
+
+    // Common explicit ranges: 0-3 months, 6-12 months, 1-3 years, 5+ years.
+    if ( preg_match_all( '/(\\d+)\\s*-\\s*(\\d+)\\s*(month|months|year|years|yr|yrs)/i', $hay, $matches, PREG_SET_ORDER ) ) {
+        foreach ( $matches as $m ) {
+            $min = (int) $m[1] * ( preg_match( '/year/i', $m[3] ) ? 12 : 1 );
+            $max = (int) $m[2] * ( preg_match( '/year/i', $m[3] ) ? 12 : 1 );
+            if ( $months >= $min && $months <= $max ) return true;
+        }
+    }
+    if ( preg_match_all( '/(\\d+)\\s*\\+/i', $hay, $matches ) ) {
+        foreach ( $matches[1] as $n ) {
+            $n = (int) $n;
+            if ( $months >= $n * ( false !== strpos( $hay, 'year' ) ? 12 : 1 ) ) return true;
+        }
+    }
+
+    // Fall back to the existing token matcher for values such as "1-3" or "5-plus".
+    $tokens = bubbahub_myhub_planner_v2_child_age_token( $child_id );
     foreach ( $tokens as $token ) if ( false !== strpos( $hay, strtolower( $token ) ) ) return true;
-    return false;
+
+    // If an age range is present but cannot be parsed, keep the session visible
+    // rather than incorrectly producing an empty planner.
+    return true;
 }
 
 function bubbahub_myhub_weekly_planner_v2_shortcode() {

@@ -286,3 +286,35 @@ body.bh-baby-modal-open{overflow:hidden}
    margin-left:auto;
  }
 }
+
+/* Final compact family cards and bottom controls. */
+.bh-myhub-family-carousel{display:block!important;}
+.bh-myhub-family-viewport{width:100%;min-width:0;overflow:hidden;}
+.bh-myhub-family-carousel .bh-myhub-family-grid{width:100%;}
+.bh-myhub-family-carousel-controls{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:10px;}
+.bh-myhub-family-carousel-controls .bh-myhub-carousel-arrow{flex:0 0 36px;width:36px;height:36px;font-size:23px;}
+.bh-myhub-child-card{padding:18px;}
+.bh-myhub-avatar{width:46px;height:46px;font-size:18px;flex:0 0 46px;}
+.bh-myhub-child-card h3{font-size:19px;}
+.bh-myhub-child-actions .bh-myhub-edit-profile{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:800;text-decoration:none;margin-left:auto;}
+.bh-myhub-edit-profile span{font-size:16px;line-height:1;}
+@media(max-width:620px){
+ .bh-myhub-family-carousel-controls{margin-top:8px;gap:8px;}
+ .bh-myhub-family-carousel-controls .bh-myhub-carousel-arrow{flex-basis:32px;width:32px;height:32px;font-size:21px;}
+ .bh-myhub-family-grid{gap:10px;padding-bottom:10px;}
+ .bh-myhub-family-grid > .bh-myhub-child-card,.bh-myhub-family-carousel .bh-myhub-family-grid>.bh-myhub-child-card{flex-basis:78vw;max-width:78vw;padding:12px;border-radius:15px;}
+ .bh-myhub-child-top{gap:9px;margin-bottom:10px;}
+ .bh-myhub-avatar{width:38px;height:38px;font-size:15px;flex-basis:38px;}
+ .bh-myhub-child-card h3{font-size:17px;line-height:1.2;}
+ .bh-myhub-child-card p{font-size:11px;}
+ .bh-myhub-tracker{padding:10px;border-radius:12px;}
+ .bh-myhub-tracker-title{font-size:11px;}
+ .bh-myhub-tracker strong{font-size:13px;}
+ .bh-myhub-tracker span,.bh-myhub-tracker a{font-size:11px;}
+ .bh-myhub-child-select{margin-top:10px;font-size:11px;}
+ .bh-myhub-child-actions{display:flex;flex-direction:column;align-items:stretch;gap:7px;margin-top:10px;}
+ .bh-myhub-child-actions a{display:block;width:100%;font-size:11px;line-height:1.3;overflow-wrap:anywhere;}
+ .bh-myhub-child-actions .bh-myhub-edit-profile{margin-left:0;justify-content:flex-end;}
+ .bh-myhub-family-add-buttons{width:100%;}
+ .bh-myhub-family-add-buttons a{flex:1;min-height:38px;padding:8px 10px;font-size:12px;}
+}

@@ -60,24 +60,38 @@ function bubbahub_myhub_groups_age_tokens($selected=array()){
     return array_values(array_unique($tokens));
 }
 function bubbahub_myhub_groups_age_range_matches($value,$child_months){
-    if(!$child_months||$value==='' )return false;
-    $hay=strtolower(is_array($value)?implode(' ',array_map('strval',$value)):strval($value));
-    if(strpos($hay,'pregnan')!==false||strpos($hay,'antenatal')!==false)return false;
-    if(strpos($hay,'all ages')!==false||strpos($hay,'any age')!==false)return true;
-    foreach($child_months as $m){
-        if(preg_match('/(\d+)\s*(?:-|–|to)\s*(\d+)\s*months?/i',$hay,$x)){
-            if($m>=(int)$x[1]&&$m<=(int)$x[2])return true;
+    if(empty($child_months)||$value===''||$value===null)return false;
+    $values=is_array($value)?$value:array($value);
+    $ranges=array(
+        '0-3'=>array(0,3,'months'),
+        '3-6'=>array(3,6,'months'),
+        '6-9'=>array(6,9,'months'),
+        '9-12'=>array(9,12,'months'),
+        '1-3'=>array(12,36,'months'),
+        '2-4'=>array(24,48,'months'),
+        '3-5'=>array(36,60,'months'),
+        '5-plus'=>array(60,null,'months'),
+        'all'=>array(0,null,'months')
+    );
+    foreach($values as $raw){
+        $key=sanitize_title((string)$raw);
+        if(isset($ranges[$key])){
+            foreach($child_months as $m){
+                $m=(int)$m;
+                $min=$ranges[$key][0];
+                $max=$ranges[$key][1];
+                if($m>=$min&&($max===null||$m<$max))return true;
+            }
+            continue;
         }
-        if(preg_match('/(\d+)\s*(?:-|–|to)\s*(\d+)\s*years?/i',$hay,$x)){
-            $min=(int)$x[1]*12;$max=(int)$x[2]*12;
-            if($m>=$min&&$m<=$max)return true;
-        }
-        if(preg_match('/(\d+)\s*\+\s*(?:years?|yrs?)/i',$hay,$x)&&$m>=(int)$x[1]*12)return true;
-        if(preg_match('/(\d+)\s*plus/i',$hay,$x)&&$m>=(int)$x[1]*12)return true;
-        if(preg_match('/\b(\d+)\s*[-–]\s*(\d+)\b/i',$hay,$x)){
-            $a=(int)$x[1];$b=(int)$x[2];
-            if(strpos($hay,'month')!==false){if($m>=$a&&$m<=$b)return true;}
-            else if($m>=$a*12&&$m<=$b*12)return true;
+        $hay=strtolower(trim((string)$raw));
+        if(strpos($hay,'pregnan')!==false||strpos($hay,'antenatal')!==false)continue;
+        if(strpos($hay,'all ages')!==false||strpos($hay,'any age')!==false)return true;
+        foreach($child_months as $m){
+            if(preg_match('/(\\d+)\\s*(?:-|–|to)\\s*(\\d+)\\s*months?/i',$hay,$x)&&$m>=(int)$x[1]&&$m<(int)$x[2])return true;
+            if(preg_match('/(\\d+)\\s*(?:-|–|to)\\s*(\\d+)\\s*years?/i',$hay,$x)&&$m>=(int)$x[1]*12&&$m<(int)$x[2]*12)return true;
+            if(preg_match('/(\\d+)\\s*\\+\\s*(?:years?|yrs?)/i',$hay,$x)&&$m>=(int)$x[1]*12)return true;
+            if(preg_match('/(\\d+)\\s*plus/i',$hay,$x)&&$m>=(int)$x[1]*12)return true;
         }
     }
     return false;

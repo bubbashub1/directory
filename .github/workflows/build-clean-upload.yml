@@ -28,7 +28,7 @@ jobs:
 
           unzip -t bubbahub-directory-wordpress-ready.zip
 
-          unzip -p bubbahub-directory-wordpress-ready.zip directory/directory.php > /dev/null
+          unzip -p bubbahub-directory-wordpress-ready.zip directory/bubbahub-directory.php > /dev/null
           unzip -p bubbahub-directory-wordpress-ready.zip directory/modules/core/bubbahub-advanced-search.php > /dev/null
           unzip -p bubbahub-directory-wordpress-ready.zip directory/myhub/myhub-v2.php > /dev/null
           unzip -p bubbahub-directory-wordpress-ready.zip directory/myhub/myhub-weekly-planner-v2.php > /dev/null

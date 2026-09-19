@@ -396,8 +396,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     <strong>Find activities that fit your family</strong>
                     <p>Your saved preferences help Bubba Hub personalise your group suggestions.</p>
                 </div>
-                    <button type="button" class="bh-myhub-carousel-arrow bh-myhub-carousel-next" aria-label="Next child" aria-controls="bh-myhub-children">›</button>
-                </div>            </section>
+            </section>
 
             <section class="bh-myhub-section">
                 <div class="bh-myhub-section-heading">

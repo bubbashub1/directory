@@ -116,6 +116,7 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $days_ahead = 7 ) {
     $today_date = wp_date('Y-m-d',$now);
     $day_map = array('Sunday'=>0,'Monday'=>1,'Tuesday'=>2,'Wednesday'=>3,'Thursday'=>4,'Friday'=>5,'Saturday'=>6);
     $rows = array();
+    $rows_by_group_day = array();
 
     $q = new WP_Query(array(
         'post_type'=>'group','post_status'=>'publish','posts_per_page'=>250,
@@ -141,8 +142,10 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $days_ahead = 7 ) {
                 if((int)wp_date('w',$candidate_ts)!==$day_map[$weekday]) continue;
                 $date=wp_date('Y-m-d',$candidate_ts);
 
-                foreach($sessions as $session){
-                    $rows[]=array(
+                // Combine multiple sessions for the same group/day into one planner card.
+                // The card uses the earliest start and latest end time.
+                if ( ! isset( $rows_by_group_day[$gid . '|' . $date] ) ) {
+                    $rows_by_group_day[$gid . '|' . $date] = array(
                         'session_id'=>0,
                         'group_id'=>$gid,
                         'venue_id'=>$venue_id,
@@ -158,11 +161,23 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $days_ahead = 7 ) {
                         'lat'=>($coords && isset($coords['lat']) ? $coords['lat'] : null),
                         'lng'=>($coords && isset($coords['lng']) ? $coords['lng'] : null),
                     );
+                } else {
+                    $key = $gid . '|' . $date;
+                    if ( $session['start'] && $session['start'] < $rows_by_group_day[$key]['start'] ) {
+                        $rows_by_group_day[$key]['start'] = $session['start'];
+                    }
+                    if ( $session['end'] && ( ! $rows_by_group_day[$key]['end'] || $session['end'] > $rows_by_group_day[$key]['end'] ) ) {
+                        $rows_by_group_day[$key]['end'] = $session['end'];
+                    }
+                    if ( ! $rows_by_group_day[$key]['label'] && $session['label'] ) {
+                        $rows_by_group_day[$key]['label'] = $session['label'];
+                    }
                 }
             }
         }
     }
     wp_reset_postdata();
+    $rows = array_values($rows_by_group_day);
 
     usort($rows,function($a,$b){return ($a['date'].' '.$a['start']) <=> ($b['date'].' '.$b['start']);});
     return $rows;

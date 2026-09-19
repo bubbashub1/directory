@@ -80,24 +80,100 @@ function bubbahub_myhub_planner_v2_weekly_schedule_rows( $post_id ) {
     return $rows;
 }
 
+function bubbahub_myhub_planner_v2_get_school_holiday_dates() {
+    $cached = get_transient( 'bubbahub_devon_school_holidays' );
+    if ( is_array( $cached ) ) return $cached;
+
+    $url = 'https://schoolholidays.org.uk/area/devon';
+    $response = wp_remote_get( $url, array(
+        'timeout'    => 12,
+        'redirection'=> 3,
+        'headers'   => array( 'User-Agent' => 'BubbaHub Calendar/1.0; ' . home_url('/') ),
+    ) );
+
+    $holidays = array();
+
+    if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
+        $html = wp_remote_retrieve_body( $response );
+
+        if ( $html && class_exists( 'DOMDocument' ) ) {
+            libxml_use_internal_errors( true );
+            $dom = new DOMDocument();
+            if ( @$dom->loadHTML( '<?xml encoding="UTF-8">' . $html ) ) {
+                $xpath = new DOMXPath( $dom );
+                $rows = $xpath->query( '//table//tr' );
+
+                foreach ( $rows as $tr ) {
+                    $cells = $xpath->query( './th|./td', $tr );
+                    if ( $cells->length < 2 ) continue;
+
+                    $label = trim( preg_replace( '/\\s+/', ' ', $cells->item(0)->textContent ) );
+                    $start_text = trim( preg_replace( '/\\s+/', ' ', $cells->item(1)->textContent ) );
+                    $end_text = $cells->length >= 3 ? trim( preg_replace( '/\\s+/', ' ', $cells->item(2)->textContent ) ) : $start_text;
+
+                    if ( ! preg_match( '/^(\\d{1,2})(?:st|nd|rd|th)?\\s+([A-Za-z]+)\\s+(\\d{4})$/', $start_text, $m ) ) continue;
+                    if ( ! preg_match( '/^(\\d{1,2})(?:st|nd|rd|th)?\\s+([A-Za-z]+)\\s+(\\d{4})$/', $end_text, $e ) ) $e = $m;
+
+                    $start_date = date_create( $m[3] . '-' . $m[2] . '-' . $m[1] );
+                    $end_date = date_create( $e[3] . '-' . $e[2] . '-' . $e[1] );
+                    if ( ! $start_date || ! $end_date ) continue;
+
+                    $start_iso = $start_date->format('Y-m-d');
+                    $end_iso = $end_date->format('Y-m-d');
+
+                    if ( $start_iso <= $end_iso ) {
+                        $holidays[] = array(
+                            'name'  => $label,
+                            'start' => $start_iso,
+                            'end'   => $end_iso,
+                        );
+                    }
+                }
+            }
+            libxml_clear_errors();
+        }
+    }
+
+    /*
+     * If the external source is temporarily unavailable, retain the existing
+     * administrator-configured dates rather than making term-time listings
+     * appear during known holiday periods.
+     */
+    if ( empty( $holidays ) ) {
+        $configured = get_option( 'bubbahub_school_holiday_dates', array() );
+        if ( is_array( $configured ) ) $holidays = $configured;
+    }
+
+    /*
+     * Cache the source for 12 hours. This avoids a remote request for every
+     * calendar cell while still allowing the calendar to pick up changes.
+     */
+    set_transient( 'bubbahub_devon_school_holidays', $holidays, 12 * HOUR_IN_SECONDS );
+
+    return $holidays;
+}
+
 function bubbahub_myhub_planner_v2_is_term_time_date( $date ) {
     $result = apply_filters( 'bubbahub_planner_is_term_time_date', null, $date );
     if ( null !== $result ) return (bool) $result;
 
-    $terms = get_option( 'bubbahub_school_term_dates', array() );
-    if ( ! is_array( $terms ) || empty($terms) ) return true;
+    $holidays = bubbahub_myhub_planner_v2_get_school_holiday_dates();
 
-    foreach ( $terms as $term ) {
-        if ( is_string($term) ) {
-            $parts = preg_split('/\s*(?:to|-)\s*/', trim($term));
-            if ( count($parts) === 2 ) $term = array('start'=>$parts[0], 'end'=>$parts[1]);
-        }
-        if ( ! is_array($term) ) continue;
-        $start = preg_replace('/[^0-9-]/','', (string)($term['start'] ?? $term['start_date'] ?? ''));
-        $end   = preg_replace('/[^0-9-]/','', (string)($term['end'] ?? $term['end_date'] ?? ''));
-        if ( $start && $end && $date >= $start && $date <= $end ) return true;
+    /*
+     * "Term Time Only" means the session is hidden whenever the occurrence
+     * date falls inside one of the Devon school holiday periods published by
+     * SchoolHolidays.org.uk.
+     */
+    foreach ( $holidays as $holiday ) {
+        if ( ! is_array( $holiday ) ) continue;
+
+        $start = preg_replace( '/[^0-9-]/', '', (string) ( $holiday['start'] ?? $holiday['start_date'] ?? '' ) );
+        $end   = preg_replace( '/[^0-9-]/', '', (string) ( $holiday['end'] ?? $holiday['end_date'] ?? '' ) );
+
+        if ( $start && $end && $date >= $start && $date <= $end ) return false;
     }
-    return false;
+
+    return true;
 }
 
 function bubbahub_myhub_planner_v2_date_matches_recurrence( $date, $weekday, $rule ) {

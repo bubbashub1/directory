@@ -1,11 +1,4 @@
 <?php
-/**
- * Plugin Name: BubbaHub Booking Engine
- * Description: Session, availability and booking engine for BubbaHub groups.
- * Version: 1.2.0
- * Requires PHP: 7.4
- */
-
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'BUBBAHUB_BOOKING_VERSION', '1.2.0' );

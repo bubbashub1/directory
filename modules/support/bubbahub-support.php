@@ -79,6 +79,72 @@ function bubbahub_support_match_leaders( $question, $topic, $region='' ) {
     return array_slice($matches,0,8,true);
 }
 
+function bubbahub_support_child_profile_data( $child_id ) {
+    $child_id = absint( $child_id );
+    if ( ! $child_id || ! is_user_logged_in() ) return array();
+
+    if ( function_exists( 'bubbahub_profile_child_owned' ) ) {
+        if ( ! bubbahub_profile_child_owned( $child_id ) ) return array();
+    } elseif ( (int) get_post_field( 'post_author', $child_id ) !== get_current_user_id() ) {
+        return array();
+    }
+
+    $get = function( $field, $default = '' ) use ( $child_id ) {
+        if ( function_exists( 'bubbahub_profile_field' ) ) {
+            $value = bubbahub_profile_field( $child_id, $field, $default );
+            if ( '' !== $value && false !== $value && null !== $value ) return $value;
+        }
+        $value = get_post_meta( $child_id, $field, true );
+        return ( '' !== $value && false !== $value ) ? $value : $default;
+    };
+
+    $name = sanitize_text_field( $get( 'child_name', get_the_title( $child_id ) ) );
+    $gender = sanitize_key( $get( 'child_gender' ) );
+    $dob = sanitize_text_field( $get( 'child_date_of_birth' ) );
+
+    $gender_labels = array(
+        'girl' => 'Girl',
+        'boy' => 'Boy',
+        'other' => 'Other',
+        'prefer-not-to-say' => 'Prefer not to say',
+    );
+
+    $timestamp = $dob ? strtotime( $dob ) : false;
+
+    return array(
+        'id' => $child_id,
+        'name' => $name,
+        'gender' => isset( $gender_labels[ $gender ] ) ? $gender_labels[ $gender ] : 'Not provided',
+        'dob' => $dob,
+        'dob_label' => $timestamp ? wp_date( 'j F Y', $timestamp ) : 'Not provided',
+    );
+}
+
+function bubbahub_support_child_profile_markup( $child ) {
+    if ( empty( $child ) ) return '';
+
+    ob_start(); ?>
+    <div class="bh-support-child-profile">
+      <div class="bh-support-child-profile-head">
+        <span class="bh-support-kicker">CHILD PROFILE</span>
+        <strong>About <?php echo esc_html( $child['name'] ); ?></strong>
+      </div>
+      <p class="bh-support-child-profile-intro">These details will only be shared with the specialist if you agree below.</p>
+      <div class="bh-support-child-profile-grid">
+        <div><span>Name</span><strong><?php echo esc_html( $child['name'] ); ?></strong></div>
+        <div><span>Gender</span><strong><?php echo esc_html( $child['gender'] ); ?></strong></div>
+        <div><span>Date of birth</span><strong><?php echo esc_html( $child['dob_label'] ); ?></strong></div>
+      </div>
+      <input type="hidden" name="support_child_id" value="<?php echo esc_attr( $child['id'] ); ?>">
+      <label class="bh-support-child-consent">
+        <input type="checkbox" name="support_child_consent" value="1" required>
+        <span>I agree to share my child’s Name, Gender and Date of Birth with the specialist so they can provide support.</span>
+      </label>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
 function bubbahub_support_send_question( $data ) {
     $post_id = wp_insert_post(array(
         'post_type'=>'bh_support_request','post_status'=>'publish',

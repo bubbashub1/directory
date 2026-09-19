@@ -406,8 +406,8 @@ function bubbahub_account_settings_shortcode() {
             <div class="bh-profile-card-heading bh-family-profile-heading">
                 <div><h3>Family profiles</h3><span>Add children or an expecting bump separately.</span></div>
                 <div class="bh-family-profile-add-buttons">
-                    <a class="bh-profile-add-child" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'born' ) ) ); ?>">＋ Child</a>
-                    <a class="bh-profile-add-bump" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'expecting' ) ) ); ?>">＋ Bump</a>
+                    <a class="bh-profile-add-child" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'born' ) ) ); ?>">＋ Add Child</a>
+                    <a class="bh-profile-add-bump" href="<?php echo esc_url( add_query_arg( array( 'bh_add_child' => '1', 'bh_profile_type' => 'expecting' ) ) ); ?>">＋ Add Bump</a>
                 </div>
             </div>
             <?php if ( $children ) : ?>

@@ -387,8 +387,16 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
               $start_m=(int)wp_date('H',$start_ts)*60+(int)wp_date('i',$start_ts);$end_m=(int)wp_date('H',$end_ts)*60+(int)wp_date('i',$end_ts);
               $top=max(0,$start_m-$grid_start);$height=max(42,$end_m-$start_m);$lane_count=max(1,(int)$item['lane_count']);$lane=(int)$item['lane'];$left=$lane*100/$lane_count;$width=100/$lane_count;
               $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']);
+              $category_terms = array();
+              foreach ( array('category','group_category','listing_category') as $tax ) {
+                  if ( taxonomy_exists($tax) ) {
+                      $terms = wp_get_post_terms((int)$item['group_id'],$tax,array('fields'=>'names'));
+                      if ( ! is_wp_error($terms) && ! empty($terms) ) { $category_terms = $terms; break; }
+                  }
+              }
+              $category_key = sanitize_title( !empty($category_terms) ? $category_terms[0] : 'other' );
             ?>
-              <div class="bh-timetable-event bh-planner-filter-item" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>" style="top:<?php echo esc_attr($top); ?>px;height:<?php echo esc_attr($height); ?>px;left:<?php echo esc_attr($left); ?>%;width:<?php echo esc_attr($width); ?>%;">
+              <div class="bh-timetable-event bh-planner-filter-item bh-category-<?php echo esc_attr($category_key); ?>" data-planner-category="<?php echo esc_attr($category_key); ?>" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>" style="top:<?php echo esc_attr($top); ?>px;height:<?php echo esc_attr($height); ?>px;left:<?php echo esc_attr($left); ?>%;width:<?php echo esc_attr($width); ?>%;">
                 <a href="<?php echo esc_url($item['url']); ?>"><strong><?php echo esc_html($item['title']); ?></strong><?php if($item['label']): ?><span><?php echo esc_html($item['label']); ?></span><?php endif; ?><b><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></b><small><?php echo esc_html($item['venue']?:'Location to be confirmed'); ?></small></a>
                 <a class="bh-planner-calendar-link" href="<?php echo esc_url($item['calendar_url']); ?>" title="Add this session to your calendar">+ Add to Calendar</a>
               </div>
@@ -443,7 +451,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-timetable-empty{padding:12px;text-align:center;color:#aaa;font-size:11px}
 .bh-planner-mobile{display:none}.bh-weekly-planner-v2{padding-bottom:50px}.bh-planner-mobile-day{border:1px solid #e4e4e4;border-radius:12px;background:#fff;margin:0 0 9px;overflow:hidden}.bh-planner-mobile-day-heading{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #eee}.bh-planner-mobile-day-heading>span:first-child{display:flex;flex-direction:column;gap:2px}.bh-planner-mobile-day-heading strong{font-size:15px}.bh-planner-mobile-day-heading small{font-size:11px;color:#777}.bh-planner-mobile-count{min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f1f1f1;font-size:11px;font-weight:700}.bh-planner-mobile-items{padding:10px;display:grid;gap:9px}.bh-planner-item-wrap{margin:0}.bh-planner-item{height:100%;border:1px solid #e7e7e7;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}.bh-planner-mobile-calendar-link{display:block;margin:0 10px 10px;padding:7px 10px;border:1px solid #ddd;border-radius:8px;text-align:center;text-decoration:none!important;font-size:12px;font-weight:700}.bh-planner-listing-link{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none!important}.bh-planner-thumb{width:58px;height:58px;min-width:58px;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f3f3f3}.bh-planner-thumb img{width:100%;height:100%;object-fit:cover;display:block}.bh-planner-placeholder{font-size:22px;opacity:.45}.bh-planner-item-main{display:flex;flex-direction:column;min-width:0;line-height:1.3}.bh-planner-item-main strong{font-size:14px;line-height:1.25}.bh-planner-session-label{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-time{font-size:12px;font-weight:700;margin-top:2px}.bh-planner-location{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media print{
-  @page{size:A4 landscape;margin:0}
+  @page{size:A4 landscape;margin:5mm}
   html,body{margin:0!important;padding:0!important;width:auto!important;height:auto!important;min-height:0!important;overflow:hidden!important}
   body *{visibility:hidden!important}
   .bh-weekly-planner-v2{
@@ -451,9 +459,10 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     position:fixed!important;
     top:0!important;
     left:0!important;
-    width:420mm!important;
-    max-width:420mm!important;
-    height:297mm!important;
+    width:100%!important;
+    max-width:none!important;
+    height:287mm!important;
+    box-sizing:border-box!important;
     min-height:0!important;
     margin:0!important;
     padding:0!important;
@@ -461,6 +470,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     box-shadow:none!important;
     overflow:hidden!important;
     transform:none!important;
+    box-sizing:border-box!important;
     transform-origin:top left!important;
   }
   .bh-weekly-planner-v2 .bh-planner-timetable-desktop,
@@ -503,16 +513,21 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     display:block!important;
     width:100%!important;
     max-width:none!important;
-    height:calc(var(--bh-grid-hours) * 60px)!important;
-    overflow:visible!important;
+    height:calc(287mm - 55mm)!important;
+    max-height:232mm!important;
+    overflow:hidden!important;
     border:1px solid #999!important;
     break-inside:avoid!important;
     page-break-inside:avoid!important;
   }
-  .bh-timetable-header,.bh-timetable-body{min-width:0!important}
+  .bh-timetable-header,.bh-timetable-body{min-width:0!important;width:100%!important;grid-template-columns:42px repeat(7,minmax(0,1fr))!important}
   .bh-timetable-event{break-inside:avoid!important;page-break-inside:avoid!important}
   .bh-weekly-planner-v2:after{content:none!important;display:none!important}
 }
+
+/* Category colour coding */
+.bh-timetable-event.bh-category-baby,.bh-timetable-event.bh-category-babies{--bh-cat:#4285f4}.bh-timetable-event.bh-category-toddler,.bh-timetable-event.bh-category-toddlers{--bh-cat:#34a853}.bh-timetable-event.bh-category-pregnancy,.bh-timetable-event.bh-category-antenatal,.bh-timetable-event.bh-category-postnatal{--bh-cat:#a142f4}.bh-timetable-event.bh-category-sensory,.bh-timetable-event.bh-category-music,.bh-timetable-event.bh-category-dance{--bh-cat:#fbbc04}.bh-timetable-event.bh-category-forest-school,.bh-timetable-event.bh-category-forest-schools{--bh-cat:#0f9d58}.bh-timetable-event.bh-category-support,.bh-timetable-event.bh-category-wellbeing{--bh-cat:#00acc1}.bh-timetable-event{--bh-cat:#1a73e8}.bh-timetable-event>a:first-child{background:var(--bh-cat)!important;border-left-color:color-mix(in srgb,var(--bh-cat),#000 22%)!important}
+@media print{.bh-weekly-planner-v2{break-after:avoid!important;page-break-after:avoid!important}.bh-planner-timetable-desktop{break-before:avoid!important;break-after:avoid!important;page-break-before:avoid!important;page-break-after:avoid!important}.bh-timetable-column-many{min-width:0!important}.bh-timetable-event{font-size:9px!important}.bh-timetable-event>a:first-child{padding:3px 4px!important}.bh-timetable-event>a:first-child strong{font-size:9px!important}.bh-timetable-event>a:first-child span,.bh-timetable-event>a:first-child b{font-size:8px!important}.bh-timetable-event>a:first-child small{font-size:7px!important}}
 /* Mobile calendar improvements */
 @media(max-width:700px){
   .bh-weekly-planner-v2{padding-left:10px!important;padding-right:10px!important;overflow-x:hidden}

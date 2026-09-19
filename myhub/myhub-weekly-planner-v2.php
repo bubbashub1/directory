@@ -301,7 +301,7 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $range_start, $range_en
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if(!is_user_logged_in()) return '<div class="bh-planner-empty">Please log in to use your weekly planner.</div>';
 
-    $view = isset($_GET['bh_view']) ? sanitize_key(wp_unslash($_GET['bh_view'])) : 'week';
+    $view = isset($_GET['bh_planner_mode']) ? sanitize_key(wp_unslash($_GET['bh_planner_mode'])) : ( isset($_GET['bh_view']) ? sanitize_key(wp_unslash($_GET['bh_view'])) : 'week' );
     if ( ! in_array($view,array('list','today','week','month'),true) ) $view='week';
     $requested = isset($_GET['bh_week']) ? sanitize_text_field(wp_unslash($_GET['bh_week'])) : '';
     $requested_date = $requested ?: wp_date('Y-m-d',current_time('timestamp'));

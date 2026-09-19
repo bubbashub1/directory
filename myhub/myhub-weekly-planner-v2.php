@@ -393,7 +393,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     ob_start(); ?>
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2">
       <div class="bh-myhub-section-heading">
-        <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Weekly Planner</h2></div>
+        <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
         <a class="bh-weekly-planner-preferences" href="<?php echo esc_url($account_url); ?>">Update Preferences →</a>
       </div>
 
@@ -473,7 +473,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       <?php if(in_array($view,array('week','today'),true)): ?>
 <div class="bh-planner-actions">
         <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">📅 Subscribe to Calendar</a>
-        <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Planner</button>
+        <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Calendar</button>
       </div>
       <?php endif; ?>
 <style>

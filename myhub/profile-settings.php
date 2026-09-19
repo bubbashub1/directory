@@ -292,7 +292,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                 ?></h2>
                 <p>This information is saved to the child profile used by My Hub and group suggestions.</p>
             </div>
-            <a class="bh-profile-back" href="<?php echo esc_url( remove_query_arg( array( 'bh_add_child', 'bh_profile_type', 'child_id' ) ) ); ?>">‹ Back to Account Settings</a>
+            <a class="bh-profile-back" href="<?php echo esc_url( remove_query_arg( array( 'bh_add_child', 'bh_profile_type', 'child_id' ) ) ); ?>">‹ Back to My Hub</a>
         </div>
 
         <?php if ( ! empty( $message['success'] ) ) : ?><div class="bh-profile-success">✓ <?php echo esc_html( $message['success'] ); ?></div><?php endif; ?>

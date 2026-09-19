@@ -305,8 +305,24 @@ function bubbahub_directory_render_cards( $query ) {
         $days = bubbahub_directory_open_days( $id );
         $age = bubbahub_directory_format_value( bubbahub_directory_get_field( $id, 'age_range', '' ) );
         $price = bubbahub_directory_format_value( bubbahub_directory_get_field( $id, 'price', '' ) );
+        // Map coordinates: support the ACF/legacy map field plus standalone lat/lng fields.
+        $map = bubbahub_directory_normalise_map( bubbahub_directory_get_field( $id, 'map', '' ) );
+        if ( ! $map ) {
+            $lat = bubbahub_directory_get_field( $id, 'latitude', '' );
+            $lng = bubbahub_directory_get_field( $id, 'longitude', '' );
+            if ( $lat !== '' && $lng !== '' ) $map = array( 'lat' => (float) $lat, 'lng' => (float) $lng );
+        }
+        if ( ! $map ) {
+            $lat = bubbahub_directory_get_field( $id, 'lat', '' );
+            $lng = bubbahub_directory_get_field( $id, 'lng', '' );
+            if ( $lat !== '' && $lng !== '' ) $map = array( 'lat' => (float) $lat, 'lng' => (float) $lng );
+        }
+        $map_attrs = '';
+        if ( $map && is_finite( (float) $map['lat'] ) && is_finite( (float) $map['lng'] ) ) {
+            $map_attrs = ' data-lat="' . esc_attr( $map['lat'] ) . '" data-lng="' . esc_attr( $map['lng'] ) . '"';
+        }
         ?>
-        <article class="bh-card bh-card-simple">
+        <article class="bh-card bh-card-simple"<?php echo $map_attrs; ?> data-title="<?php echo esc_attr( $title ); ?>" data-url="<?php echo esc_url( $url ); ?>">
             <a class="bh-card-link" href="<?php echo esc_url( $url ); ?>">
                 <div class="bh-card-image">
                     <?php if ( $image ) : ?>

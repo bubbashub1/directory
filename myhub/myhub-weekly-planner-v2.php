@@ -317,8 +317,38 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $week_dates=array();
     foreach($days as $i=>$day) $week_dates[$day]=wp_date('Y-m-d',strtotime('+'.$i.' days',$week_start_ts));
 
+    $display_days = ('today' === $view) ? array( wp_date('l', strtotime($requested_date)) ) : $days;
+    $display_dates = array();
+    foreach($display_days as $i=>$day) {
+        $display_dates[$day] = ('today' === $view)
+            ? $requested_date
+            : $week_dates[$day];
+    }
+
+    /* Add calendar links before any alternate view consumes the rows. */
+    foreach($rows as &$calendar_row) {
+        $calendar_row['calendar_url'] = add_query_arg(
+            array(
+                'bubbahub_calendar_event'=>1,
+                'group'=>(int)$calendar_row['group_id'],
+                'date'=>$calendar_row['date'],
+                'start'=>$calendar_row['start'],
+                'end'=>$calendar_row['end']
+            ),
+            home_url('/')
+        );
+    }
+    unset($calendar_row);
+
     $week_by=array_fill_keys($days,array());
-    foreach($rows as $row) foreach($week_dates as $day=>$date) if($row['date']===$date){$week_by[$day][]=$row;break;}
+    foreach($rows as $row) {
+        foreach($display_dates as $day=>$date) {
+            if($row['date']===$date) {
+                $week_by[$day][]=$row;
+                break;
+            }
+        }
+    }
 
     $min_minutes=7*60;$max_minutes=22*60;
     foreach($week_by as $entries) foreach($entries as $item){
@@ -392,11 +422,11 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       <?php if(in_array($view,array('week','today'),true)): ?>
       <div class="bh-planner-timetable-desktop">
         <div class="bh-timetable-header"><div class="bh-timetable-time-head">TIME</div>
-          <?php foreach(('today'===$view?array(wp_date('l',strtotime($requested_date))):$days) as $day): ?><div class="bh-timetable-day-head<?php echo $week_dates[$day] === wp_date('Y-m-d', current_time('timestamp' )) ? ' bh-timetable-day-head-today' : ''; ?>"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j',strtotime($week_dates[$day]))); ?></span></div><?php endforeach; ?>
+          <?php foreach($display_days as $day): ?><div class="bh-timetable-day-head<?php echo $display_dates[$day] === wp_date('Y-m-d', current_time('timestamp' )) ? ' bh-timetable-day-head-today' : ''; ?>"><strong><?php echo esc_html(substr($day,0,3)); ?></strong><span><?php echo esc_html(wp_date('j',strtotime($display_dates[$day]))); ?></span></div><?php endforeach; ?>
         </div>
         <div class="bh-timetable-body" style="--bh-grid-hours:<?php echo esc_attr($grid_hours); ?>;">
           <div class="bh-timetable-times"><?php for($h=$grid_start;$h<=$grid_end;$h+=60): ?><span style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"><?php echo esc_html(sprintf('%02d:00',floor($h/60))); ?></span><?php endfor; ?></div>
-          <?php foreach(('today'===$view?array(wp_date('l',strtotime($requested_date))):$days) as $day): $day_lane_count=0; foreach($week_by[$day] as $day_item) $day_lane_count=max($day_lane_count,(int)($day_item['lane_count']??1)); ?><div class="bh-timetable-column<?php echo $day_lane_count>2?' bh-timetable-column-many':''; ?>" data-day="<?php echo esc_attr($day); ?>" data-lane-count="<?php echo esc_attr($day_lane_count); ?>">
+          <?php foreach($display_days as $day): $day_lane_count=0; foreach($week_by[$day] as $day_item) $day_lane_count=max($day_lane_count,(int)($day_item['lane_count']??1)); ?><div class="bh-timetable-column<?php echo $day_lane_count>2?' bh-timetable-column-many':''; ?>" data-day="<?php echo esc_attr($day); ?>" data-lane-count="<?php echo esc_attr($day_lane_count); ?>">
             <?php for($h=$grid_start;$h<$grid_end;$h+=60): ?><div class="bh-timetable-hour-line" style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"></div><?php endfor; ?>
             <?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item):
               $start_ts=strtotime($item['date'].' '.$item['start']);$end_ts=$item['end']?strtotime($item['date'].' '.$item['end']):$start_ts+3600;if($end_ts<$start_ts)$end_ts=strtotime('+1 day',$end_ts);
@@ -429,8 +459,9 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       <div class="bh-planner-month-view"><?php $cursor=strtotime($view_start);for($mi=0;$mi<42;$mi++):$md=wp_date('Y-m-d',strtotime('+'.$mi.' days',$cursor));$mitems=array();foreach($rows as $mr)if($mr['date']===$md)$mitems[]=$mr; ?><div class="bh-planner-month-day<?php echo wp_date('m',strtotime($md))===wp_date('m',$month_ts)?'':' bh-planner-month-outside'; ?><?php echo $md===$today_date?' bh-planner-month-today':''; ?>"><div class="bh-planner-month-date"><?php echo esc_html(wp_date('j',strtotime($md))); ?></div><div class="bh-planner-month-items"><?php foreach($mitems as $miitem): ?><a href="<?php echo esc_url($miitem['url']); ?>" class="bh-planner-month-event"><strong><?php echo esc_html($miitem['start']); ?></strong> <?php echo esc_html($miitem['title']); ?></a><?php endforeach; ?></div></div><?php endfor; ?></div>
       <?php endif; ?>
 
+      <?php if(in_array($view,array('week','today'),true)): ?>
       <div class="bh-planner-mobile">
-        <?php foreach($days as $day): ?><div class="bh-planner-mobile-day"><div class="bh-planner-mobile-day-heading"><span><strong><?php echo esc_html($day); ?></strong><small><?php echo esc_html(wp_date('j F',strtotime($week_dates[$day]))); ?></small></span><span class="bh-planner-mobile-count"><?php echo esc_html(count($week_by[$day])); ?></span></div>
+        <?php foreach($display_days as $day): ?><div class="bh-planner-mobile-day"><div class="bh-planner-mobile-day-heading"><span><strong><?php echo esc_html($day); ?></strong><small><?php echo esc_html(wp_date('j F',strtotime($week_dates[$day]))); ?></small></span><span class="bh-planner-mobile-count"><?php echo esc_html(count($week_by[$day])); ?></span></div>
           <div class="bh-planner-mobile-items"><?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item): $location_ids=bubbahub_myhub_planner_v2_region_ids((int)$item['group_id']); ?>
             <div class="bh-planner-item-wrap bh-planner-filter-item" data-planner-location-ids="<?php echo esc_attr(implode(',',array_map('absint',(array)$location_ids))); ?>"><div class="bh-planner-item"><a class="bh-planner-listing-link" href="<?php echo esc_url($item['url']); ?>"><span class="bh-planner-thumb"><?php if($item['image']): ?><img src="<?php echo esc_url($item['image']); ?>" alt="" loading="lazy"><?php else: ?><span class="bh-planner-placeholder" aria-hidden="true">♡</span><?php endif; ?></span><span class="bh-planner-item-main"><strong><?php echo esc_html($item['title']); ?></strong><?php if($item['label']): ?><span class="bh-planner-session-label"><?php echo esc_html($item['label']); ?></span><?php endif; ?><span class="bh-planner-time"><?php echo esc_html($item['start'].($item['end']?'–'.$item['end']:'')); ?></span><span class="bh-planner-location">📍 <?php echo esc_html($item['venue']?:'Location to be confirmed'); ?></span></span></a><a class="bh-planner-mobile-calendar-link" href="<?php echo esc_url($item['calendar_url']); ?>">+ Add to Calendar</a></div></div>
           <?php endforeach; endif; ?></div>
@@ -438,10 +469,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       </div>
       <?php endif; ?>
 
+      <?php if(in_array($view,array('week','today'),true)): ?>
 <div class="bh-planner-actions">
         <a class="bh-planner-subscribe-button" href="<?php echo esc_url( 'webcal://' . preg_replace( '#^https?://#', '', home_url('/?bubbahub_calendar=1') ) ); ?>">📅 Subscribe to Calendar</a>
         <button type="button" class="bh-planner-print-button" onclick="window.print()">🖨 Print Planner</button>
       </div>
+      <?php endif; ?>
 <style>
 .bh-planner-print-header{display:none!important}
 .bh-planner-search{margin:0 0 18px;padding:16px;border:1px solid #e6e6e6;border-radius:16px;background:#fff}

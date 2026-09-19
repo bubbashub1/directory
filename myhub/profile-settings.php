@@ -316,7 +316,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
                 <?php endif; ?>
                 <div class="bh-profile-grid two bh-child-fields">
                     <label><span>Name</span><input name="child_name" value="<?php echo esc_attr( $name ); ?>" required></label>
-                    <label><span>Gender</span><select name="child_gender"><option value="">Select gender</option><option value="girl" <?php selected( $gender, 'girl' ); ?>>Girl</option><option value="boy" <?php selected( $gender, 'boy' ); ?>>Boy</option><option value="other" <?php selected( $gender, 'other' ); ?>>Other</option><option value="prefer-not-to-say" <?php selected( $gender, 'prefer-not-to-say' ); ?>>Prefer not to say</option></select></label>
+                    <label><span>Gender</span><select name="child_gender" required><option value="">Select gender</option><option value="girl" <?php selected( $gender, 'girl' ); ?>>Girl</option><option value="boy" <?php selected( $gender, 'boy' ); ?>>Boy</option><option value="other" <?php selected( $gender, 'other' ); ?>>Other</option><option value="prefer-not-to-say" <?php selected( $gender, 'prefer-not-to-say' ); ?>>Prefer not to say</option></select></label>
                     <label><span>Photo</span><input name="child_photo" type="file" accept="image/*"></label>
                     <label><span>Date of birth</span><input name="child_date_of_birth" type="date" value="<?php echo esc_attr( $dob ); ?>" required></label>
                 </div>

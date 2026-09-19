@@ -378,7 +378,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         </div>
         <div class="bh-timetable-body" style="--bh-grid-hours:<?php echo esc_attr($grid_hours); ?>;">
           <div class="bh-timetable-times"><?php for($h=$grid_start;$h<=$grid_end;$h+=60): ?><span style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"><?php echo esc_html(sprintf('%02d:00',floor($h/60))); ?></span><?php endfor; ?></div>
-          <?php foreach($days as $day): ?><div class="bh-timetable-column" data-day="<?php echo esc_attr($day); ?>">
+          <?php foreach($days as $day): $day_lane_count=0; foreach($week_by[$day] as $day_item) $day_lane_count=max($day_lane_count,(int)($day_item['lane_count']??1)); ?><div class="bh-timetable-column<?php echo $day_lane_count>2?' bh-timetable-column-many':''; ?>" data-day="<?php echo esc_attr($day); ?>" data-lane-count="<?php echo esc_attr($day_lane_count); ?>">
             <?php for($h=$grid_start;$h<$grid_end;$h+=60): ?><div class="bh-timetable-hour-line" style="top:<?php echo esc_attr((($h-$grid_start)/60)*60); ?>px;"></div><?php endfor; ?>
             <?php if(!empty($week_by[$day])): foreach($week_by[$day] as $item):
               $start_ts=strtotime($item['date'].' '.$item['start']);$end_ts=$item['end']?strtotime($item['date'].' '.$item['end']):$start_ts+3600;if($end_ts<$start_ts)$end_ts=strtotime('+1 day',$end_ts);
@@ -428,6 +428,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 .bh-timetable-body{display:grid;grid-template-columns:58px repeat(7,minmax(120px,1fr));min-width:900px;height:calc(var(--bh-grid-hours) * 60px);position:relative}
 .bh-timetable-times{position:relative;border-right:1px solid #ddd;background:#fff}.bh-timetable-times span{position:absolute;left:0;right:0;transform:translateY(-7px);font-size:10px;color:#777;text-align:center}
 .bh-timetable-column{position:relative;border-right:1px solid #ddd;background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#e9e9e9 59px,#e9e9e9 60px)}
+.bh-timetable-column-many{min-width:390px}
+.bh-timetable-column-many .bh-timetable-event{padding:3px}
+.bh-timetable-column-many .bh-timetable-event a{padding:8px 9px}
+.bh-timetable-column-many .bh-timetable-event strong{font-size:12px;line-height:1.25}
+.bh-timetable-column-many .bh-timetable-event span,.bh-timetable-column-many .bh-timetable-event b,.bh-timetable-column-many .bh-timetable-event small{font-size:10px}
+.bh-timetable-column-many .bh-planner-calendar-link{font-size:9px!important;padding:5px 6px!important;flex:0 0 auto}
 .bh-timetable-hour-line{position:absolute;left:0;right:0;border-top:1px solid #ececec;pointer-events:none}
 .bh-timetable-event{position:absolute;box-sizing:border-box;padding:2px;border-radius:7px;overflow:hidden;min-width:0}.bh-timetable-event a{display:flex;flex-direction:column;height:100%;padding:7px 8px;background:#dceff1;border:1px solid #9bc8cc;border-radius:5px;color:inherit;text-decoration:none!important;overflow:hidden}
 .bh-timetable-event strong{font-size:12px;line-height:1.2}.bh-timetable-event span{font-size:10px;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-timetable-event b{font-size:10px;line-height:1.2;margin-top:3px}.bh-timetable-event small{font-size:9px;line-height:1.2;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-calendar-link{display:block!important;margin:3px 0 0!important;padding:4px 5px!important;border-radius:5px!important;background:#fff!important;border:1px solid #ddd!important;font-size:9px!important;line-height:1.1!important;text-align:center;text-decoration:none!important;color:inherit!important}

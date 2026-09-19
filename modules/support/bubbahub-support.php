@@ -572,6 +572,17 @@ function bubbahub_support_assets() {
 .bh-support-link strong{font-size:14px}.bh-support-link span{font-size:12px;color:#718078}
 .bh-support-empty{padding:24px;border-radius:16px;background:#f4f7f4;color:#718078}
 .bh-support-resource-form{margin-top:30px}
+.bh-support-child-profile{margin:20px 0;padding:20px;border:1px solid #dfe8e1;border-radius:18px;background:#f7faf7}
+.bh-support-child-profile-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.bh-support-child-profile-head strong{font-size:18px;color:#173f32}
+.bh-support-child-profile-intro{font-size:13px!important;color:#66766f!important;margin:0 0 14px!important}
+.bh-support-child-profile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.bh-support-child-profile-grid>div{padding:12px 14px;background:#fff;border:1px solid #e3e9e4;border-radius:12px}
+.bh-support-child-profile-grid span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:800;color:#7b8982;margin-bottom:4px}
+.bh-support-child-profile-grid strong{display:block;color:#284e41;font-size:14px}
+.bh-support-child-consent{display:flex!important;align-items:flex-start;gap:10px;padding:13px 14px;background:#fff;border:1px solid #d8e3da;border-radius:12px;text-transform:none!important;letter-spacing:0!important;font-size:13px!important;line-height:1.5;color:#315247!important;cursor:pointer}
+.bh-support-child-consent input{width:18px!important;min-width:18px;margin:2px 0 0!important;padding:0!important}
+.bh-support-child-consent span{flex:1}
 @media(max-width:850px){.bh-support-article-grid,.bh-support-directory-grid,.bh-support-app-grid{grid-template-columns:1fr 1fr}.bh-support-row-head{align-items:flex-start;flex-direction:column}.bh-support-filters{width:100%}.bh-support-filters input,.bh-support-filters select{flex:1;min-width:0}}
 @media(max-width:620px){.bh-support-hub{padding:20px 12px 50px}.bh-support-hero{padding:30px 24px;border-radius:22px}.bh-support-panel,.bh-support-directory,.bh-support-guidance{padding:22px;border-radius:22px}.bh-support-form-grid,.bh-support-article-grid,.bh-support-directory-grid,.bh-support-app-grid,.bh-support-link-grid{grid-template-columns:1fr}.bh-support-filters{flex-direction:column}.bh-support-filters input,.bh-support-filters select{width:100%}.bh-support-guidance-card{align-items:flex-start;flex-direction:column}.bh-support-view-button{width:100%;text-align:center;box-sizing:border-box}}
 CSS

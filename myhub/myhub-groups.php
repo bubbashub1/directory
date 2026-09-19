@@ -38,7 +38,7 @@ function bubbahub_myhub_groups_user_preferences(){
     }
     return array(array_values(array_unique($interest_out)),array_values(array_unique($location_out)));
 }
-function bubbahub_myhub_groups_age_tokensfunction bubbahub_myhub_groups_age_tokens($selected=array()){
+function bubbahub_myhub_groups_age_tokens($selected=array()){
     $children=get_posts(array('post_type'=>'bh_child','post_status'=>'publish','author'=>get_current_user_id(),'posts_per_page'=>-1,'fields'=>'ids','no_found_rows'=>true));
     $selected=array_map('absint',(array)$selected);
     $tokens=array();
@@ -82,7 +82,7 @@ function bubbahub_myhub_groups_age_range_matches($value,$child_months){
     }
     return false;
 }
-function bubbahub_myhub_groups_scorefunction bubbahub_myhub_groups_score($id,$interests,$locations,$ages){
+function bubbahub_myhub_groups_score($id,$interests,$locations,$ages){
     $score=0;
     $matched_location=false;
     if($locations){
@@ -121,7 +121,7 @@ function bubbahub_myhub_groups_scorefunction bubbahub_myhub_groups_score($id,$in
     if(bubbahub_myhub_groups_age_range_matches($v,$ages))$score+=3;
     return $score;
 }
-function bubbahub_myhub_groups_suggested_idsfunction bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array()){
+function bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array()){
     list($interests,$locations)=bubbahub_myhub_groups_user_preferences();
     $ages=bubbahub_myhub_groups_age_tokens($selected);
     $q=new WP_Query(array('post_type'=>'group','post_status'=>'publish','posts_per_page'=>200,'post__not_in'=>array_map('absint',$exclude),'orderby'=>'date','order'=>'DESC','no_found_rows'=>true));
@@ -136,5 +136,5 @@ function bubbahub_myhub_groups_suggested_idsfunction bubbahub_myhub_groups_sugge
     arsort($scored,SORT_NUMERIC);
     return array_slice(array_values(array_unique(array_map('absint',array_keys($scored)))),0,24);
 }
-function bubbahub_myhub_groups_ajaxfunction bubbahub_myhub_groups_ajax(){if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);check_ajax_referer('bubbahub_myhub_groups','nonce');$type=isset($_POST['type'])?sanitize_key(wp_unslash($_POST['type'])):'favourite';$ids=isset($_POST['ids'])?json_decode(wp_unslash($_POST['ids']),true):array();$ids=bubbahub_myhub_groups_clean_ids($ids);$favs=isset($_POST['favourites'])?json_decode(wp_unslash($_POST['favourites']),true):array();$visited=isset($_POST['visited'])?json_decode(wp_unslash($_POST['visited']),true):array();$recent=isset($_POST['recently_viewed'])?json_decode(wp_unslash($_POST['recently_viewed']),true):array();$selected=isset($_POST['selected_children'])?json_decode(wp_unslash($_POST['selected_children']),true):array();if($type==='suggested'){$exclude=array_merge($ids,bubbahub_myhub_groups_clean_ids($favs),bubbahub_myhub_groups_clean_ids($visited),bubbahub_myhub_groups_clean_ids($recent));$ids=bubbahub_myhub_groups_suggested_ids($exclude,$selected);}elseif($type==='recently_viewed')$ids=bubbahub_myhub_groups_clean_ids($recent);$html='';foreach(array_slice($ids,0,24) as $id)$html.=bubbahub_myhub_groups_card($id);wp_send_json_success(array('html'=>$html,'count'=>count($ids)));}
+function bubbahub_myhub_groups_ajax(){if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);check_ajax_referer('bubbahub_myhub_groups','nonce');$type=isset($_POST['type'])?sanitize_key(wp_unslash($_POST['type'])):'favourite';$ids=isset($_POST['ids'])?json_decode(wp_unslash($_POST['ids']),true):array();$ids=bubbahub_myhub_groups_clean_ids($ids);$favs=isset($_POST['favourites'])?json_decode(wp_unslash($_POST['favourites']),true):array();$visited=isset($_POST['visited'])?json_decode(wp_unslash($_POST['visited']),true):array();$recent=isset($_POST['recently_viewed'])?json_decode(wp_unslash($_POST['recently_viewed']),true):array();$selected=isset($_POST['selected_children'])?json_decode(wp_unslash($_POST['selected_children']),true):array();if($type==='suggested'){$exclude=array_merge($ids,bubbahub_myhub_groups_clean_ids($favs),bubbahub_myhub_groups_clean_ids($visited),bubbahub_myhub_groups_clean_ids($recent));$ids=bubbahub_myhub_groups_suggested_ids($exclude,$selected);}elseif($type==='recently_viewed')$ids=bubbahub_myhub_groups_clean_ids($recent);$html='';foreach(array_slice($ids,0,24) as $id)$html.=bubbahub_myhub_groups_card($id);wp_send_json_success(array('html'=>$html,'count'=>count($ids)));}
 function bubbahub_myhub_groups_shortcode(){if(!is_user_logged_in())return '<div class="bh-myhub-login"><h2>My Groups</h2><p>Please log in to see your groups.</p></div>';wp_enqueue_style('bubbahub-myhub');wp_enqueue_style('bubbahub-myhub-groups');wp_enqueue_script('bubbahub-myhub-groups');$view=isset($_GET['group_view'])?sanitize_key(wp_unslash($_GET['group_view'])):'favourite';if(!in_array($view,array('recently_viewed','favourite','visited','suggested'),true))$view='favourite';$titles=array('recently_viewed'=>'Recently Viewed','favourite'=>'Favourite Groups','visited'=>'Visited Groups','suggested'=>'Suggested Groups');ob_start();?><div class="bh-myhub bh-myhub-groups-page" data-myhub-groups-page="<?php echo esc_attr($view);?>"><div class="bh-myhub-groups-page-head"><div><div class="bh-myhub-kicker">YOUR BUBBA HUB</div><h1><?php echo esc_html($titles[$view]);?></h1><p>Keep the local groups that matter to your family close at hand.</p></div><a class="bh-myhub-button secondary" href="<?php echo esc_url(home_url('/my-hub/'));?>">← Back to My Hub</a></div><div class="bh-myhub-groups-tabs"><?php foreach($titles as $key=>$label):?><a class="<?php echo $view===$key?'is-active':'';?>" href="<?php echo esc_url(add_query_arg('group_view',$key,home_url('/my-groups/')));?>"><?php echo esc_html($label);?></a><?php endforeach;?></div><div class="bh-myhub-groups-results" data-myhub-group-results data-group-view="<?php echo esc_attr($view);?>"><div class="bh-myhub-groups-loading">Loading your groups…</div></div></div><?php return ob_get_clean();}

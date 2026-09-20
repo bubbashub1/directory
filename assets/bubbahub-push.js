@@ -26,6 +26,7 @@
       state.registration = registration;
       firebase.initializeApp(BubbaHubPush.firebase);
       state.messaging = firebase.messaging();
+      bindForegroundMessages();
       return state.messaging.getToken({ vapidKey: BubbaHubPush.vapidKey, serviceWorkerRegistration: registration });
     }).then(function (token) {
       if (!token) throw new Error('Firebase did not return a push registration.');
@@ -38,6 +39,21 @@
     if (!state.token) return Promise.resolve();
     return request(BubbaHubPush.unregisterUrl, { token: state.token }).then(function () {
       state.token = null;
+    });
+  }
+
+  function bindForegroundMessages() {
+    if (!state.messaging) return;
+    state.messaging.onMessage(function (payload) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      var n = payload.notification || {};
+      var d = payload.data || {};
+      var title = n.title || d.title || 'Bubba Hub';
+      var body = n.body || d.body || '';
+      var url = d.url || '/my-hub/';
+      if (state.registration && state.registration.showNotification) {
+        state.registration.showNotification(title, { body: body, icon: '/wp-content/uploads/2026/09/cropped-bubba-hub-logo-192x192.png', data: { url: url } });
+      }
     });
   }
 

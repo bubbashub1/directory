@@ -52,7 +52,7 @@
       var body = n.body || d.body || '';
       var url = d.url || '/my-hub/';
       if (state.registration && state.registration.showNotification) {
-        state.registration.showNotification(title, { body: body, icon: '/wp-content/uploads/2026/09/cropped-bubba-hub-logo-192x192.png', data: { url: url } });
+        state.registration.showNotification(title, { body: body, icon: BubbaHubPush.icon || '', data: { url: url } });
       }
     });
   }

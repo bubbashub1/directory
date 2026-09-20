@@ -738,6 +738,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>" data-save-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_save_custom_calendar' ) ); ?>" data-edit-calendar="<?php echo esc_attr($edit_calendar_id); ?>">
       <div class="bh-myhub-section-heading">
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
+        <a class="bh-weekly-planner-preferences" href="<?php echo esc_url( add_query_arg( array( 'bh_account_settings' => '1', 'bh_settings_section' => 'calendar' ), get_permalink() ) ); ?>">Change Calendar Preferences →</a>
       </div>
 
       <form class="bh-calendar-search-form" method="get">

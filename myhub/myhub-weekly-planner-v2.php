@@ -5,24 +5,6 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action( 'wp_ajax_bubbahub_calendar_filter', 'bubbahub_myhub_planner_v2_ajax_filter' );
-function bubbahub_myhub_planner_v2_ajax_filter() {
-    check_ajax_referer( 'bubbahub_calendar_filter', 'nonce' );
-    if ( ! is_user_logged_in() ) {
-        wp_send_json_error( array( 'message' => 'Please log in to use the Calendar.' ), 403 );
-    }
-
-    $previous_get = $_GET;
-    $_GET = wp_unslash( $_POST );
-    unset( $_GET['action'], $_GET['nonce'] );
-
-    $html = bubbahub_myhub_weekly_planner_v2_shortcode();
-    $_GET = $previous_get;
-
-    wp_send_json_success( array( 'html' => $html ) );
-}
-
-
 
 function bubbahub_myhub_planner_v2_saved_calendars() {
     if ( ! is_user_logged_in() ) return array();
@@ -603,7 +585,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
           <label for="bh-calendar-save-name">Name this custom calendar</label>
           <div><input id="bh-calendar-save-name" type="text" maxlength="80" placeholder="e.g. Baby groups near Exeter"><button type="button" data-confirm-save>Save</button><button type="button" data-cancel-save>Cancel</button></div>
         </div>
-        <div class="bh-calendar-advanced-search" hidden>
+        <div class="bh-calendar-advanced-search" hidden aria-hidden="true">
           <?php
           $calendar_regions = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>0));
           $calendar_towns = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>!empty($calendar_filters['region']) ? (int)term_exists($calendar_filters['region'],'region') : 0));
@@ -1138,10 +1120,13 @@ document.addEventListener('DOMContentLoaded',function(){
     var saveCancel=planner.querySelector('[data-cancel-save]');
 
     if(advancedToggle&&advancedPanel){
-      advancedToggle.addEventListener('click',function(){
-        var open=advancedToggle.getAttribute('aria-expanded')==='true';
-        advancedToggle.setAttribute('aria-expanded',open?'false':'true');
-        advancedPanel.hidden=open;
+      advancedToggle.addEventListener('click',function(e){
+        e.preventDefault();
+        var isOpen=advancedToggle.getAttribute('aria-expanded')==='true';
+        var nextOpen=!isOpen;
+        advancedToggle.setAttribute('aria-expanded',nextOpen?'true':'false');
+        advancedPanel.hidden=!nextOpen;
+        advancedPanel.setAttribute('aria-hidden',nextOpen?'false':'true');
       });
     }
 
@@ -1184,6 +1169,8 @@ document.addEventListener('DOMContentLoaded',function(){
         var data=new FormData(searchForm);
         data.append('action','bubbahub_calendar_filter');
         data.append('nonce',nonce);
+        // Always submit the current form state, including Advanced Search fields.
+        // The server-side AJAX handler rebuilds the planner from this exact state.
 
         fetch(endpoint,{method:'POST',credentials:'same-origin',body:data})
           .then(function(response){return response.json();})
@@ -1194,8 +1181,16 @@ document.addEventListener('DOMContentLoaded',function(){
             var replacement=doc.querySelector('.bh-weekly-planner-v2');
             if(!replacement)throw new Error('Calendar markup missing');
 
+            var advancedWasOpen = advancedPanel && advancedPanel.hidden === false;
             planner.replaceWith(replacement);
             initBubbaHubCalendar(replacement);
+            var replacementAdvancedToggle = replacement.querySelector('.bh-calendar-advanced-toggle');
+            var replacementAdvancedPanel = replacement.querySelector('.bh-calendar-advanced-search');
+            if (replacementAdvancedToggle && replacementAdvancedPanel && advancedWasOpen) {
+              replacementAdvancedToggle.setAttribute('aria-expanded','true');
+              replacementAdvancedPanel.hidden=false;
+              replacementAdvancedPanel.setAttribute('aria-hidden','false');
+            }
 
             var url=new URL(window.location.href);
             var replacementForm=replacement.querySelector('.bh-calendar-search-form');

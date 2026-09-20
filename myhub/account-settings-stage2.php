@@ -1556,7 +1556,6 @@ function bubbahub_account_settings_stage2_shortcode() {
 
     $section = isset( $_GET['bh_settings_section'] ) ? sanitize_key( wp_unslash( $_GET['bh_settings_section'] ) ) : 'home';
     $user = wp_get_current_user();
-    $children = bubbahub_stage2_children();
     $is_pro = bubbahub_stage2_is_pro();
     $um_url = bubbahub_stage2_account_url();
     $payment_url = bubbahub_stage2_payment_url();
@@ -1576,12 +1575,12 @@ function bubbahub_account_settings_stage2_shortcode() {
     if ( $content ) {
         $back = add_query_arg( 'bh_account_settings', '1', remove_query_arg( 'bh_settings_section' ) );
         ob_start(); ?>
-        <div id="bh-account-settings-screen" class="bh-profile-shell"><div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, children, membership, interests, notifications and payments.</p></div><a class="bh-profile-back light" href="<?php echo esc_url($back); ?>">‹ Back to settings</a></div><?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?><?php echo $content; ?></div><?php return ob_get_clean();
+        <div id="bh-account-settings-screen" class="bh-profile-shell"><div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, membership, interests, notifications and payments.</p></div><a class="bh-profile-back light" href="<?php echo esc_url($back); ?>">‹ Back to settings</a></div><?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?><?php echo $content; ?></div><?php return ob_get_clean();
     }
 
     ob_start(); ?>
     <div id="bh-account-settings-screen" class="bh-profile-shell">
-        <div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, children, membership and payment details in one place.</p><?php if($is_pro): ?><div class="bh-pro-pill">⭐ Pro Member Active</div><?php endif; ?></div><a class="bh-profile-back light" href="<?php echo esc_url(remove_query_arg('bh_account_settings')); ?>">‹ Back to My Hub</a></div>
+        <div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, membership and payment details in one place.</p><?php if($is_pro): ?><div class="bh-pro-pill">⭐ Pro Member Active</div><?php endif; ?></div><a class="bh-profile-back light" href="<?php echo esc_url(remove_query_arg('bh_account_settings')); ?>">‹ Back to My Hub</a></div>
         <?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?>
         <div id="bh-account-settings-list" class="bh-settings-list" role="navigation" aria-label="Account settings">
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'profile'))); ?>">
@@ -1597,7 +1596,6 @@ function bubbahub_account_settings_stage2_shortcode() {
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'payments'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">💳</span><span class="bh-account-settings-content"><h3>My Connected Payment Options</h3><p>Open your connected payment provider securely to manage your payment options.</p></span></a></div>
         </div>
         <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My Membership</h3><span>Membership &amp; account</span></div><div class="bh-connected-row"><div><strong><?php echo esc_html($user->display_name); ?></strong><small><?php echo esc_html($user->user_email); ?></small></div><a href="<?php echo esc_url($um_url); ?>">Open My Membership →</a></div></div>
-        <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Child profiles</h3><a href="<?php echo esc_url(add_query_arg('bh_add_child','1')); ?>">＋ Manage children</a></div><?php if($children): ?><div class="bh-account-children-list"><?php foreach($children as $child): $name=function_exists('bubbahub_profile_field')?bubbahub_profile_field($child->ID,'child_name',$child->post_title):$child->post_title; $status=function_exists('bubbahub_profile_field')?bubbahub_profile_field($child->ID,'child_status','born'):'born'; ?><div><span class="bh-mini-avatar"><?php echo esc_html(strtoupper(substr((string)$name,0,1))); ?></span><div><strong><?php echo esc_html($name); ?></strong><small><?php echo 'expecting'===$status?'Expecting':'Child profile'; ?></small></div><a href="<?php echo esc_url(add_query_arg(array('bh_add_child'=>1,'child_id'=>$child->ID))); ?>">Edit</a></div><?php endforeach; ?></div><?php else: ?><p class="bh-muted">No child profiles have been added yet.</p><?php endif; ?></div>
         <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Payment account</h3><span>GetPaid connection</span></div><div class="bh-connected-row"><div><strong><?php echo $is_pro ? 'Pro / payment account available' : 'Payment history and invoices'; ?></strong><small>Use the connected payment area for invoices, subscriptions and secure payment details.</small></div><a href="<?php echo esc_url($payment_url); ?>">Open payments →</a></div></div>
     </div>
     <?php return ob_get_clean();

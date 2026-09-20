@@ -1095,6 +1095,9 @@ document.addEventListener('DOMContentLoaded',function(){
     <?php return ob_get_clean();
 }
 
+
+/* Keep planner override CSS out of plugin activation output. */
+add_action( 'wp_head', function() {
 ?>
 <style>
 /* Final planner layout overrides */
@@ -1272,3 +1275,6 @@ document.addEventListener('DOMContentLoaded',function(){
   .bh-planner-grid{margin-top:0!important}
 }
 </style>
+
+<?php
+} );

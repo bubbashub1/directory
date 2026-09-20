@@ -322,22 +322,3 @@
     font-size:11px!important;
   }
 }
-
-
-/* Account Settings final cleanup: one visual surface per component.
- * Scope everything to the Account Settings shell so theme/card styles cannot
- * create nested white panels or force the account tiles into broken boxes.
- */
-.bh-profile-shell.bh-account-settings-shell{background:transparent!important;box-shadow:none!important;border:0!important;}
-.bh-account-settings-shell .bh-account-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;margin:0 0 18px!important;padding:0!important;background:transparent!important;border:0!important;}
-.bh-account-settings-shell .bh-account-card{position:relative!important;display:flex!important;align-items:flex-start!important;gap:12px!important;width:100%!important;min-width:0!important;min-height:112px!important;height:auto!important;margin:0!important;padding:18px!important;background:#fff!important;border:1px solid #e6ebe9!important;border-radius:18px!important;box-shadow:0 2px 8px rgba(0,0,0,.025)!important;}
-.bh-account-settings-shell .bh-account-card>*{box-sizing:border-box!important;}
-.bh-account-settings-shell .bh-account-card .bh-account-card-body{display:block!important;flex:1 1 auto!important;width:auto!important;min-width:0!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
-.bh-account-settings-shell .bh-account-card .bh-account-card-body h3{margin:0 0 5px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
-.bh-account-settings-shell .bh-account-card .bh-account-card-body p{margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;}
-.bh-account-settings-shell .bh-account-card .bh-account-card-arrow{display:flex!important;flex:0 0 auto!important;margin-left:auto!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;align-items:center!important;}
-.bh-account-settings-shell>.bh-profile-card{width:100%!important;margin:0 0 18px!important;background:#fff!important;border:1px solid #e6ebe9!important;box-shadow:0 2px 8px rgba(0,0,0,.025)!important;}
-.bh-account-settings-shell .bh-notification-centre{box-sizing:border-box!important;width:100%!important;margin:0 0 18px!important;}
-.bh-account-settings-shell .bh-notification-feed{box-sizing:border-box!important;width:100%!important;margin:0 0 18px!important;}
-@media(max-width:800px){.bh-account-settings-shell .bh-account-grid{grid-template-columns:1fr!important;}.bh-account-settings-shell .bh-account-card{min-height:0!important;}}
-@media(max-width:620px){.bh-account-settings-shell .bh-account-card{padding:15px!important;border-radius:16px!important;}.bh-account-settings-shell>.bh-profile-card{padding:15px!important;border-radius:16px!important;}}

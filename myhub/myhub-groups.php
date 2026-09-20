@@ -96,6 +96,116 @@ function bubbahub_myhub_groups_age_range_matches($value,$child_months){
     }
     return false;
 }
+function bubbahub_myhub_groups_family_preferences(){
+    $read=function($keys){
+        foreach((array)$keys as $key){
+            $value=get_user_meta(get_current_user_id(),$key,true);
+            if(function_exists('get_field')){
+                $acf=get_field($key,'user_'.get_current_user_id());
+                if($acf!==null&&$acf!==false&&$acf!=='')$value=$acf;
+            }
+            if($value!==null&&$value!==false&&$value!=='')return is_array($value)?$value:array($value);
+        }
+        return array();
+    };
+    $normalise=function($values){
+        $out=array();
+        foreach((array)$values as $v){
+            if(is_array($v)&&isset($v['value']))$v=$v['value'];
+            if(is_scalar($v)){ $v=sanitize_key((string)$v); if($v!=='')$out[]=$v; }
+        }
+        return array_values(array_unique($out));
+    };
+    return array(
+        'accessibility'=>$normalise($read(array('accessibility_needs'))),
+        'activity_setting'=>$normalise($read(array('activity_setting'))),
+        'term_holiday'=>$normalise($read(array('term_holiday'))),
+        'preferred_days'=>$normalise($read(array('preferred_days'))),
+        'preferred_times'=>$normalise($read(array('preferred_times'))),
+        'price'=>$normalise($read(array('preferred_price_bracket'))),
+    );
+}
+function bubbahub_myhub_groups_listing_value($id,$name,$default=array()){
+    $value=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,$name,$default):get_post_meta($id,$name,true);
+    return ($value===null||$value===false||$value==='')?$default:$value;
+}
+function bubbahub_myhub_groups_truthy($value){
+    if(is_bool($value))return $value;
+    if(is_numeric($value))return (bool)$value;
+    return in_array(strtolower(trim((string)$value)),array('1','true','yes','on'),true);
+}
+function bubbahub_myhub_groups_schedule_rows($id){
+    $schedule=bubbahub_myhub_groups_listing_value($id,'week_schedule',array());
+    if(is_string($schedule)){
+        $decoded=json_decode($schedule,true);
+        if(is_array($decoded))$schedule=$decoded;
+    }
+    if(!is_array($schedule))return array();
+    $rows=array();
+    $walk=function($value)use(&$walk,&$rows){
+        if(!is_array($value))return;
+        $has_day=isset($value['day'],$value['day_name'],$value['weekday'],$value['week_day']);
+        $has_time=isset($value['start'],$value['start_time'],$value['from'],$value['end'],$value['end_time'],$value['to']);
+        if($has_day||$has_time)$rows[]=$value;
+        foreach($value as $child)if(is_array($child))$walk($child);
+    };
+    $walk($schedule);
+    return $rows;
+}
+function bubbahub_myhub_groups_time_bucket($time){
+    if(!$time)return '';
+    $time=preg_replace('/[^0-9:]/','',str_replace('.',':',(string)$time));
+    if(!preg_match('/^(\\d{1,2})(?::(\\d{2}))?/',$time,$m))return '';
+    $minutes=((int)$m[1]*60)+(isset($m[2])?(int)$m[2]:0);
+    if($minutes<720)return 'morning';
+    if($minutes<1020)return 'afternoon';
+    return 'early-evening';
+}
+function bubbahub_myhub_groups_listing_matches_preferences($id,$prefs){
+    $score=0;
+
+    $need_access=(array)$prefs['accessibility'];
+    if($need_access){
+        $listing=(array)bubbahub_myhub_groups_listing_value($id,'accessibility_needs',array());
+        $listing=array_map('sanitize_key',$listing);
+        $matches=array_intersect($need_access,$listing);
+        if($matches)$score+=min(4,count($matches)*2);
+    }
+
+    $activity=(array)$prefs['activity_setting'];
+    if($activity){
+        $listing=(array)bubbahub_myhub_groups_listing_value($id,'activity_setting',array());
+        $listing=array_map('sanitize_key',$listing);
+        if(array_intersect($activity,$listing))$score+=2;
+    }
+
+    $term=(array)$prefs['term_holiday'];
+    if($term){
+        $term_only=bubbahub_myhub_groups_truthy(bubbahub_myhub_groups_listing_value($id,'term_time_only',false));
+        if(in_array('term-time',$term,true)&&$term_only)$score+=2;
+        if(in_array('school-holidays',$term,true)&&!$term_only)$score+=2;
+    }
+
+    $days=(array)$prefs['preferred_days'];
+    $times=(array)$prefs['preferred_times'];
+    if($days||$times){
+        foreach(bubbahub_myhub_groups_schedule_rows($id) as $row){
+            $day='';
+            foreach(array('day','day_name','weekday','week_day') as $key)if(isset($row[$key])&&$row[$key]!==''){$day=sanitize_key((string)$row[$key]);break;}
+            $start=$end='';
+            foreach(array('start','start_time','from','opening_time','open') as $key)if(isset($row[$key])&&$row[$key]!==''){$start=(string)$row[$key];break;}
+            foreach(array('end','end_time','to','closing_time','close') as $key)if(isset($row[$key])&&$row[$key]!==''){$end=(string)$row[$key];break;}
+            $day_ok=!$days||in_array($day,$days,true);
+            $buckets=array_filter(array(bubbahub_myhub_groups_time_bucket($start),bubbahub_myhub_groups_time_bucket($end)));
+            $time_ok=!$times||array_intersect($times,$buckets);
+            if($day_ok&&$time_ok){$score+=2;break;}
+        }
+    }
+
+    if(in_array('free',$prefs['price'],true)&&bubbahub_myhub_groups_truthy(bubbahub_myhub_groups_listing_value($id,'isFree',false)))$score+=2;
+
+    return $score;
+}
 function bubbahub_myhub_groups_score($id,$interests,$locations,$ages){
     $score=0;
     $matched_location=false;

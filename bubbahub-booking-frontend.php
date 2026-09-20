@@ -78,6 +78,10 @@ function bubbahub_booking_reserve_ajax() {
     $places = isset( $_POST['places'] ) ? max( 1, absint( $_POST['places'] ) ) : 1;
     $name = isset( $_POST['customer_name'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_name'] ) ) : '';
     $email = isset( $_POST['customer_email'] ) ? sanitize_email( wp_unslash( $_POST['customer_email'] ) ) : '';
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in to complete a booking. Your booking consent and child profile must be attached to every booking.' ), 403 );
+    if ( function_exists( 'bubbahub_stage2_consent_is_valid' ) && ! bubbahub_stage2_consent_is_valid( get_current_user_id() ) ) {
+        wp_send_json_error( array( 'message' => 'Please complete your booking consent in Account Settings before booking.' ), 403 );
+    }
     if ( ! $session_id || get_post_type( $session_id ) !== 'bh_session' ) wp_send_json_error( array( 'message' => 'Invalid booking session.' ), 400 );
     if ( ! $name || ! is_email( $email ) ) wp_send_json_error( array( 'message' => 'Please enter your name and a valid email address.' ), 400 );
     if ( ! (bool) bubbahub_booking_meta( $session_id, '_bh_reserve_enabled', false ) ) wp_send_json_error( array( 'message' => 'Reservations are not enabled for this session.' ), 400 );
@@ -141,7 +145,11 @@ function bubbahub_booking_page_shortcode() {
     $notice = '';
 
     if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['bh_reserve_submit'] ) ) {
-        if ( ! isset( $_POST['bh_reserve_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_reserve_nonce'] ) ), 'bh_reserve_page' ) ) {
+        if ( ! is_user_logged_in() ) {
+            $notice = '<div class="bh-booking-message is-error">Please log in to complete a booking. Your booking consent and child profile must be attached to every booking.</div>';
+        } elseif ( function_exists( 'bubbahub_stage2_consent_is_valid' ) && ! bubbahub_stage2_consent_is_valid( get_current_user_id() ) ) {
+            $notice = '<div class="bh-booking-message is-error">Please complete your booking consent in Account Settings before booking.</div>';
+        } elseif ( ! isset( $_POST['bh_reserve_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_reserve_nonce'] ) ), 'bh_reserve_page' ) ) {
             $notice = '<div class="bh-booking-message is-error">Security check failed. Please try again.</div>';
         } else {
             $post_session = isset( $_POST['session_id'] ) ? absint( $_POST['session_id'] ) : 0;

@@ -11,7 +11,11 @@
       "instructions": "Select the accessibility facilities and support available for this group or activity. These choices are matched against family Accessibility Needs in My Hub.",
       "required": 0,
       "conditional_logic": 0,
-      "wrapper": { "width": "50", "class": "", "id": "" },
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
       "choices": {
         "step-free": "Step-free access",
         "accessible-toilet": "Accessible toilet",
@@ -36,7 +40,11 @@
       "instructions": "Select whether this group or activity takes place indoors, outdoors, or both. This is matched against the family's Activity Setting preference.",
       "required": 0,
       "conditional_logic": 0,
-      "wrapper": { "width": "50", "class": "", "id": "" },
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
       "choices": {
         "indoor": "Indoor",
         "outdoor": "Outdoor"
@@ -46,11 +54,35 @@
       "toggle": 0,
       "return_format": "value",
       "layout": "vertical"
+    },
+    {
+      "key": "field_bh_group_sen_friendly",
+      "label": "SEN Friendly",
+      "name": "sen_friendly",
+      "aria-label": "",
+      "type": "true_false",
+      "instructions": "Mark this group or activity as SEN friendly. This is matched against the family's SEN Friendly preference in My Hub.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "message": "SEN friendly",
+      "default_value": 0,
+      "ui": 1,
+      "ui_on_text": "Yes",
+      "ui_off_text": "No"
     }
   ],
   "location": [
     [
-      { "param": "post_type", "operator": "==", "value": "group" }
+      {
+        "param": "post_type",
+        "operator": "==",
+        "value": "group"
+      }
     ]
   ],
   "menu_order": 20,
@@ -62,5 +94,5 @@
   "active": true,
   "description": "Group listing fields used by BubbaHub My Hub preference matching.",
   "show_in_rest": 0,
-  "modified": 1789930000
+  "modified": 1789930100
 }

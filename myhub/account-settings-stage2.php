@@ -677,13 +677,15 @@ function bubbahub_stage2_handle_calendar_settings() {
     $price = isset( $_POST['calendar_price_filter'] ) ? sanitize_key( wp_unslash( $_POST['calendar_price_filter'] ) ) : 'all';
 
     $allowed_days = array( 'monday','tuesday','wednesday','thursday','friday','saturday','sunday' );
-    $hidden_days = array();
-    $selected_hidden = isset( $_POST['calendar_hidden_days'] ) ? (array) $_POST['calendar_hidden_days'] : array();
-    foreach ( $selected_hidden as $day ) {
-        $day = sanitize_key( wp_unslash( $day ) );
-        if ( in_array( $day, $allowed_days, true ) ) $hidden_days[] = $day;
-    }
-    $hidden_days = array_values( array_unique( $hidden_days ) );
+    // The settings UI is expressed as "Show days": checked = visible.
+    // Store the inverse as hidden days so existing calendar filtering remains stable.
+    $selected_visible = isset( $_POST['calendar_visible_days'] ) ? (array) $_POST['calendar_visible_days'] : array();
+    $selected_visible = array_values( array_unique( array_filter( array_map(
+        function( $day ) { return sanitize_key( wp_unslash( $day ) ); },
+        $selected_visible
+    ), function( $day ) use ( $allowed_days ) { return in_array( $day, $allowed_days, true ); } ) ) );
+    $hidden_days = array_values( array_diff( $allowed_days, $selected_visible ) );
+    // Never allow the calendar to end up with no visible day.
     if ( count( $hidden_days ) >= 7 ) array_pop( $hidden_days );
 
     $time_options = array( 'morning','afternoon','evening' );
@@ -1397,7 +1399,7 @@ function bubbahub_stage2_render_calendar_settings() {
           <div class="bh-calendar-setting-card bh-calendar-setting-wide">
             <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">📅</span><div><h4>Show days</h4><p>Choose which days are normally visible. Untick a day to hide it from your calendar.</p></div></div>
             <div class="bh-calendar-check-pills">
-              <?php foreach($days as $v=>$label): ?><label><input type="checkbox" name="calendar_hidden_days[]" value="<?php echo esc_attr($v); ?>" <?php checked(in_array($v,$hidden_days,true)); ?>><span><?php echo esc_html($label); ?></span></label><?php endforeach; ?>
+              <?php foreach($days as $v=>$label): ?><label><input type="checkbox" name="calendar_visible_days[]" value="<?php echo esc_attr($v); ?>" <?php checked(!in_array($v,$hidden_days,true)); ?>><span><?php echo esc_html($label); ?></span></label><?php endforeach; ?>
             </div>
           </div>
           <div class="bh-calendar-setting-card bh-calendar-setting-wide">

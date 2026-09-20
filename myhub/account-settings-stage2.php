@@ -654,11 +654,21 @@ function bubbahub_stage2_handle_privacy() {
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
     $uid = get_current_user_id();
-    update_user_meta( $uid, 'bubbahub_privacy_share_contact_leaders', ! empty( $_POST['privacy_share_contact_leaders'] ) ? '1' : '0' );
-    update_user_meta( $uid, 'bubbahub_privacy_share_child_yob_leaders', ! empty( $_POST['privacy_share_child_yob_leaders'] ) ? '1' : '0' );
+    $restrict_leader_sharing = ! empty( $_POST['privacy_restrict_leader_sharing'] ) ? '1' : '0';
+    $share_contact = ! empty( $_POST['privacy_share_contact_leaders'] ) ? '1' : '0';
+    $share_child_yob = ! empty( $_POST['privacy_share_child_yob_leaders'] ) ? '1' : '0';
+    $leader_messages = ! empty( $_POST['privacy_leader_messages'] ) ? '1' : '0';
+    if ( '1' === $restrict_leader_sharing ) {
+        $share_contact = '0';
+        $share_child_yob = '0';
+        $leader_messages = '0';
+    }
+    update_user_meta( $uid, 'bubbahub_privacy_restrict_leader_sharing', $restrict_leader_sharing );
+    update_user_meta( $uid, 'bubbahub_privacy_share_contact_leaders', $share_contact );
+    update_user_meta( $uid, 'bubbahub_privacy_share_child_yob_leaders', $share_child_yob );
     update_user_meta( $uid, 'bubbahub_privacy_personalised_recommendations', ! empty( $_POST['privacy_personalised_recommendations'] ) ? '1' : '0' );
     update_user_meta( $uid, 'bubbahub_privacy_anonymous_analytics', ! empty( $_POST['privacy_anonymous_analytics'] ) ? '1' : '0' );
-    update_user_meta( $uid, 'bubbahub_privacy_leader_messages', ! empty( $_POST['privacy_leader_messages'] ) ? '1' : '0' );
+    update_user_meta( $uid, 'bubbahub_privacy_leader_messages', $leader_messages );
 
     $request = isset( $_POST['privacy_request'] ) ? sanitize_key( wp_unslash( $_POST['privacy_request'] ) ) : '';
     if ( $request && in_array( $request, array( 'export','deletion' ), true ) ) {
@@ -1328,6 +1338,7 @@ function bubbahub_stage2_render_calendar_settings() {
 }
 function bubbahub_stage2_render_privacy() {
     $existing = bubbahub_stage2_user_meta('bubbahub_privacy_request','');
+    $restrict_leader_sharing = bubbahub_stage2_user_meta('bubbahub_privacy_restrict_leader_sharing','0');
     $share_contact = bubbahub_stage2_user_meta('bubbahub_privacy_share_contact_leaders','1');
     $share_child_yob = bubbahub_stage2_user_meta('bubbahub_privacy_share_child_yob_leaders','1');
     $personalised = bubbahub_stage2_user_meta('bubbahub_privacy_personalised_recommendations','1');
@@ -1347,6 +1358,7 @@ function bubbahub_stage2_render_privacy() {
         <div class="bh-privacy-section">
           <div class="bh-privacy-section-heading"><span>👩‍🏫</span><div><h4>Sharing with class leaders</h4><p>Control optional information sharing with group and class leaders.</p></div></div>
           <?php
+          echo $toggle('privacy_restrict_leader_sharing',$restrict_leader_sharing,'Don’t share optional information with class leaders','Turn this on to stop optional contact, child year-of-birth and leader messaging permissions. Booking information that is required to provide the service may still be processed.');
           echo $toggle('privacy_share_contact_leaders',$share_contact,'Share my contact details with class leaders','Allow relevant leaders to receive the contact details needed to communicate about your booking or enquiry.');
           echo $toggle('privacy_share_child_yob_leaders',$share_child_yob,'Share my child’s year of birth','Allow the class leader to see the child’s year of birth where it helps them manage the booking.');
           echo $toggle('privacy_leader_messages',$leader_messages,'Allow messages from class leaders','Allow class leaders to contact you through Bubba Hub about bookings, classes or enquiries.');

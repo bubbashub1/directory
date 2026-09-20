@@ -80,3 +80,62 @@
   .bh-family-profile-add-buttons{width:100%}
   .bh-family-profile-add-buttons a{flex:1}
 }
+
+
+/* Mobile hardening: Account Settings / Family Profiles
+ * Keeps the existing desktop layout while preventing narrow-screen overflow.
+ */
+.bh-profile-shell,
+.bh-profile-shell *{box-sizing:border-box}
+.bh-profile-shell img{max-width:100%;height:auto}
+.bh-profile-shell input,
+.bh-profile-shell select,
+.bh-profile-shell textarea,
+.bh-profile-shell button{max-width:100%}
+.bh-profile-header,
+.bh-profile-card,
+.bh-account-card,
+.bh-connected-row,
+.bh-account-children-list>div{min-width:0}
+.bh-profile-grid label,
+.bh-connected-row>div,
+.bh-account-children-list>div>div{min-width:0}
+.bh-profile-grid input,
+.bh-profile-grid select,
+.bh-profile-grid textarea{min-width:0}
+.bh-profile-actions button,
+.bh-profile-actions a,
+.bh-family-profile-add-buttons a{touch-action:manipulation}
+@media(max-width:620px){
+  .bh-profile-shell{padding:14px 10px 48px;overflow-x:hidden}
+  .bh-profile-header{padding:20px 16px;border-radius:20px;gap:14px}
+  .bh-profile-header h1,
+  .bh-profile-header h2{font-size:22px;line-height:1.2}
+  .bh-profile-header p{font-size:12px;line-height:1.5}
+  .bh-profile-card{padding:17px 14px;border-radius:18px}
+  .bh-profile-card-heading{align-items:flex-start;flex-wrap:wrap}
+  .bh-profile-card-heading h3{font-size:15px}
+  .bh-profile-actions{width:100%;text-align:left;justify-content:stretch}
+  .bh-profile-actions button,
+  .bh-profile-actions a{width:100%;min-height:44px;text-align:center}
+  .bh-connected-row{align-items:flex-start;flex-wrap:wrap}
+  .bh-connected-row>a{margin-left:auto}
+  .bh-account-children-list>div{align-items:flex-start}
+  .bh-account-children-list>div>a{margin-left:auto}
+  .bh-profile-specialist-check{padding:13px}
+  .bh-profile-specialist-check strong{font-size:13px}
+  .bh-profile-specialist-check small{font-size:11px}
+  .bh-nap-row{grid-template-columns:34px 28px minmax(0,1fr) 12px minmax(0,1fr);gap:5px;padding:8px}
+  .bh-nap-row input[type=time]{width:100%;min-width:0}
+}
+@media(max-width:380px){
+  .bh-profile-shell{padding-left:8px;padding-right:8px}
+  .bh-profile-card{padding:15px 12px}
+  .bh-profile-header{padding:18px 14px}
+  .bh-profile-header h1,
+  .bh-profile-header h2{font-size:20px}
+  .bh-nap-row{grid-template-columns:28px 24px minmax(0,1fr) 9px minmax(0,1fr);gap:3px;padding:7px 5px}
+  .bh-nap-row strong{font-size:10px}
+  .bh-nap-row input[type=time]{font-size:10px;padding:6px 4px}
+  .bh-profile-specialist-check{gap:9px}
+}

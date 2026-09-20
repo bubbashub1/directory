@@ -414,10 +414,19 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
     }
     $snapshot['child_profile_id'] = $child_id;
     /* Provider-facing child profile data is deliberately limited to year of birth. */
+    $share_child_yob = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_share_child_yob_leaders', true );
+    $share_contact = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_share_contact_leaders', true );
+    $leader_messages = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_leader_messages', true );
+
     $snapshot['child_profile'] = array(
-        'year_of_birth' => sanitize_text_field( $child_year ),
+        'year_of_birth' => $share_child_yob ? sanitize_text_field( $child_year ) : '',
     );
-    $snapshot['child_year_of_birth'] = sanitize_text_field( $child_year );
+    $snapshot['child_year_of_birth'] = $share_child_yob ? sanitize_text_field( $child_year ) : '';
+    $snapshot['provider_privacy'] = array(
+        'share_contact' => $share_contact,
+        'share_child_year_of_birth' => $share_child_yob,
+        'allow_leader_messages' => $leader_messages,
+    );
     unset( $snapshot['participant_dob'] );
     $snapshot['version'] = $snapshot['version'] ?: bubbahub_stage2_consent_version();
     $snapshot['user_id'] = $uid;
@@ -459,10 +468,11 @@ function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
     update_post_meta( $post_id, '_bh_consent_snapshot', $snapshot );
     update_post_meta( $post_id, '_bh_child_profile_id_internal', absint( $snapshot['child_profile_id'] ) );
     update_post_meta( $post_id, '_bh_child_year_of_birth', sanitize_text_field( $snapshot['child_year_of_birth'] ) );
-    /* Provider-facing child profile data is deliberately limited to year of birth. */
+    /* Provider-facing child profile data is limited to year of birth and respects the user's sharing preference. */
     update_post_meta( $post_id, '_bh_child_profile_for_provider', array(
         'year_of_birth' => sanitize_text_field( $snapshot['child_year_of_birth'] ),
     ) );
+    update_post_meta( $post_id, '_bh_provider_privacy', isset( $snapshot['provider_privacy'] ) ? $snapshot['provider_privacy'] : array() );
     update_post_meta( $post_id, '_bh_consent_version', sanitize_text_field( $snapshot['version'] ) );
     update_post_meta( $post_id, '_bh_consent_captured_at', sanitize_text_field( $snapshot['captured_at'] ) );
     update_post_meta( $post_id, '_bh_consent_status', ! empty( $snapshot['accuracy_declaration'] ) ? 'accepted' : 'missing' );

@@ -126,6 +126,12 @@ add_action( 'transition_post_status', function( $new_status, $old_status, $post 
     bubbahub_notification_group_family_alert( $post->ID, 'publish' === $old_status );
 }, 60, 3 );
 
+add_action( 'save_post_group', function( $post_id, $post, $update ) {
+    if ( ! $update || ! $post || 'publish' !== $post->post_status ) return;
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+    bubbahub_notification_group_family_alert( $post_id, true );
+}, 100, 3 );
+
 function bubbahub_notification_log( $user_id, $type, $title, $message, $url = '' ) {
     $user_id = absint( $user_id );
     if ( ! $user_id ) return 0;

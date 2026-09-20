@@ -30,7 +30,7 @@
         setTimeout(function(){ var button = modal.querySelector('.bh-booking-confirmation-done'); if(button) button.focus(); }, 0);
     }
 
-    function showPaymentModal(url){
+    function showPaymentModal(url, walletUrl){
         var modal = document.querySelector('#bh-booking-confirmation');
         if(!modal){
             modal = document.createElement('div');
@@ -39,16 +39,18 @@
             modal.setAttribute('role','dialog');
             modal.setAttribute('aria-modal','true');
             modal.setAttribute('aria-labelledby','bh-booking-confirmation-title');
-            modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close payment message">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">£</div><h2 id="bh-booking-confirmation-title">Booking received</h2><p class="bh-booking-payment-message">Your booking has been received. Continue to secure payment.</p><button type="button" class="bh-booking-primary bh-booking-payment-continue">Continue to payment</button></div>';
+            modal.innerHTML = '<div class="bh-booking-confirmation-backdrop"></div><div class="bh-booking-confirmation-dialog"><button type="button" class="bh-booking-confirmation-close" aria-label="Close payment message">×</button><div class="bh-booking-confirmation-icon" aria-hidden="true">£</div><h2 id="bh-booking-confirmation-title">Booking received</h2><p class="bh-booking-payment-message">Your booking has been received. Choose how you would like to pay.</p><div class="bh-booking-payment-actions"><button type="button" class="bh-booking-primary bh-booking-payment-wallet">Pay with Wallet</button><button type="button" class="bh-booking-primary bh-booking-payment-continue">Pay by card</button></div></div>';
             document.body.appendChild(modal);
             document.body.classList.add('bh-booking-confirmation-open');
             modal.querySelector('.bh-booking-confirmation-close').addEventListener('click', closeConfirmationModal);
             modal.querySelector('.bh-booking-confirmation-backdrop').addEventListener('click', closeConfirmationModal);
         }
         var button = modal.querySelector('.bh-booking-payment-continue');
+        var walletButton = modal.querySelector('.bh-booking-payment-wallet');
         var message = modal.querySelector('.bh-booking-payment-message');
         if(url){
-            if(message) message.textContent = 'Your booking has been received. Continue to secure payment.';
+            if(message) message.textContent = walletUrl ? 'Your booking has been received. Choose Wallet or card to complete payment.' : 'Your booking has been received. Continue to secure payment.';
+            if(walletButton){ walletButton.style.display = walletUrl ? '' : 'none'; walletButton.disabled = !walletUrl; walletButton.onclick = function(){ window.location.href = walletUrl; }; }
             if(button){
                 button.disabled = false;
                 button.textContent = 'Continue to payment';
@@ -64,10 +66,11 @@
 
     function showPaymentError(detail){
         var modal = document.querySelector('#bh-booking-confirmation');
-        if(!modal){ showPaymentModal(null); modal = document.querySelector('#bh-booking-confirmation'); }
+        if(!modal){ showPaymentModal(null, null); modal = document.querySelector('#bh-booking-confirmation'); }
         if(!modal) return;
         var message = modal.querySelector('.bh-booking-payment-message');
         var button = modal.querySelector('.bh-booking-payment-continue');
+        var walletButton = modal.querySelector('.bh-booking-payment-wallet');
         var title = modal.querySelector('#bh-booking-confirmation-title');
         if(title) title.textContent = 'Booking received';
         var safeDetail = detail ? String(detail).replace(/\s+/g, ' ').trim() : '';
@@ -78,6 +81,7 @@
                 : 'We received your booking, but the secure payment page could not be opened. Please try again from MyHub or contact the organiser.';
         }
         if(button){ button.disabled = false; button.textContent = 'Go to MyHub'; button.onclick = goToMyHub; }
+        if(walletButton){ walletButton.style.display = 'none'; }
         setTimeout(function(){ if(button) button.focus(); }, 0);
     }
 
@@ -160,7 +164,7 @@
         fetch(endpoint.toString(), {credentials:'same-origin', headers:{'Accept':'application/json'}})
             .then(function(res){ return res.json().then(function(data){ return {ok:res.ok, status:res.status, data:data}; }); })
             .then(function(result){
-                if(result.ok && result.data && result.data.url){ showPaymentModal(result.data.url); return; }
+                if(result.ok && result.data && result.data.url){ showPaymentModal(result.data.url, result.data.wallet_url || ''); return; }
                 if(result.status === 409 || (result.data && result.data.code === 'payment_not_required')){
                     closeConfirmationModal();
                     showBookingConfirmation('book_now');

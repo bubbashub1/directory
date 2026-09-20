@@ -98,32 +98,77 @@ function bubbahub_stage2_account_url() {
     return home_url( '/account/' );
 }
 
+function bubbahub_stage2_find_page_by_shortcode( $shortcode ) {
+    if ( ! shortcode_exists( $shortcode ) ) return '';
+
+    $pages = get_pages(
+        array(
+            'post_status' => 'publish',
+            'number'       => 100,
+            'orderby'      => 'ID',
+            'order'        => 'ASC',
+        )
+    );
+
+    foreach ( $pages as $page ) {
+        if ( has_shortcode( (string) $page->post_content, $shortcode ) ) {
+            return esc_url_raw( get_permalink( $page->ID ) );
+        }
+    }
+
+    return '';
+}
+
 function bubbahub_stage2_payment_url() {
     $url = apply_filters( 'bubbahub_getpaid_account_url', '' );
     if ( $url ) return esc_url_raw( $url );
 
-    // GetPaid stores its customer invoice history on the page configured
-    // under GetPaid > Settings > General > Page Settings > Invoice History.
-    // Do not assume a particular page slug because sites can rename this page.
-    if ( shortcode_exists( 'wpinv_history' ) ) {
-        $pages = get_pages(
-            array(
-                'post_status' => 'publish',
-                'number'       => 50,
-                'orderby'      => 'ID',
-                'order'        => 'ASC',
-            )
-        );
-        foreach ( $pages as $page ) {
-            if ( has_shortcode( (string) $page->post_content, 'wpinv_history' ) ) {
-                return esc_url_raw( get_permalink( $page->ID ) );
+    $url = bubbahub_stage2_find_page_by_shortcode( 'wpinv_history' );
+    if ( $url ) return $url;
+
+    return home_url( '/wpi-checkout/wpi-history/' );
+}
+
+function bubbahub_stage2_getpaid_shortcode_output( $needles = array() ) {
+    global $shortcode_tags;
+
+    if ( empty( $shortcode_tags ) || empty( $needles ) ) return '';
+
+    foreach ( $shortcode_tags as $tag => $callback ) {
+        $tag_lc = strtolower( (string) $tag );
+        $match = false;
+
+        foreach ( $needles as $needle ) {
+            if ( false !== strpos( $tag_lc, strtolower( (string) $needle ) ) ) {
+                $match = true;
+                break;
             }
+        }
+
+        if ( ! $match ) continue;
+
+        $output = do_shortcode( '[' . $tag . ']' );
+        if ( trim( wp_strip_all_tags( (string) $output ) ) || trim( (string) $output ) ) {
+            return $output;
         }
     }
 
-    // Last-resort legacy fallback. The configured GetPaid page above should
-    // normally be found before this is reached.
-    return home_url( '/wpi-checkout/wpi-history/' );
+    return '';
+}
+
+function bubbahub_stage2_getpaid_checkout_url() {
+    $url = bubbahub_stage2_find_page_by_shortcode( 'wpinv_checkout' );
+    return $url ? $url : home_url( '/wpi-checkout/' );
+}
+
+function bubbahub_stage2_getpaid_invoice_url() {
+    $url = bubbahub_stage2_find_page_by_shortcode( 'wpinv_history' );
+    return $url ? $url : bubbahub_stage2_payment_url();
+}
+
+function bubbahub_stage2_getpaid_subscription_url() {
+    $url = bubbahub_stage2_find_page_by_shortcode( 'wpinv_subscriptions' );
+    return $url ? $url : bubbahub_stage2_payment_url();
 }
 
 /* -------------------------------------------------------------------------
@@ -1757,45 +1802,18 @@ function bubbahub_stage2_render_pro() {
 }
 
 function bubbahub_stage2_render_payments() {
-    $payment_url = bubbahub_stage2_payment_methods_url();
+    $invoice_url = bubbahub_stage2_getpaid_invoice_url();
+    $subscription_url = bubbahub_stage2_getpaid_subscription_url();
+    $checkout_url = bubbahub_stage2_getpaid_checkout_url();
 
-    $payment_sections = array(
-        array(
-            'icon'  => '💳',
-            'title' => 'Payment methods',
-            'text'  => 'Manage your saved payment methods securely through your connected payment provider.',
-            'url'   => apply_filters( 'bubbahub_getpaid_payment_methods_url', $payment_url ),
-            'label' => 'Manage payment methods',
-        ),
-        array(
-            'icon'  => '🧾',
-            'title' => 'Invoices',
-            'text'  => 'View your GetPaid invoices, payment status and invoice history.',
-            'url'   => apply_filters( 'bubbahub_getpaid_invoices_url', $payment_url ),
-            'label' => 'View invoices',
-        ),
-        array(
-            'icon'  => '👛',
-            'title' => 'Wallet balance',
-            'text'  => 'View and manage your GetPaid wallet balance when the Wallet extension is enabled.',
-            'url'   => apply_filters( 'bubbahub_getpaid_wallet_url', $payment_url ),
-            'label' => 'Open wallet',
-        ),
-        array(
-            'icon'  => '↔️',
-            'title' => 'Transactions',
-            'text'  => 'Review your payments and transaction history.',
-            'url'   => apply_filters( 'bubbahub_getpaid_transactions_url', $payment_url ),
-            'label' => 'View transactions',
-        ),
-        array(
-            'icon'  => '🔄',
-            'title' => 'Subscriptions',
-            'text'  => 'View recurring payments and subscription information.',
-            'url'   => apply_filters( 'bubbahub_getpaid_subscriptions_url', $payment_url ),
-            'label' => 'View subscriptions',
-        ),
-    );
+    /*
+     * GetPaid exposes Invoice History and Subscriptions as configured pages,
+     * while Wallet and Wallet Transactions are widgets/shortcodes/blocks.
+     * We deliberately render the native components where available instead
+     * of inventing page URLs for them.
+     */
+    $wallet_output = bubbahub_stage2_getpaid_shortcode_output( array( 'wallet' ) );
+    $transaction_output = bubbahub_stage2_getpaid_shortcode_output( array( 'wallet_transaction', 'wallet_transactions' ) );
 
     ob_start(); ?>
     <div class="bh-payment-settings">
@@ -1804,24 +1822,76 @@ function bubbahub_stage2_render_payments() {
                 <h3>My Payments, Invoices &amp; Wallet</h3>
                 <span>GetPaid &amp; secure payments</span>
             </div>
+
             <div class="bh-pro-status">
                 <strong>Secure payment management</strong>
                 <p>Your full card details are not displayed or stored by Bubba Hub. Payment information is handled by the connected payment provider.</p>
             </div>
 
             <div class="bh-settings-list bh-payment-options-list" role="navigation" aria-label="Payment settings">
-            <?php foreach ( $payment_sections as $item ) : ?>
                 <div class="bh-account-settings-menu-container">
-                    <a class="bh-account-settings-item bh-payment-option" href="<?php echo esc_url( $item['url'] ); ?>">
-                        <span class="bh-account-settings-icon" aria-hidden="true"><?php echo esc_html( $item['icon'] ); ?></span>
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">💳</span>
                         <span class="bh-account-settings-content">
-                            <h3><?php echo esc_html( $item['title'] ); ?></h3>
-                            <p><?php echo esc_html( $item['text'] ); ?></p>
-                            <span class="bh-payment-option-link"><?php echo esc_html( $item['label'] ); ?> →</span>
+                            <h3>Payment methods</h3>
+                            <p>Saved card details are handled by your connected Stripe payment gateway. GetPaid does not provide a separate Payment Methods page in Page Settings.</p>
+                            <a class="bh-payment-option-link" href="<?php echo esc_url( $checkout_url ); ?>">Manage saved payment method at checkout →</a>
                         </span>
-                    </a>
+                    </div>
                 </div>
-            <?php endforeach; ?>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">🧾</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Invoices</h3>
+                            <p>View your GetPaid invoice history and payment status.</p>
+                            <a class="bh-payment-option-link" href="<?php echo esc_url( $invoice_url ); ?>">View invoices →</a>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">👛</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Wallet balance</h3>
+                            <p>Use the native GetPaid Wallet component to view your balance and manage wallet funds.</p>
+                            <?php if ( $wallet_output ) : ?>
+                                <div class="bh-getpaid-native-component"><?php echo do_shortcode( $wallet_output ); ?></div>
+                            <?php else : ?>
+                                <p class="bh-muted">The GetPaid Wallet extension is not currently exposing its Wallet component on this site.</p>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">↔️</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Transactions</h3>
+                            <p>Review your GetPaid wallet transaction history.</p>
+                            <?php if ( $transaction_output ) : ?>
+                                <div class="bh-getpaid-native-component"><?php echo do_shortcode( $transaction_output ); ?></div>
+                            <?php else : ?>
+                                <p class="bh-muted">The GetPaid Wallet Transactions component is not currently exposing its widget/shortcode on this site.</p>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">🔄</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Subscriptions</h3>
+                            <p>View your active and previous GetPaid subscriptions.</p>
+                            <a class="bh-payment-option-link" href="<?php echo esc_url( $subscription_url ); ?>">View subscriptions →</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <?php return ob_get_clean();

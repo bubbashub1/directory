@@ -933,8 +933,8 @@ function bubbahub_stage2_render_preferences() {
                         <datalist id="bh-interest-suggestions"><?php foreach ( $terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
                     </div>
                 </div>
-                <div class="bh-preference-section">
-                    <div class="bh-preference-heading"><h4>Preferred Group Types</h4><p>Choose the types of groups and activities you would like to discover.</p></div>
+                <div id="bh-pref-group-types" class="bh-preference-section bh-preference-anchor">
+                    <div class="bh-preference-heading"><h4>👨‍👩‍👧 Preferred Group Types</h4><p>Choose the types of groups and activities you would like to discover.</p></div>
                     <div class="bh-group-type-options">
                         <?php foreach ( $group_type_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_group_types, true ); ?>
                             <label class="bh-group-type-option"><input type="checkbox" name="preferred_group_types[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>><span><?php echo esc_html($name); ?></span></label>
@@ -944,8 +944,8 @@ function bubbahub_stage2_render_preferences() {
                 </div>
             </div>
 
-            <div class="bh-preference-section bh-location-preference-section">
-                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select locations from the <strong>Location</strong> hierarchy used by Bubba Hub groups. You can choose a region, town or area at any level.</p></div>
+            <div id="bh-pref-locations" class="bh-preference-section bh-location-preference-section bh-preference-anchor">
+                <div class="bh-preference-heading"><h4>📍 Preferred Locations</h4><p>Select locations from the <strong>Location</strong> hierarchy used by Bubba Hub groups. You can choose a region, town or area at any level.</p></div>
                 <div class="bh-location-columns">
                     <div class="bh-location-column">
                         <div class="bh-location-column-title">Select locations</div>

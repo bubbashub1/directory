@@ -912,9 +912,14 @@ function bubbahub_stage2_render_preferences() {
             <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?>
             <input type="hidden" name="bh_stage2_action" value="preferences">
 
-            <div class="bh-interest-group-grid">
-                <div class="bh-preference-section">
-                    <div class="bh-preference-heading"><h4>My Interests</h4><p>Start typing to get suggestions from tags already used by Bubba Hub groups, or enter your own interest.</p></div>
+            <nav class="bh-preferences-jump-menu" aria-label="Jump to preference section">
+                <div class="bh-preferences-jump-head"><strong>Jump to</strong><span>Go straight to the settings you want to update.</span></div>
+                <div class="bh-preferences-jump-links">
+                    <a href="#bh-pref-interests">✨ Interests</a><a href="#bh-pref-group-types">👨‍👩‍👧 Group types</a><a href="#bh-pref-locations">📍 Locations</a><a href="#bh-pref-filters">🎯 Age, length &amp; price</a><a href="#bh-pref-family-needs">💚 Family needs</a>
+                </div>
+            </nav>
+            <div id="bh-pref-interests" class="bh-preference-section bh-preference-anchor">
+                <div class="bh-preference-heading"><h4>✨ My Interests</h4><p>Start typing to get suggestions from tags already used by Bubba Hub groups, or enter your own interest.</p></div>
                     <div class="bh-chip-editor" data-bh-chip-editor data-field="user_interest">
                         <div class="bh-chip-list" data-bh-chip-list>
                             <?php foreach ( $user_interests as $interest ) : ?>
@@ -966,7 +971,7 @@ function bubbahub_stage2_render_preferences() {
                 </div>
             </div>
 
-            <div class="bh-preference-grid">
+            <div id="bh-pref-filters" class="bh-preference-grid bh-preference-anchor">
                 <div class="bh-preference-section">
                     <div class="bh-preference-heading"><h4>Preferred Age Range</h4><p>Choose the age range you want to see in your group suggestions.</p></div>
                     <label class="bh-preference-field"><span>Age range</span><select name="preferred_age_range[]" multiple size="5" aria-label="Preferred age ranges"><?php foreach($age_options as $value=>$label): if($value==='') continue; ?><option value="<?php echo esc_attr($value); ?>" <?php selected(in_array($value,$age_range,true)); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
@@ -981,8 +986,8 @@ function bubbahub_stage2_render_preferences() {
                 </div>
             </div>
 
-            <div class="bh-preference-section bh-family-preferences-section">
-                <div class="bh-preference-heading"><h4>Family Needs & Discovery</h4><p>Choose the accessibility, activity, timing and search preferences that help Bubba Hub find suitable groups for your family.</p></div>
+            <div id="bh-pref-family-needs" class="bh-preference-section bh-family-preferences-section bh-preference-anchor">
+                <div class="bh-preference-heading"><h4>💚 Family Needs & Discovery</h4><p>Choose the accessibility, activity, timing and search preferences that help Bubba Hub find suitable groups for your family.</p></div>
                 <div class="bh-settings-option-grid">
                     <?php
                     $family_data = array(
@@ -1150,6 +1155,14 @@ function bubbahub_stage2_render_preferences() {
     }());
     </script>
     <style>
+      .bh-preferences-jump-menu{position:sticky;top:12px;z-index:10;margin:0 0 18px;padding:12px 14px;border:1px solid #dfe9e4;border-radius:16px;background:rgba(255,255,255,.96);box-shadow:0 6px 18px rgba(50,72,64,.07);backdrop-filter:blur(8px)}
+      .bh-preferences-jump-head{display:flex;align-items:baseline;gap:8px;margin-bottom:9px}
+      .bh-preferences-jump-head strong{font-size:13px;color:#31584b}.bh-preferences-jump-head span{font-size:11px;color:#718079}
+      .bh-preferences-jump-links{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 3px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .bh-preferences-jump-links a{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 11px;border:1px solid #dfe8e4;border-radius:999px;background:#f8faf8;color:#40574f!important;text-decoration:none!important;font-size:11px;font-weight:800;white-space:nowrap}
+      .bh-preferences-jump-links a:hover,.bh-preferences-jump-links a:focus-visible{background:#eef5f0;border-color:#a9c7bb;outline:none}
+      .bh-preference-anchor{scroll-margin-top:105px}.bh-preferences-form .bh-preference-section{margin-bottom:18px}.bh-preferences-form .bh-preference-heading{margin-bottom:13px}.bh-preferences-form .bh-preference-heading h4{font-size:16px}
+      @media(max-width:650px){.bh-preferences-jump-menu{top:8px;margin-bottom:15px;padding:11px 12px;border-radius:14px}.bh-preferences-jump-head{display:block;margin-bottom:7px}.bh-preferences-jump-head strong{display:block;margin-bottom:2px}.bh-preferences-jump-head span{font-size:10px}.bh-preferences-jump-links{margin-right:-2px;padding-right:2px}.bh-preferences-jump-links a{min-height:32px;padding:6px 10px;font-size:10px}.bh-preference-anchor{scroll-margin-top:92px}}
       .bh-family-preferences-section{margin-top:18px}
       .bh-family-search-controls{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;margin-top:14px;align-items:start}
       .bh-location-depth-1{padding-left:18px!important}.bh-location-depth-2{padding-left:36px!important}.bh-location-depth-3{padding-left:54px!important}

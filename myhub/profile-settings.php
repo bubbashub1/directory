@@ -282,7 +282,7 @@ function bubbahub_profile_child_form( $child_id = 0 ) {
     $due = bubbahub_profile_date_value( $due );
 
     ob_start(); ?>
-    <div class="bh-profile-shell bh-account-settings-shell">
+    <div class="bh-profile-shell">
         <div class="bh-profile-header">
             <div>
                 <span class="bh-profile-kicker">FAMILY PROFILE</span>
@@ -392,9 +392,9 @@ function bubbahub_account_settings_shortcode() {
         </div>
 
         <div class="bh-account-grid">
-            <a class="bh-account-card" href="<?php echo esc_url( $um_url ); ?>"><span class="bh-account-icon">👤</span><div class="bh-account-card-body"><h3>Ultimate Member Account</h3><p>Update your name, email, password, privacy and account details using Ultimate Member.</p></div><span class="bh-account-card-arrow" aria-hidden="true">→</span></a>
-            <a class="bh-account-card" href="<?php echo esc_url( $payment_url ); ?>"><span class="bh-account-icon">💳</span><div class="bh-account-card-body"><h3>Payments &amp; invoices</h3><p>View your Bubba Hub bookings and payment activity.</p></div><span class="bh-account-card-arrow" aria-hidden="true">→</span></a>
-            <div class="bh-account-card bh-account-card-static"><span class="bh-account-icon">👶</span><div class="bh-account-card-body"><h3>Family profiles</h3><p><?php echo esc_html( count( $children ) ); ?> profile<?php echo 1 === count( $children ) ? '' : 's'; ?> saved. Manage your children and bumps.</p></div><span class="bh-account-card-arrow" aria-hidden="true">→</span></div>
+            <a class="bh-account-card" href="<?php echo esc_url( $um_url ); ?>"><span class="bh-account-icon">👤</span><div><h3>Ultimate Member Account</h3><p>Update your name, email, password, privacy and account details using Ultimate Member.</p></div><span>→</span></a>
+            <a class="bh-account-card" href="<?php echo esc_url( $payment_url ); ?>"><span class="bh-account-icon">💳</span><div><h3>Payments & invoices</h3><p>View your Bubba Hub bookings and payment activity.</p></div><span>→</span></a>
+            <div class="bh-account-card bh-account-card-static"><span class="bh-account-icon">👶</span><div><h3>Family profiles</h3><p><?php echo esc_html( count( $children ) ); ?> profile<?php echo 1 === count( $children ) ? '' : 's'; ?> saved. Manage your children and bumps.</p></div><span>→</span></div>
         </div>
 
         <div class="bh-profile-card">

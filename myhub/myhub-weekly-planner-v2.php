@@ -531,6 +531,12 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <div class="bh-planner-view-switcher">
           <?php foreach(array('list'=>'List','today'=>'Today','week'=>'Week','month'=>'Monthly') as $v=>$label): ?><a class="bh-planner-view-link<?php echo $view===$v?' is-active':''; ?>" href="<?php echo esc_url($view_urls[$v]); ?>"><?php echo esc_html($label); ?></a><?php endforeach; ?>
         </div>
+        <label class="bh-planner-mobile-view-select">
+          <span class="screen-reader-text">Calendar view</span>
+          <select aria-label="Calendar view" data-planner-view-select>
+            <?php foreach(array('list'=>'List','today'=>'Today','week'=>'Week','month'=>'Monthly') as $v=>$label): ?><option value="<?php echo esc_url($view_urls[$v]); ?>" <?php selected($view,$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?>
+          </select>
+        </label>
         <div class="bh-planner-calendar-nav">
           <a href="<?php echo esc_url($prev); ?>">← Previous</a>
           <strong><?php echo esc_html('month'===$view?$month_label:('today'===$view?wp_date('l, j F Y',strtotime($requested_date)):wp_date('j M',strtotime($week_dates['Monday'])).' – '.wp_date('j M Y',strtotime($week_dates['Sunday'])))); ?></strong>
@@ -1109,7 +1115,8 @@ add_action( 'wp_head', function() {
 }
 </style>
 <style>
-.bh-planner-view-switcher{display:inline-flex;border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-view-link{padding:8px 14px!important;border:0!important;border-right:1px solid #dadce0!important;border-radius:0!important;color:#3c4043!important;background:#fff!important;text-decoration:none!important;font-size:13px!important;font-weight:500!important}.bh-planner-view-link:last-child{border-right:0!important}.bh-planner-view-link.is-active{background:#e8f0fe!important;color:#1a73e8!important}.bh-planner-calendar-nav{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%}.bh-planner-calendar-nav a{min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:8px 13px!important;border:1px solid #dadce0!important;border-radius:4px!important;background:#fff!important;color:#3c4043!important;text-decoration:none!important}.bh-planner-calendar-nav strong{text-align:center;font-size:18px!important;font-weight:400!important}.bh-planner-list-view{border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-list-row{display:grid;grid-template-columns:80px 90px minmax(180px,1.5fr) minmax(140px,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #e8eaed}.bh-planner-list-row:last-child{border-bottom:0}.bh-planner-list-date{display:flex;flex-direction:column;line-height:1.1}.bh-planner-list-date strong{font-size:11px;text-transform:uppercase;color:#70757a}.bh-planner-list-date span{font-size:15px;font-weight:600}.bh-planner-list-time{font-size:13px;font-weight:600}.bh-planner-list-name{text-decoration:none!important;color:#3c4043!important}.bh-planner-list-name strong{display:block}.bh-planner-list-name small{display:block;color:#70757a}.bh-planner-list-venue{font-size:12px;color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-list-add{font-size:11px;padding:6px 8px;border:1px solid #dadce0;border-radius:5px;color:#3c4043;text-decoration:none!important}.bh-planner-month-view{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-month-day{min-height:125px;padding:7px;border-right:1px solid #e8eaed;border-bottom:1px solid #e8eaed;box-sizing:border-box}.bh-planner-month-day:nth-child(7n){border-right:0}.bh-planner-month-date{font-size:12px;font-weight:600;margin-bottom:5px}.bh-planner-month-today .bh-planner-month-date{display:flex;width:25px;height:25px;border-radius:50%;align-items:center;justify-content:center;background:#1a73e8;color:#fff}.bh-planner-month-outside{background:#f8f9fa}.bh-planner-month-outside .bh-planner-month-date{color:#9aa0a6}.bh-planner-month-items{display:grid;gap:3px}.bh-planner-month-event{display:block;padding:3px 5px;border-radius:3px;background:#1a73e8;color:#fff!important;text-decoration:none!important;font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:700px){.bh-planner-view-switcher{width:100%;display:flex}.bh-planner-view-link{flex:1;text-align:center;padding:8px 4px!important}.bh-planner-calendar-nav{grid-template-columns:1fr 1fr}.bh-planner-calendar-nav strong{grid-column:1/-1;grid-row:1}.bh-planner-calendar-nav a{grid-row:2}.bh-planner-list-row{grid-template-columns:60px 1fr;gap:6px 10px}.bh-planner-list-name,.bh-planner-list-venue,.bh-planner-list-add{grid-column:1/-1}.bh-planner-list-add{text-align:center}.bh-planner-month-view{grid-template-columns:repeat(7,minmax(90px,1fr));overflow-x:auto}.bh-planner-month-day{min-width:90px;min-height:105px}}@media print{.bh-planner-view-switcher,.bh-planner-calendar-nav,.bh-planner-list-view,.bh-planner-month-view{display:none!important}}
+.bh-planner-mobile-view-select{display:none}
+.bh-planner-view-switcher{display:inline-flex;border:1px solid #d9e7e2;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 2px 10px rgba(39,48,58,.04)}.bh-planner-view-link{padding:8px 14px!important;border:0!important;border-right:1px solid #dadce0!important;border-radius:0!important;color:#3c4043!important;background:#fff!important;text-decoration:none!important;font-size:13px!important;font-weight:500!important}.bh-planner-view-link:last-child{border-right:0!important}.bh-planner-view-link.is-active{background:#e8f0fe!important;color:#1a73e8!important}.bh-planner-calendar-nav{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%}.bh-planner-calendar-nav a{min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:8px 13px!important;border:1px solid #dadce0!important;border-radius:4px!important;background:#fff!important;color:#3c4043!important;text-decoration:none!important}.bh-planner-calendar-nav strong{text-align:center;font-size:18px!important;font-weight:400!important}.bh-planner-list-view{border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-list-row{display:grid;grid-template-columns:80px 90px minmax(180px,1.5fr) minmax(140px,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #e8eaed}.bh-planner-list-row:last-child{border-bottom:0}.bh-planner-list-date{display:flex;flex-direction:column;line-height:1.1}.bh-planner-list-date strong{font-size:11px;text-transform:uppercase;color:#70757a}.bh-planner-list-date span{font-size:15px;font-weight:600}.bh-planner-list-time{font-size:13px;font-weight:600}.bh-planner-list-name{text-decoration:none!important;color:#3c4043!important}.bh-planner-list-name strong{display:block}.bh-planner-list-name small{display:block;color:#70757a}.bh-planner-list-venue{font-size:12px;color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bh-planner-list-add{font-size:11px;padding:6px 8px;border:1px solid #dadce0;border-radius:5px;color:#3c4043;text-decoration:none!important}.bh-planner-month-view{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #dadce0;border-radius:8px;overflow:hidden;background:#fff}.bh-planner-month-day{min-height:125px;padding:7px;border-right:1px solid #e8eaed;border-bottom:1px solid #e8eaed;box-sizing:border-box}.bh-planner-month-day:nth-child(7n){border-right:0}.bh-planner-month-date{font-size:12px;font-weight:600;margin-bottom:5px}.bh-planner-month-today .bh-planner-month-date{display:flex;width:25px;height:25px;border-radius:50%;align-items:center;justify-content:center;background:#1a73e8;color:#fff}.bh-planner-month-outside{background:#f8f9fa}.bh-planner-month-outside .bh-planner-month-date{color:#9aa0a6}.bh-planner-month-items{display:grid;gap:3px}.bh-planner-month-event{display:block;padding:3px 5px;border-radius:3px;background:#1a73e8;color:#fff!important;text-decoration:none!important;font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:700px){.bh-planner-view-switcher{width:100%;display:flex}.bh-planner-view-link{flex:1;text-align:center;padding:8px 4px!important}.bh-planner-calendar-nav{grid-template-columns:1fr 1fr}.bh-planner-calendar-nav strong{grid-column:1/-1;grid-row:1}.bh-planner-calendar-nav a{grid-row:2}.bh-planner-list-row{grid-template-columns:60px 1fr;gap:6px 10px}.bh-planner-list-name,.bh-planner-list-venue,.bh-planner-list-add{grid-column:1/-1}.bh-planner-list-add{text-align:center}.bh-planner-month-view{grid-template-columns:repeat(7,minmax(90px,1fr));overflow-x:auto}.bh-planner-month-day{min-width:90px;min-height:105px}}@media print{.bh-planner-view-switcher,.bh-planner-calendar-nav,.bh-planner-list-view,.bh-planner-month-view{display:none!important}}
 
 /* Calendar directory/search controls */
 .bh-weekly-planner-v2 .bh-calendar-view-switcher{
@@ -1273,7 +1280,80 @@ add_action( 'wp_head', function() {
   .bh-planner-print-header p{margin-top:0!important}
   .bh-planner-calendar,
   .bh-planner-grid{margin-top:0!important}
+}/* Softer Bubba Hub calendar palette */
+.bh-weekly-planner-v2{
+  --bh-gcal-blue:#78a99d;
+  --bh-gcal-blue-soft:#edf6f3;
+  --bh-gcal-border:#d9e7e2;
+  --bh-gcal-grid:#edf1f0;
+  --bh-gcal-muted:#71807b;
+  --bh-gcal-text:#35423f;
 }
+.bh-weekly-planner-v2 .bh-timetable-event>a:first-child{
+  background:#dfeeea!important;
+  border-left-color:#9bc8bf!important;
+  color:#35423f!important;
+}
+.bh-weekly-planner-v2 .bh-timetable-event>a:first-child strong,
+.bh-weekly-planner-v2 .bh-timetable-event>a:first-child b{color:#35423f!important}
+.bh-weekly-planner-v2 .bh-timetable-event>a:first-child span,
+.bh-weekly-planner-v2 .bh-timetable-event>a:first-child small{color:#5c6d68!important}
+.bh-weekly-planner-v2 .bh-timetable-event:hover>a:first-child{background:#d4e8e2!important}
+.bh-weekly-planner-v2 .bh-planner-month-event{background:#78a99d!important}
+.bh-weekly-planner-v2 .bh-planner-month-today .bh-planner-month-date{background:#78a99d!important}
+.bh-weekly-planner-v2 .bh-planner-view-link.is-active{background:#e7f2ef!important;color:#4f8175!important}
+.bh-weekly-planner-v2 .bh-planner-calendar-toolbar a:hover{background:#f5faf8!important}
+.bh-weekly-planner-v2 .bh-planner-calendar-search-form,
+.bh-weekly-planner-v2 .bh-planner-search{box-shadow:0 2px 12px rgba(39,48,58,.035)!important}
+@media(max-width:700px){
+  .bh-weekly-planner-v2 .bh-planner-view-switcher{display:none!important}
+  .bh-weekly-planner-v2 .bh-planner-mobile-view-select{
+    display:block!important;
+    min-width:0;
+    margin:0;
+  }
+  .bh-weekly-planner-v2 .bh-planner-mobile-view-select select{
+    width:100%;
+    min-height:44px;
+    padding:9px 38px 9px 12px;
+    border:1px solid #d9e7e2;
+    border-radius:10px;
+    background:#f8fbfa;
+    color:#35423f;
+    font:inherit;
+    font-size:14px;
+    font-weight:700;
+    box-sizing:border-box;
+  }
+  .bh-weekly-planner-v2 .bh-planner-calendar-toolbar{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    margin-bottom:12px!important;
+  }
+  .bh-weekly-planner-v2 .bh-planner-mobile-view-select{
+    grid-column:1/-1;
+    grid-row:1;
+  }
+  .bh-weekly-planner-v2 .bh-planner-calendar-nav{
+    grid-column:1/-1;
+    grid-row:2;
+  }
+  .bh-weekly-planner-v2 .bh-planner-calendar-nav a{
+    min-height:42px!important;
+    border-radius:9px!important;
+    background:#f8fbfa!important;
+    border-color:#d9e7e2!important;
+  }
+}
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-planner-view-select]').forEach(function(select){
+    select.addEventListener('change',function(){
+      if(this.value) window.location.href=this.value;
+    });
+  });
+});
+</script>
 </style>
 
 <?php

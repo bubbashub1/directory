@@ -139,7 +139,7 @@ function bubbahub_stage2_getpaid_shortcode_output( $needles = array() ) {
         $match = false;
 
         foreach ( $needles as $needle ) {
-            if ( false !== strpos( $tag_lc, strtolower( (string) $needle ) ) ) {
+            if ( false !== strpos( $tag_lc, strtolower( (string) $needle ) ) && ( false !== strpos( $tag_lc, 'wpinv' ) || false !== strpos( $tag_lc, 'getpaid' ) ) ) {
                 $match = true;
                 break;
             }
@@ -1858,7 +1858,7 @@ function bubbahub_stage2_render_payments() {
                             <h3>Wallet balance</h3>
                             <p>Use the native GetPaid Wallet component to view your balance and manage wallet funds.</p>
                             <?php if ( $wallet_output ) : ?>
-                                <div class="bh-getpaid-native-component"><?php echo do_shortcode( $wallet_output ); ?></div>
+                                <div class="bh-getpaid-native-component"><?php echo $wallet_output; ?></div>
                             <?php else : ?>
                                 <p class="bh-muted">The GetPaid Wallet extension is not currently exposing its Wallet component on this site.</p>
                             <?php endif; ?>
@@ -1873,7 +1873,7 @@ function bubbahub_stage2_render_payments() {
                             <h3>Transactions</h3>
                             <p>Review your GetPaid wallet transaction history.</p>
                             <?php if ( $transaction_output ) : ?>
-                                <div class="bh-getpaid-native-component"><?php echo do_shortcode( $transaction_output ); ?></div>
+                                <div class="bh-getpaid-native-component"><?php echo $transaction_output; ?></div>
                             <?php else : ?>
                                 <p class="bh-muted">The GetPaid Wallet Transactions component is not currently exposing its widget/shortcode on this site.</p>
                             <?php endif; ?>

@@ -22,6 +22,65 @@ function bubbahub_myhub_planner_v2_ajax_filter() {
     wp_send_json_success( array( 'html' => $html ) );
 }
 
+
+
+function bubbahub_myhub_planner_v2_saved_calendars() {
+    if ( ! is_user_logged_in() ) return array();
+    $saved = get_user_meta( get_current_user_id(), 'bubbahub_saved_planner_calendars', true );
+    return is_array( $saved ) ? $saved : array();
+}
+
+function bubbahub_myhub_planner_v2_sanitize_saved_value( $value ) {
+    if ( is_array( $value ) ) {
+        $clean = array();
+        foreach ( $value as $key => $item ) {
+            $clean[ sanitize_key( $key ) ] = bubbahub_myhub_planner_v2_sanitize_saved_value( $item );
+        }
+        return $clean;
+    }
+    return sanitize_text_field( wp_unslash( (string) $value ) );
+}
+
+function bubbahub_myhub_planner_v2_saved_params_from_request( $request ) {
+    $allowed = array(
+        'bh_search','bh_location','bh_region','bh_town','bh_category','bh_day',
+        'bh_term_time','bh_age','bh_price','bh_radius','bh_lat','bh_lng','bh_acf'
+    );
+    $params = array();
+    foreach ( $allowed as $key ) {
+        if ( isset( $request[$key] ) && '' !== $request[$key] ) {
+            $params[$key] = bubbahub_myhub_planner_v2_sanitize_saved_value( $request[$key] );
+        }
+    }
+    return $params;
+}
+
+add_action( 'wp_ajax_bubbahub_save_custom_calendar', 'bubbahub_myhub_planner_v2_save_custom_calendar' );
+function bubbahub_myhub_planner_v2_save_custom_calendar() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in to save calendars.' ), 403 );
+    check_ajax_referer( 'bubbahub_save_custom_calendar', 'nonce' );
+
+    $name = isset( $_POST['calendar_name'] ) ? sanitize_text_field( wp_unslash( $_POST['calendar_name'] ) ) : '';
+    $name = trim( $name );
+    if ( '' === $name ) wp_send_json_error( array( 'message' => 'Please enter a name for this calendar.' ), 400 );
+    if ( function_exists( 'mb_substr' ) ) $name = mb_substr( $name, 0, 80 );
+    else $name = substr( $name, 0, 80 );
+
+    $saved = bubbahub_myhub_planner_v2_saved_calendars();
+    $saved[] = array(
+        'id'     => wp_generate_uuid4(),
+        'name'   => $name,
+        'view'   => isset( $_POST['bh_planner_mode'] ) ? sanitize_key( wp_unslash( $_POST['bh_planner_mode'] ) ) : 'week',
+        'params' => bubbahub_myhub_planner_v2_saved_params_from_request( $_POST ),
+        'saved'  => current_time( 'mysql' ),
+    );
+    if ( count( $saved ) > 20 ) $saved = array_slice( $saved, -20 );
+
+    update_user_meta( get_current_user_id(), 'bubbahub_saved_planner_calendars', $saved );
+
+    wp_send_json_success( array( 'message' => 'Calendar saved.', 'id' => end( $saved )['id'] ) );
+}
+
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
 
 add_action( 'wp_ajax_bubbahub_calendar_filter', 'bubbahub_myhub_calendar_filter_ajax' );
@@ -346,6 +405,20 @@ function bubbahub_myhub_planner_v2_schedule_occurrences( $range_start, $range_en
 function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if(!is_user_logged_in()) return '<div class="bh-planner-empty">Please log in to use your weekly planner.</div>';
 
+    $saved_calendars = bubbahub_myhub_planner_v2_saved_calendars();
+    $saved_calendar_id = isset( $_GET['bh_saved_calendar'] ) ? sanitize_text_field( wp_unslash( $_GET['bh_saved_calendar'] ) ) : '';
+    if ( $saved_calendar_id ) {
+        foreach ( $saved_calendars as $saved_calendar ) {
+            if ( ! empty( $saved_calendar['id'] ) && hash_equals( (string) $saved_calendar['id'], $saved_calendar_id ) ) {
+                if ( ! empty( $saved_calendar['params'] ) && is_array( $saved_calendar['params'] ) ) {
+                    foreach ( $saved_calendar['params'] as $key => $value ) $_GET[ $key ] = $value;
+                }
+                if ( ! empty( $saved_calendar['view'] ) ) $_GET['bh_planner_mode'] = sanitize_key( $saved_calendar['view'] );
+                break;
+            }
+        }
+    }
+
     $view = isset($_GET['bh_planner_mode']) ? sanitize_key(wp_unslash($_GET['bh_planner_mode'])) : ( isset($_GET['bh_view']) ? sanitize_key(wp_unslash($_GET['bh_view'])) : 'week' );
     if ( ! in_array($view,array('list','today','week','month'),true) ) $view='week';
     $requested = isset($_GET['bh_week']) ? sanitize_text_field(wp_unslash($_GET['bh_week'])) : '';
@@ -491,11 +564,16 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $next=add_query_arg(array('bh_week'=>$next_date,'bh_view'=>'planner','bh_planner_mode'=>$view),$planner_base_url);
     $today=add_query_arg(array('bh_week'=>$today_date,'bh_view'=>'planner','bh_planner_mode'=>'today'),$planner_base_url);
     $view_urls=array();foreach(array('list','today','week','month') as $v)$view_urls[$v]=add_query_arg(array('bh_week'=>$requested_date,'bh_view'=>'planner','bh_planner_mode'=>$v),$planner_base_url);
+    $saved_view_urls = array();
+    foreach ( $saved_calendars as $saved_calendar ) {
+        if ( empty($saved_calendar['id']) || empty($saved_calendar['name']) ) continue;
+        $saved_view_urls[ $saved_calendar['id'] ] = add_query_arg( 'bh_saved_calendar', sanitize_text_field($saved_calendar['id']), $planner_base_url );
+    }
     $month_ts=strtotime(wp_date('Y-m-01',strtotime($requested_date)));$month_label=wp_date('F Y',$month_ts);
     $list_rows=$rows;usort($list_rows,function($a,$b){return ($a['date'].' '.$a['start'])<=>($b['date'].' '.$b['start']);});
 
     ob_start(); ?>
-    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>">
+    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>" data-save-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_save_custom_calendar' ) ); ?>">
       <div class="bh-myhub-section-heading">
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
       </div>
@@ -518,6 +596,11 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <div class="bh-calendar-search-actions">
           <button type="submit" class="bh-calendar-search-button">Search</button>
           <button type="button" class="bh-calendar-advanced-toggle" aria-expanded="false">Advanced search <span aria-hidden="true">⌄</span></button>
+          <button type="button" class="bh-calendar-save-button" data-save-calendar>Save calendar</button>
+        </div>
+        <div class="bh-calendar-save-panel" data-save-panel hidden>
+          <label for="bh-calendar-save-name">Name this custom calendar</label>
+          <div><input id="bh-calendar-save-name" type="text" maxlength="80" placeholder="e.g. Baby groups near Exeter"><button type="button" data-confirm-save>Save</button><button type="button" data-cancel-save>Cancel</button></div>
         </div>
         <div class="bh-calendar-advanced-search" hidden>
           <?php
@@ -547,11 +630,13 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
       <div class="bh-planner-calendar-toolbar">
         <div class="bh-planner-view-switcher">
           <?php foreach(array('list'=>'List','today'=>'Today','week'=>'Week','month'=>'Monthly') as $v=>$label): ?><a class="bh-planner-view-link<?php echo $view===$v?' is-active':''; ?>" href="<?php echo esc_url($view_urls[$v]); ?>"><?php echo esc_html($label); ?></a><?php endforeach; ?>
+          <?php foreach($saved_calendars as $saved_calendar): if(!empty($saved_calendar['id'])&&!empty($saved_calendar['name'])&&!empty($saved_view_urls[$saved_calendar['id']])): ?><a class="bh-planner-view-link bh-planner-saved-calendar-link<?php echo !empty($saved_calendar_id)&&$saved_calendar_id===$saved_calendar['id']?' is-active':''; ?>" href="<?php echo esc_url($saved_view_urls[$saved_calendar['id']]); ?>">★ <?php echo esc_html($saved_calendar['name']); ?></a><?php endif; endforeach; ?>
         </div>
         <label class="bh-planner-mobile-view-select">
           <span class="screen-reader-text">Calendar view</span>
           <select aria-label="Calendar view" data-planner-view-select>
             <?php foreach(array('list'=>'List','today'=>'Today','week'=>'Week','month'=>'Monthly') as $v=>$label): ?><option value="<?php echo esc_url($view_urls[$v]); ?>" <?php selected($view,$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?>
+            <?php foreach($saved_calendars as $saved_calendar): if(!empty($saved_calendar['id'])&&!empty($saved_calendar['name'])&&!empty($saved_view_urls[$saved_calendar['id']])): ?><option value="<?php echo esc_url($saved_view_urls[$saved_calendar['id']]); ?>" <?php selected($saved_calendar_id,$saved_calendar['id']); ?>>★ <?php echo esc_html($saved_calendar['name']); ?></option><?php endif; endforeach; ?>
           </select>
         </label>
         <div class="bh-planner-calendar-nav">
@@ -1045,12 +1130,38 @@ document.addEventListener('DOMContentLoaded',function(){
     var locationButton=planner.querySelector('.bh-calendar-use-location');
     var advancedToggle=planner.querySelector('.bh-calendar-advanced-toggle');
     var advancedPanel=planner.querySelector('.bh-calendar-advanced-search');
+    var saveButton=planner.querySelector('[data-save-calendar]');
+    var savePanel=planner.querySelector('[data-save-panel]');
+    var saveName=planner.querySelector('#bh-calendar-save-name');
+    var saveConfirm=planner.querySelector('[data-confirm-save]');
+    var saveCancel=planner.querySelector('[data-cancel-save]');
 
     if(advancedToggle&&advancedPanel){
       advancedToggle.addEventListener('click',function(){
         var open=advancedToggle.getAttribute('aria-expanded')==='true';
         advancedToggle.setAttribute('aria-expanded',open?'false':'true');
         advancedPanel.hidden=open;
+      });
+    }
+
+    if(saveButton&&savePanel){
+      saveButton.addEventListener('click',function(){ savePanel.hidden=false; saveButton.hidden=true; if(saveName){saveName.focus();} });
+      if(saveCancel) saveCancel.addEventListener('click',function(){savePanel.hidden=true;saveButton.hidden=false;});
+      if(saveConfirm) saveConfirm.addEventListener('click',function(){
+        var name=saveName?saveName.value.trim():'';
+        if(!name){if(saveName)saveName.focus();return;}
+        saveConfirm.disabled=true;
+        var data=new FormData(searchForm);
+        data.append('action','bubbahub_save_custom_calendar');
+        data.append('calendar_name',name);
+        data.append('nonce',planner.getAttribute('data-save-nonce')||'');
+        fetch(planner.getAttribute('data-calendar-ajax'),{method:'POST',credentials:'same-origin',body:data})
+          .then(function(response){return response.json();})
+          .then(function(response){
+            if(!response||!response.success) throw new Error(response&&response.data&&response.data.message?response.data.message:'Save failed');
+            window.location.reload();
+          })
+          .catch(function(error){alert(error.message||'Sorry, the calendar could not be saved.');saveConfirm.disabled=false;});
       });
     }
 
@@ -1241,6 +1352,33 @@ add_action( 'wp_head', function() {
   cursor:pointer;
 }
 .bh-weekly-planner-v2 .bh-calendar-search-actions{display:flex;gap:8px}
+.bh-weekly-planner-v2 .bh-calendar-save-button{
+  border:1px solid #9bc8bf;
+  background:#fff;
+  color:#4f8175;
+}
+.bh-weekly-planner-v2 .bh-calendar-save-panel{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid #dfe8e5;
+  border-radius:14px;
+  background:#fff;
+}
+.bh-weekly-planner-v2 .bh-calendar-save-panel label{font-size:12px;font-weight:800;color:#52615c;white-space:nowrap}
+.bh-weekly-planner-v2 .bh-calendar-save-panel>div{display:flex;gap:7px;flex:1}
+.bh-weekly-planner-v2 .bh-calendar-save-panel input{min-height:42px!important;flex:1}
+.bh-weekly-planner-v2 .bh-calendar-save-panel button{min-height:42px;padding:0 13px;border:1px solid #d9e7e2;border-radius:10px;background:#eef5f2;color:#35423f;font-weight:800;cursor:pointer}
+.bh-weekly-planner-v2 .bh-calendar-save-panel button[data-confirm-save]{background:#5f9183;color:#fff;border-color:#5f9183}
+.bh-weekly-planner-v2 .bh-planner-saved-calendar-link{border-top:2px solid #f2c6b8!important}
+@media(max-width:620px){
+  .bh-weekly-planner-v2 .bh-calendar-save-panel{display:block}
+  .bh-weekly-planner-v2 .bh-calendar-save-panel label{display:block;margin-bottom:6px}
+  .bh-weekly-planner-v2 .bh-calendar-save-panel>div{display:grid;grid-template-columns:1fr 1fr 1fr}
+  .bh-weekly-planner-v2 .bh-calendar-save-panel input{grid-column:1/-1}
+}
 .bh-weekly-planner-v2 .bh-calendar-search-actions button{
   min-height:48px;
   padding:0 16px;
@@ -1406,4 +1544,4 @@ document.addEventListener('DOMContentLoaded',function(){
 <?php
 } );
 
-@media(max-width:480px){.bh-planner-subscribe-button,.bh-planner-print-button{flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;font-size:0!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important}.bh-planner-subscribe-button::before{content:'📅';font-size:20px!important;line-height:1!important}.bh-planner-print-button::before{content:'🖨';font-size:20px!important;line-height:1!important}bh-planner-actions{justify-content:center!important}}
+@media(max-width:480px){.bh-planner-subscribe-button,.bh-planner-print-button{flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;font-size:0!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important}.bh-planner-subscribe-button::before{content:'📅';font-size:20px!important;line-height:1!important}.bh-planner-print-button::before{content:'🖨';font-size:20px!important;line-height:1!important}.bh-planner-actions{justify-content:center!important}}

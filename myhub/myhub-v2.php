@@ -166,18 +166,6 @@ if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
         $tracker_class = $has_school ? 'school-hub' : 'school-application';
         $title = $has_school ? 'School & Childcare Hub' : 'School Application';
 
-        $saved_calendars = function_exists( 'bubbahub_myhub_planner_v2_saved_calendars' ) ? bubbahub_myhub_planner_v2_saved_calendars() : array();
-        $planner_page_url = '';
-        $planner_pages = get_pages( array( 'post_status' => 'publish', 'number' => 100 ) );
-        foreach ( $planner_pages as $planner_page ) {
-            if ( has_shortcode( $planner_page->post_content, 'bubbahub_weekly_planner_v2' ) ) {
-                $planner_page_url = get_permalink( $planner_page->ID );
-                break;
-            }
-        }
-        if ( ! $planner_page_url ) {
-            $planner_page_url = home_url( '/my-hub/' );
-        }
         ob_start();
         ?>
         <div class="bh-myhub-tracker bh-myhub-school-tracker <?php echo esc_attr( $tracker_class ); ?>">
@@ -347,6 +335,20 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
     function bubbahub_myhub_v3_render() {
         if ( ! is_user_logged_in() ) {
             return '<div class="bh-myhub-login"><h2>Welcome to My Hub</h2><p>Please log in to see your family dashboard.</p></div>';
+        }
+
+        // Saved calendars belong to the logged-in user and must be prepared in the My Hub render scope.
+        $saved_calendars = function_exists( 'bubbahub_myhub_planner_v2_saved_calendars' ) ? bubbahub_myhub_planner_v2_saved_calendars() : array();
+        $planner_page_url = '';
+        $planner_pages = get_pages( array( 'post_status' => 'publish', 'number' => 100 ) );
+        foreach ( $planner_pages as $planner_page ) {
+            if ( has_shortcode( $planner_page->post_content, 'bubbahub_weekly_planner_v2' ) ) {
+                $planner_page_url = get_permalink( $planner_page->ID );
+                break;
+            }
+        }
+        if ( ! $planner_page_url ) {
+            $planner_page_url = home_url( '/my-hub/' );
         }
 
         /* Account Settings uses the same My Hub page. Handle the route directly here

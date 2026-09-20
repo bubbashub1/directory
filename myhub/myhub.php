@@ -52,6 +52,7 @@ if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage7.php' ) ) bubbah
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php', 'account settings stage 8' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php', 'account settings stage 9' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php', 'account settings stage 10' );
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php', 'account settings stage 11' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php', 'account link' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php', 'UI overrides' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-nap-planner.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-nap-planner.php', 'nap planner' );

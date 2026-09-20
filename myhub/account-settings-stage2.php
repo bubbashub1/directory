@@ -264,7 +264,7 @@ function bubbahub_stage2_handle_notifications() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'notifications' !== $_POST['bh_stage2_action'] ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
-    $keys = array( 'new_groups','group_updates','new_suggestions','saved_group_updates','new_classes','booking_alerts','booking_reminders','planner_reminders','messages','community_alerts','whats_on','email_digest' );
+    $keys = array( 'new_groups','group_updates','new_suggestions','saved_group_updates','new_classes','booking_alerts','booking_reminders','planner_reminders','calendar_reminders','messages','community_alerts','whats_on','email_digest' );
     foreach ( $keys as $key ) bubbahub_stage2_update_meta( 'bubbahub_' . $key, ! empty( $_POST[ $key ] ) ? '1' : '0' );
     bubbahub_stage2_update_meta( 'bubbahub_sms_reminders', '0' );
 
@@ -274,6 +274,7 @@ function bubbahub_stage2_handle_notifications() {
             'booking_reminders' => ! empty( $_POST['booking_reminders'] ),
             'saved_groups' => ! empty( $_POST['saved_group_updates'] ),
             'planner_reminders' => ! empty( $_POST['planner_reminders'] ),
+            'calendar_reminders' => ! empty( $_POST['calendar_reminders'] ),
             'messages' => ! empty( $_POST['messages'] ),
             'email_digest' => ! empty( $_POST['email_digest'] ),
             'community' => ! empty( $_POST['community_alerts'] ),
@@ -459,6 +460,7 @@ function bubbahub_stage2_render_notifications() {
             'booking_alerts' => array('📅','Booking alerts','Booking confirmations, status changes, cancellations and important booking updates.'),
             'booking_reminders' => array('⏰','Booking reminders','Reminders before your upcoming booked classes and activities.'),
             'planner_reminders' => array('🗓️','Planner reminders','Reminders for activities and events in your family planner.'),
+            'calendar_reminders' => array('🔔','Calendar reminders','Reminders for events and activities saved to your Bubba Hub calendars.'),
         ),
         'Messages & community' => array(
             'messages' => array('💬','Messages & support','Alerts when a specialist, group leader or support contact replies to you.'),

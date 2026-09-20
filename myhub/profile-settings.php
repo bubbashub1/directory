@@ -20,6 +20,7 @@ function bubbahub_profile_settings_register() {
 function bubbahub_profile_settings_assets() {
     if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) return;
     wp_enqueue_style( 'bubbahub-profile-settings', BUBBAHUB_MYHUB_URL . 'profile-settings.css', array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.3.0' );
+    wp_register_style( 'bubbahub-account-settings', BUBBAHUB_MYHUB_URL . 'account-settings.css', array( 'bubbahub-profile-settings' ), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.0.0' );
     wp_register_script( 'bubbahub-profile-settings', BUBBAHUB_MYHUB_URL . 'profile-settings.js', array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.3.0', true );
 }
 
@@ -383,6 +384,7 @@ function bubbahub_account_settings_shortcode() {
     if ( ! is_user_logged_in() ) return '<p>Please log in to manage your account settings.</p>';
 
     wp_enqueue_style( 'bubbahub-profile-settings' );
+    wp_enqueue_style( 'bubbahub-account-settings' );
     wp_enqueue_script( 'bubbahub-profile-settings' );
 
     if ( isset( $_GET['bh_add_child'] ) ) {

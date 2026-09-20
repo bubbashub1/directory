@@ -950,7 +950,19 @@ function bubbahub_stage2_render_interests() {
     }());
     </script>
     <style>
-        .bh-location-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+        /* Keep the three discovery preferences visually prominent below Preferred Locations. */
+        .bh-preference-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;margin-top:18px!important;width:100%!important}
+        .bh-preference-grid .bh-preference-section{display:block!important;visibility:visible!important;min-width:0!important;padding:16px!important;border:1px solid #e4ece8!important;border-radius:16px!important;background:#fff!important;box-sizing:border-box!important}
+        .bh-preference-grid .bh-preference-heading{display:block!important;margin:0 0 12px!important}
+        .bh-preference-grid .bh-preference-heading h4{display:block!important;margin:0 0 5px!important;color:#31584b!important;font-size:15px!important;line-height:1.25!important;font-weight:800!important}
+        .bh-preference-grid .bh-preference-heading p{display:block!important;margin:0!important;color:#718079!important;font-size:12px!important;line-height:1.45!important}
+        .bh-preference-grid .bh-preference-field{display:block!important;margin:0!important}
+        .bh-preference-grid .bh-preference-field>span{display:block!important;margin:0 0 7px!important;color:#40574f!important;font-size:12px!important;font-weight:800!important}
+        .bh-preference-grid .bh-preference-field select{display:block!important;visibility:visible!important;width:100%!important;min-height:174px!important;height:auto!important;padding:6px!important;border:1px solid #dbe7e1!important;border-radius:12px!important;background:#fbfdfc!important;color:#1e3330!important;font:inherit!important;font-size:12px!important;line-height:1.5!important;box-sizing:border-box!important}
+        .bh-preference-grid .bh-preference-field select option{display:block!important;padding:8px 9px!important;border-radius:7px!important}
+        .bh-preference-grid .bh-preference-field select option:checked{background:#eaf3ef!important;color:#31584b!important;font-weight:800!important}
+        @media(max-width:900px){.bh-preference-grid{grid-template-columns:1fr 1fr!important}}
+        @media(max-width:620px){.bh-preference-grid{grid-template-columns:1fr!important;gap:12px!important}.bh-preference-grid .bh-preference-section{padding:14px!important}.bh-preference-grid .bh-preference-field select{min-height:150px!important}}\n        .bh-location-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
         .bh-location-column{min-width:0;padding:14px;border:1px solid #e4ece8;border-radius:14px;background:#fbfdfc}
         .bh-location-column-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;color:#31584b;font-size:12px;font-weight:800}
         .bh-location-column-title span{min-width:22px;padding:2px 7px;border-radius:999px;background:#eaf3ef;text-align:center}

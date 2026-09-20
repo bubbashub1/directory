@@ -361,7 +361,7 @@ if ( ! function_exists( 'bubbahub_myhub_v3_family_snapshot' ) ) {
                 <div class="bh-myhub-snapshot-upcoming-head"><strong>Coming up</strong><a href="<?php echo esc_url( home_url( '/my-bookings/' ) ); ?>">View bookings →</a></div>
                 <?php foreach ( $upcoming as $booking ) : ?>
                     <a class="bh-myhub-upcoming-item" href="<?php echo esc_url( home_url( '/my-bookings/' ) ); ?>">
-                        <span class="bh-myhub-upcoming-date"><?php echo esc_html( bubbahub_myhub_booking_date_label( $booking['date'], $booking['start'] ) ); ?></span>
+                        <span class="bh-myhub-upcoming-date"><?php echo esc_html( wp_date( 'D j M · H:i', $booking['stamp'] ) ); ?></span>
                         <span><strong><?php echo esc_html( $booking['title'] ? $booking['title'] : $booking['group'] ); ?></strong><?php if ( ! empty( $booking['venue'] ) ) : ?><small>⌖ <?php echo esc_html( $booking['venue'] ); ?></small><?php endif; ?></span>
                         <span aria-hidden="true">→</span>
                     </a>

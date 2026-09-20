@@ -319,6 +319,15 @@ function bubbahub_stage2_handle_consent() {
         bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, '1' );
     }
 
+    $child_profile_id = isset( $_POST['child_profile_id'] ) ? absint( $_POST['child_profile_id'] ) : 0;
+    if ( $child_profile_id ) {
+        $child_post = get_post( $child_profile_id );
+        if ( ! $child_post || 'bh_child' !== $child_post->post_type || absint( $child_post->post_author ) !== get_current_user_id() ) {
+            return 'Please select one of your saved child profiles.';
+        }
+    }
+    bubbahub_stage2_update_meta( 'bubbahub_consent_child_profile_id', $child_profile_id );
+
     $fields = array(
         'relationship'        => 'sanitize_text_field',
         'emergency_name'      => 'sanitize_text_field',
@@ -353,17 +362,35 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
 
     $keys = array(
         'relationship','emergency_name','emergency_phone','emergency_relation',
-        'participant_name','participant_dob','allergies','medical_notes',
+        'participant_name','allergies','medical_notes',
         'accessibility_notes','additional_notes','profile_shared_ack',
         'class_leader_contact','payment_agreement','liability_ack',
         'booking_terms_ack','data_processing_ack','accuracy_declaration',
-        'media_social','media_promotional','media_head_office','version','saved_at',
+        'media_social','media_promotional','media_head_office','child_profile_id','child_year_of_birth','version','saved_at',
     );
     $snapshot = array();
     foreach ( $keys as $key ) {
         $meta_key = 'bubbahub_consent_' . $key;
         $snapshot[ $key ] = get_user_meta( $uid, $meta_key, true );
     }
+
+    $child_id = absint( get_user_meta( $uid, 'bubbahub_consent_child_profile_id', true ) );
+    $child_year = '';
+    $child_name = '';
+    if ( $child_id && 'bh_child' === get_post_type( $child_id ) && absint( get_post_field( 'post_author', $child_id ) ) === $uid ) {
+        $child_name = function_exists( 'bubbahub_profile_field' ) ? bubbahub_profile_field( $child_id, 'child_name', get_the_title( $child_id ) ) : get_the_title( $child_id );
+        $child_dob = function_exists( 'bubbahub_profile_field' ) ? bubbahub_profile_field( $child_id, 'child_date_of_birth', '' ) : get_post_meta( $child_id, 'child_date_of_birth', true );
+        if ( $child_dob ) {
+            $child_year = wp_date( 'Y', strtotime( $child_dob ) );
+        }
+    }
+    $snapshot['child_profile_id'] = $child_id;
+    $snapshot['child_profile'] = array(
+        'name' => sanitize_text_field( $child_name ),
+        'year_of_birth' => sanitize_text_field( $child_year ),
+    );
+    $snapshot['child_year_of_birth'] = sanitize_text_field( $child_year );
+    unset( $snapshot['participant_dob'] );
     $snapshot['version'] = $snapshot['version'] ?: bubbahub_stage2_consent_version();
     $snapshot['user_id'] = $uid;
     $snapshot['captured_at'] = current_time( 'mysql' );
@@ -387,6 +414,12 @@ function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
     if ( ! $snapshot ) return;
 
     update_post_meta( $post_id, '_bh_consent_snapshot', $snapshot );
+    update_post_meta( $post_id, '_bh_child_profile_id', absint( $snapshot['child_profile_id'] ) );
+    update_post_meta( $post_id, '_bh_child_year_of_birth', sanitize_text_field( $snapshot['child_year_of_birth'] ) );
+    update_post_meta( $post_id, '_bh_child_profile_for_provider', array(
+        'name' => isset( $snapshot['child_profile']['name'] ) ? sanitize_text_field( $snapshot['child_profile']['name'] ) : '',
+        'year_of_birth' => sanitize_text_field( $snapshot['child_year_of_birth'] ),
+    ) );
     update_post_meta( $post_id, '_bh_consent_version', sanitize_text_field( $snapshot['version'] ) );
     update_post_meta( $post_id, '_bh_consent_captured_at', sanitize_text_field( $snapshot['captured_at'] ) );
     update_post_meta( $post_id, '_bh_consent_status', ! empty( $snapshot['accuracy_declaration'] ) ? 'accepted' : 'missing' );
@@ -652,8 +685,16 @@ function bubbahub_stage2_render_consent() {
         <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>1. Parent / guardian details</h4><span>Booking contact</span></div>
           <div class="bh-profile-grid two">
             <label><span>Relationship to child / participant</span><input name="relationship" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_relationship')); ?>" placeholder="Parent, guardian, carer..."></label>
+            <label><span>Child profile for this consent</span><select name="child_profile_id">
+              <option value="">Select a child profile</option>
+              <?php foreach ( bubbahub_stage2_children() as $child ) :
+                  $child_name = function_exists('bubbahub_profile_field') ? bubbahub_profile_field($child->ID, 'child_name', $child->post_title) : $child->post_title;
+                  $selected_child = absint( bubbahub_stage2_user_meta('bubbahub_consent_child_profile_id') );
+              ?>
+                <option value="<?php echo absint($child->ID); ?>" <?php selected($selected_child, $child->ID); ?>><?php echo esc_html($child_name); ?></option>
+              <?php endforeach; ?>
+            </select><small class="bh-muted">The class provider will receive the child's year of birth only, not the full date of birth.</small></label>
             <label><span>Participant / child name</span><input name="participant_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_name')); ?>"></label>
-            <label><span>Participant date of birth</span><input type="date" name="participant_dob" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_dob')); ?>"></label>
           </div>
         </div>
         <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>2. Emergency contact</h4><span>Safety</span></div>

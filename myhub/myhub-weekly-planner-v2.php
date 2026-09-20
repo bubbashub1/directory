@@ -754,7 +754,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
   --bh-gcal-grid:#e8eaed;
   --bh-gcal-muted:#70757a;
   --bh-gcal-text:#3c4043;
-  background:#fff;
+  background:transparent;
 }
 .bh-planner-calendar-toolbar{
   grid-template-columns:auto auto 1fr auto!important;

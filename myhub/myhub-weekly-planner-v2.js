@@ -8,6 +8,8 @@ function calendarAjax($section,form){
  var previousRequest=$section.data('calendarRequest');
  if(previousRequest&&previousRequest.readyState!==4)previousRequest.abort();
  var data=$form.serializeArray();data.push({name:'action',value:'bubbahub_calendar_filter'},{name:'nonce',value:$section.attr('data-calendar-nonce')});
+ var editCalendarId=$section.attr('data-edit-calendar')||'';
+ if(editCalendarId)data.push({name:'bh_edit_calendar',value:editCalendarId});
  $section.data('calendarLoading',true).addClass('is-loading');
  var request=$.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'});
  $section.data('calendarRequest',request);
@@ -65,8 +67,11 @@ $(document).on('click','.bh-weekly-planner-v2 [data-confirm-save]',function(){
  $button.prop('disabled',true).text(editId?'Updating…':'Saving…');
  $.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'}).done(function(response){
   if(response&&response.success){
-   window.location.href=window.location.href.replace(/([?&])bh_edit_calendar=[^&]*/,'$1').replace(/[?&]$/,'');
-   if(!editId)window.location.reload();
+   if(editId){
+    window.location.href=window.location.href.replace(/([?&])bh_edit_calendar=[^&]*/,'$1').replace(/[?&]$/,'');
+   }else{
+    window.location.reload();
+   }
   }else{
    $button.prop('disabled',false).text(editId?'Update':'Save');
    window.alert(response&&response.data&&response.data.message?response.data.message:'The calendar could not be saved.');

@@ -1846,6 +1846,21 @@ function bubbahub_stage2_render_payments() {
 
                 <div class="bh-account-settings-menu-container">
                     <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">↔️</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Transactions</h3>
+                            <p>Review your GetPaid wallet transaction history.</p>
+                            <?php if ( $transaction_output ) : ?>
+                                <div class="bh-getpaid-native-component"><?php echo $transaction_output; ?></div>
+                            <?php else : ?>
+                                <p class="bh-muted">The GetPaid Wallet Transactions component is not currently exposing its widget/shortcode on this site.</p>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
                         <span class="bh-account-settings-icon" aria-hidden="true">💳</span>
                         <span class="bh-account-settings-content">
                             <h3>Payment methods</h3>
@@ -1862,21 +1877,6 @@ function bubbahub_stage2_render_payments() {
                             <h3>Invoices</h3>
                             <p>View your GetPaid invoice history and payment status.</p>
                             <a class="bh-payment-option-link" href="<?php echo esc_url( $invoice_url ); ?>">View invoices →</a>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="bh-account-settings-menu-container">
-                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
-                        <span class="bh-account-settings-icon" aria-hidden="true">↔️</span>
-                        <span class="bh-account-settings-content">
-                            <h3>Transactions</h3>
-                            <p>Review your GetPaid wallet transaction history.</p>
-                            <?php if ( $transaction_output ) : ?>
-                                <div class="bh-getpaid-native-component"><?php echo $transaction_output; ?></div>
-                            <?php else : ?>
-                                <p class="bh-muted">The GetPaid Wallet Transactions component is not currently exposing its widget/shortcode on this site.</p>
-                            <?php endif; ?>
                         </span>
                     </div>
                 </div>

@@ -264,15 +264,28 @@ function bubbahub_stage2_handle_notifications() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'notifications' !== $_POST['bh_stage2_action'] ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
-    foreach ( array( 'push_classes', 'email_digest', 'sms_reminders', 'community_alerts' ) as $key ) {
-        bubbahub_stage2_update_meta( 'bubbahub_' . $key, ! empty( $_POST[ $key ] ) ? '1' : '0' );
+    $keys = array( 'new_groups','group_updates','new_suggestions','saved_group_updates','new_classes','booking_alerts','booking_reminders','planner_reminders','messages','community_alerts','whats_on','email_digest' );
+    foreach ( $keys as $key ) bubbahub_stage2_update_meta( 'bubbahub_' . $key, ! empty( $_POST[ $key ] ) ? '1' : '0' );
+    bubbahub_stage2_update_meta( 'bubbahub_sms_reminders', '0' );
+
+    if ( function_exists( 'bubbahub_notification_save_preferences' ) ) {
+        bubbahub_notification_save_preferences( get_current_user_id(), array(
+            'class_booking' => ! empty( $_POST['booking_alerts'] ),
+            'booking_reminders' => ! empty( $_POST['booking_reminders'] ),
+            'saved_groups' => ! empty( $_POST['saved_group_updates'] ),
+            'planner_reminders' => ! empty( $_POST['planner_reminders'] ),
+            'messages' => ! empty( $_POST['messages'] ),
+            'email_digest' => ! empty( $_POST['email_digest'] ),
+            'community' => ! empty( $_POST['community_alerts'] ),
+            'new_groups' => ! empty( $_POST['new_groups'] ),
+            'group_updates' => ! empty( $_POST['group_updates'] ),
+            'new_suggestions' => ! empty( $_POST['new_suggestions'] ),
+            'new_classes' => ! empty( $_POST['new_classes'] ),
+            'whats_on' => ! empty( $_POST['whats_on'] ),
+        ) );
     }
     return 'Notification preferences saved.';
 }
-
-/* -------------------------------------------------------------------------
- * Save consent and safety settings
- * ---------------------------------------------------------------------- */
 function bubbahub_stage2_handle_consent() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'consent' !== $_POST['bh_stage2_action'] ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
@@ -434,13 +447,49 @@ function bubbahub_stage2_render_profile( $user ) {
 }
 
 function bubbahub_stage2_render_notifications() {
+    $groups = array(
+        'Discovery & suggestions' => array(
+            'new_groups' => array('🆕','New groups','Get an alert when new groups are added that may be relevant to your family.'),
+            'group_updates' => array('✏️','Group updates','Get an alert when relevant groups are edited or updated.'),
+            'new_suggestions' => array('✨','New suggestions','Get personalised suggestions based on your interests, children, locations and preferences.'),
+            'saved_group_updates' => array('❤️','Saved group updates','Get updates when a group you have saved or followed changes.'),
+            'new_classes' => array('🎟️','New classes & sessions','Get alerts when new classes or sessions become available.'),
+        ),
+        'Bookings & planning' => array(
+            'booking_alerts' => array('📅','Booking alerts','Booking confirmations, status changes, cancellations and important booking updates.'),
+            'booking_reminders' => array('⏰','Booking reminders','Reminders before your upcoming booked classes and activities.'),
+            'planner_reminders' => array('🗓️','Planner reminders','Reminders for activities and events in your family planner.'),
+        ),
+        'Messages & community' => array(
+            'messages' => array('💬','Messages & support','Alerts when a specialist, group leader or support contact replies to you.'),
+            'community_alerts' => array('🏡','Community updates','Useful local family updates and community news.'),
+            'whats_on' => array('📍','What’s On alerts','New and updated family events and activities in your preferred areas.'),
+        ),
+        'Email' => array(
+            'email_digest' => array('✉️','Email digest','Receive a regular round-up of relevant Bubba Hub updates by email.'),
+        ),
+    );
     ob_start(); ?>
-    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Notification preferences</h3><span>Choose how Bubba Hub contacts you</span></div>
-    <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="notifications">
-    <?php $items=array('push_classes'=>'Class and booking alerts','email_digest'=>'Email digest','sms_reminders'=>'SMS reminders','community_alerts'=>'Community alerts'); foreach($items as $key=>$label): ?><label class="bh-stage2-check"><input type="checkbox" name="<?php echo esc_attr($key); ?>" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_'.$key,'1'),'1'); ?>><span><strong><?php echo esc_html($label); ?></strong><small>Receive relevant Bubba Hub updates through this channel.</small></span></label><?php endforeach; ?>
-    <div class="bh-profile-actions"><button type="submit">Save notification preferences</button></div></form></div><?php return ob_get_clean();
+    <div class="bh-profile-card bh-notification-settings">
+        <div class="bh-profile-card-heading"><div><h3>Notification preferences</h3><span>Choose exactly which Bubba Hub updates you receive</span></div></div>
+        <p class="bh-notification-intro">Turn individual notification types on or off. These choices control optional alerts; essential account, payment and transaction messages may still be sent when required.</p>
+        <form method="post" class="bh-stage2-form">
+            <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="notifications">
+            <?php foreach ( $groups as $heading => $items ) : ?>
+                <div class="bh-notification-group"><h4><?php echo esc_html($heading); ?></h4>
+                <?php foreach ( $items as $key => $item ) : ?>
+                    <label class="bh-notification-preference"><span class="bh-notification-preference-icon" aria-hidden="true"><?php echo esc_html($item[0]); ?></span><span class="bh-notification-preference-copy"><strong><?php echo esc_html($item[1]); ?></strong><small><?php echo esc_html($item[2]); ?></small></span><input type="checkbox" name="<?php echo esc_attr($key); ?>" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_'.$key,'1'),'1'); ?>><span class="bh-notification-preference-toggle" aria-hidden="true"></span></label>
+                <?php endforeach; ?></div>
+            <?php endforeach; ?>
+            <div class="bh-notification-sms-disabled"><span aria-hidden="true">📱</span><div><strong>SMS notifications</strong><small>Currently unavailable. SMS is disabled and no SMS notifications will be sent.</small></div><span class="bh-notification-disabled-pill">Disabled</span></div>
+            <div class="bh-profile-actions"><button type="submit">Save notification preferences</button></div>
+        </form>
+    </div>
+    <style>
+    .bh-notification-intro{margin:-4px 0 20px;color:#687a73;font-size:13px;line-height:1.55}.bh-notification-group{margin:0 0 24px;border:1px solid #e4ece8;border-radius:16px;overflow:hidden;background:#fff}.bh-notification-group h4{margin:0;padding:14px 16px;background:#f5f9f6;color:#31584b;font-size:14px}.bh-notification-preference{display:grid;grid-template-columns:42px minmax(0,1fr) 0 42px;gap:12px;align-items:center;padding:14px 16px;border-top:1px solid #edf1ef;cursor:pointer;position:relative}.bh-notification-preference-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#f3f7f4;font-size:18px}.bh-notification-preference-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.bh-notification-preference-copy strong{color:#24483d;font-size:14px}.bh-notification-preference-copy small{color:#718079;font-size:11px;line-height:1.45}.bh-notification-preference input{position:absolute;opacity:0;pointer-events:none}.bh-notification-preference-toggle{width:42px;height:24px;border-radius:999px;background:#cbd7d1;position:relative;transition:.2s}.bh-notification-preference-toggle:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:.2s}.bh-notification-preference input:checked + .bh-notification-preference-toggle{background:#2f6c52}.bh-notification-preference input:checked + .bh-notification-preference-toggle:after{transform:translateX(18px)}.bh-notification-sms-disabled{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 0 18px;border:1px dashed #d6dfda;border-radius:14px;background:#fafcfb;color:#738079}.bh-notification-sms-disabled>span:first-child{font-size:20px}.bh-notification-sms-disabled div{flex:1}.bh-notification-sms-disabled strong{display:block;color:#53665f;font-size:13px}.bh-notification-sms-disabled small{display:block;margin-top:3px;font-size:11px;line-height:1.4}.bh-notification-disabled-pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;border-radius:999px;background:#edf0ee;color:#718079}@media(max-width:600px){.bh-notification-preference{grid-template-columns:36px minmax(0,1fr) 42px;padding:13px 12px;gap:9px}.bh-notification-preference-icon{width:34px;height:34px}.bh-notification-preference-copy strong{font-size:13px}.bh-notification-preference-copy small{font-size:10.5px}.bh-notification-group h4{padding:12px}.bh-notification-sms-disabled{align-items:flex-start}.bh-notification-disabled-pill{margin-left:auto}}
+    </style>
+    <?php return ob_get_clean();
 }
-
 function bubbahub_stage2_render_consent() {
     $saved = bubbahub_stage2_user_meta('bubbahub_consent_saved_at');
     ob_start(); ?>

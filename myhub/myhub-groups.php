@@ -208,6 +208,7 @@ function bubbahub_myhub_groups_listing_matches_preferences($id,$prefs){
 }
 function bubbahub_myhub_groups_score($id,$interests,$locations,$ages){
     $score=0;
+    $family_prefs=bubbahub_myhub_groups_family_preferences();
     $matched_location=false;
     if($locations){
         foreach(array('location','region') as $tax){
@@ -243,6 +244,7 @@ function bubbahub_myhub_groups_score($id,$interests,$locations,$ages){
     if($interest_match)$score+=3;
     $v=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,'age_range',bubbahub_directory_get_field($id,'Age_Range','')):get_post_meta($id,'age_range',get_post_meta($id,'Age_Range',true));
     if(bubbahub_myhub_groups_age_range_matches($v,$ages))$score+=3;
+    $score+=bubbahub_myhub_groups_listing_matches_preferences($id,$family_prefs);
     return $score;
 }
 function bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array()){

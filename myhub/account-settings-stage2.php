@@ -90,6 +90,194 @@ function bubbahub_stage2_payment_url() {
     return bubbahub_stage2_url( 'bubbahub_getpaid_account_url', '/my-bookings/' );
 }
 
+/* -------------------------------------------------------------------------
+ * Ultimate Member account integration
+ * ---------------------------------------------------------------------- */
+function bubbahub_stage2_register_um_profile_tab() {
+    if ( ! function_exists( 'UM' ) ) return;
+    add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_stage2_um_profile_tab', 100 );
+    add_filter( 'um_account_content_hook_bubbahub_profile', 'bubbahub_stage2_um_profile_content', 20, 2 );
+    add_action( 'um_submit_account_errors_hook', 'bubbahub_stage2_um_profile_validate', 20, 1 );
+    add_action( 'um_after_user_account_updated', 'bubbahub_stage2_um_profile_save', 20, 2 );
+}
+add_action( 'init', 'bubbahub_stage2_register_um_profile_tab', 40 );
+
+function bubbahub_stage2_um_profile_tab( $tabs ) {
+    $tabs[ 150 ]['bubbahub_profile'] = array(
+        'icon'         => 'um-faicon-user',
+        'title'        => __( 'My Bubba Hub Profile', 'bubbahub' ),
+        'submit_title' => __( 'Save profile details', 'bubbahub' ),
+        'custom'       => true,
+    );
+    return $tabs;
+}
+
+function bubbahub_stage2_um_profile_content( $output = '', $shortcode_args = array() ) {
+    if ( ! is_user_logged_in() ) return $output;
+
+    $uid = get_current_user_id();
+    $user = wp_get_current_user();
+    $relationships = array(
+        'mum'            => 'Mum',
+        'dad'            => 'Dad',
+        'parent'         => 'Parent',
+        'step-parent'    => 'Step-parent',
+        'carer'          => 'Carer',
+        'foster-carer'   => 'Foster carer',
+        'grandparent'    => 'Grandparent',
+        'guardian'       => 'Guardian',
+        'family-member'  => 'Family member',
+        'other'          => 'Other',
+    );
+
+    $relationship = (string) get_user_meta( $uid, 'bubbahub_relationship_to_children', true );
+    $fields = array(
+        'phone'              => get_user_meta( $uid, 'bubbahub_phone', true ),
+        'address1'           => get_user_meta( $uid, 'bubbahub_address1', true ),
+        'address2'           => get_user_meta( $uid, 'bubbahub_address2', true ),
+        'town'               => get_user_meta( $uid, 'bubbahub_town', true ),
+        'county'             => get_user_meta( $uid, 'bubbahub_county', true ),
+        'postcode'            => get_user_meta( $uid, 'bubbahub_postcode', true ),
+        'billing_address1'   => get_user_meta( $uid, 'bubbahub_billing_address1', true ),
+        'billing_address2'   => get_user_meta( $uid, 'bubbahub_billing_address2', true ),
+        'billing_town'       => get_user_meta( $uid, 'bubbahub_billing_town', true ),
+        'billing_county'     => get_user_meta( $uid, 'bubbahub_billing_county', true ),
+        'billing_postcode'   => get_user_meta( $uid, 'bubbahub_billing_postcode', true ),
+    );
+
+    $profile_url = function_exists( 'um_user_profile_url' ) ? um_user_profile_url( $uid ) : '';
+    $avatar = '';
+    if ( function_exists( 'um_fetch_user' ) && function_exists( 'um_user' ) ) {
+        um_fetch_user( $uid );
+        $avatar = um_user( 'profile_photo', 96 );
+        um_reset_user();
+    }
+
+    ob_start();
+    ?>
+    <div class="bh-um-bubba-profile">
+        <div class="bh-um-profile-intro">
+            <div class="bh-um-profile-avatar">
+                <?php echo $avatar ? $avatar : '<span aria-hidden="true">👤</span>'; ?>
+            </div>
+            <div>
+                <h3>My Bubba Hub Profile</h3>
+                <p>Keep the details Bubba Hub uses for your account, bookings and family connections in one place.</p>
+                <?php if ( $profile_url ) : ?>
+                    <a class="bh-um-profile-photo-link" href="<?php echo esc_url( $profile_url ); ?>">Change profile photo</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="bh-um-profile-section">
+            <h4>Personal details</h4>
+            <div class="bh-um-profile-grid">
+                <div class="bh-um-field">
+                    <label for="bubbahub_relationship_to_children">Relationship to child(ren)</label>
+                    <select id="bubbahub_relationship_to_children" name="bubbahub_relationship_to_children">
+                        <option value="">Select relationship</option>
+                        <?php foreach ( $relationships as $key => $label ) : ?>
+                            <option value="<?php echo esc_attr( $key ); ?>" <?php selected( $relationship, $key ); ?>><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="bh-um-field">
+                    <label for="bubbahub_phone">Contact number</label>
+                    <input type="tel" id="bubbahub_phone" name="bubbahub_phone" value="<?php echo esc_attr( $fields['phone'] ); ?>" autocomplete="tel">
+                </div>
+            </div>
+        </div>
+
+        <div class="bh-um-profile-section">
+            <h4>Home address</h4>
+            <div class="bh-um-profile-grid">
+                <div class="bh-um-field bh-um-field-wide"><label for="bubbahub_address1">Address line 1</label><input type="text" id="bubbahub_address1" name="bubbahub_address1" value="<?php echo esc_attr( $fields['address1'] ); ?>" autocomplete="address-line1"></div>
+                <div class="bh-um-field"><label for="bubbahub_address2">Address line 2</label><input type="text" id="bubbahub_address2" name="bubbahub_address2" value="<?php echo esc_attr( $fields['address2'] ); ?>" autocomplete="address-line2"></div>
+                <div class="bh-um-field"><label for="bubbahub_town">Town / City</label><input type="text" id="bubbahub_town" name="bubbahub_town" value="<?php echo esc_attr( $fields['town'] ); ?>" autocomplete="address-level2"></div>
+                <div class="bh-um-field"><label for="bubbahub_county">County</label><input type="text" id="bubbahub_county" name="bubbahub_county" value="<?php echo esc_attr( $fields['county'] ); ?>" autocomplete="address-level1"></div>
+                <div class="bh-um-field"><label for="bubbahub_postcode">Postcode</label><input type="text" id="bubbahub_postcode" name="bubbahub_postcode" value="<?php echo esc_attr( $fields['postcode'] ); ?>" autocomplete="postal-code"></div>
+            </div>
+        </div>
+
+        <div class="bh-um-profile-section">
+            <div class="bh-um-section-heading-row">
+                <div><h4>Billing address</h4><p>Use a separate billing address if it is different from your home address.</p></div>
+                <label class="bh-um-inline-check"><input type="checkbox" id="bubbahub_billing_same" name="bubbahub_billing_same" value="1"><span>Same as home address</span></label>
+            </div>
+            <div class="bh-um-profile-grid" id="bubbahub-billing-fields">
+                <div class="bh-um-field bh-um-field-wide"><label for="bubbahub_billing_address1">Billing address line 1</label><input type="text" id="bubbahub_billing_address1" name="bubbahub_billing_address1" value="<?php echo esc_attr( $fields['billing_address1'] ); ?>" autocomplete="billing address-line1"></div>
+                <div class="bh-um-field"><label for="bubbahub_billing_address2">Billing address line 2</label><input type="text" id="bubbahub_billing_address2" name="bubbahub_billing_address2" value="<?php echo esc_attr( $fields['billing_address2'] ); ?>" autocomplete="billing address-line2"></div>
+                <div class="bh-um-field"><label for="bubbahub_billing_town">Town / City</label><input type="text" id="bubbahub_billing_town" name="bubbahub_billing_town" value="<?php echo esc_attr( $fields['billing_town'] ); ?>" autocomplete="billing address-level2"></div>
+                <div class="bh-um-field"><label for="bubbahub_billing_county">County</label><input type="text" id="bubbahub_billing_county" name="bubbahub_billing_county" value="<?php echo esc_attr( $fields['billing_county'] ); ?>" autocomplete="billing address-level1"></div>
+                <div class="bh-um-field"><label for="bubbahub_billing_postcode">Postcode</label><input type="text" id="bubbahub_billing_postcode" name="bubbahub_billing_postcode" value="<?php echo esc_attr( $fields['billing_postcode'] ); ?>" autocomplete="billing postal-code"></div>
+            </div>
+        </div>
+    </div>
+    <style>
+      .bh-um-bubba-profile{margin:0}.bh-um-profile-intro{display:flex;gap:16px;align-items:center;margin:0 0 20px;padding:16px;border:1px solid #e1e9e5;border-radius:16px;background:#fbfdfc}.bh-um-profile-avatar{width:72px;height:72px;flex:0 0 72px;border-radius:50%;overflow:hidden;background:#eaf3ef;display:flex;align-items:center;justify-content:center;font-size:28px}.bh-um-profile-avatar img{width:100%;height:100%;object-fit:cover}.bh-um-profile-intro h3{margin:0 0 4px;color:#1e3330}.bh-um-profile-intro p{margin:0 0 7px;color:#718079;font-size:12px;line-height:1.5}.bh-um-profile-photo-link{font-size:12px;font-weight:700;color:#31584b}.bh-um-profile-section{margin-top:14px;padding:16px;border:1px solid #e1e9e5;border-radius:16px;background:#fff}.bh-um-profile-section h4{margin:0 0 12px;color:#31584b;font-size:14px}.bh-um-section-heading-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.bh-um-section-heading-row p{margin:0;color:#718079;font-size:11px}.bh-um-inline-check{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:#31584b;white-space:nowrap}.bh-um-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.bh-um-field{min-width:0}.bh-um-field-wide{grid-column:1/-1}.bh-um-field label{display:block;margin:0 0 5px;color:#31584b;font-size:11px;font-weight:700}.bh-um-field input,.bh-um-field select{width:100%;min-height:42px;padding:9px 11px;border:1px solid #dbe7e1;border-radius:10px;background:#fff;box-sizing:border-box}.bh-um-field input:focus,.bh-um-field select:focus{outline:none;border-color:#668785;box-shadow:0 0 0 2px rgba(102,135,133,.12)}@media(max-width:650px){.bh-um-profile-grid{grid-template-columns:1fr}.bh-um-field-wide{grid-column:auto}.bh-um-section-heading-row{display:block}.bh-um-inline-check{margin-top:10px;white-space:normal}}
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      var same=document.getElementById('bubbahub_billing_same'), billing=document.getElementById('bubbahub-billing-fields');
+      if(!same||!billing)return;
+      same.addEventListener('change',function(){
+        var pairs=[['bubbahub_address1','bubbahub_billing_address1'],['bubbahub_address2','bubbahub_billing_address2'],['bubbahub_town','bubbahub_billing_town'],['bubbahub_county','bubbahub_billing_county'],['bubbahub_postcode','bubbahub_billing_postcode']];
+        pairs.forEach(function(p){var a=document.getElementById(p[0]),b=document.getElementById(p[1]);if(a&&b&&same.checked)b.value=a.value;});
+        billing.style.opacity=same.checked?'0.55':'1';
+      });
+    });
+    </script>
+    <?php
+    $output .= ob_get_clean();
+    return $output;
+}
+
+function bubbahub_stage2_um_profile_validate( $submitted ) {
+    if ( empty( $submitted['_um_account_tab'] ) || 'bubbahub_profile' !== sanitize_key( $submitted['_um_account_tab'] ) ) return;
+    if ( ! empty( $submitted['bubbahub_phone'] ) && function_exists( 'UM' ) && isset( UM()->validation ) && method_exists( UM()->validation(), 'is_phone_number' ) && ! UM()->validation()->is_phone_number( sanitize_text_field( $submitted['bubbahub_phone'] ) ) ) {
+        UM()->form()->add_error( 'bubbahub_phone', __( 'Please enter a valid contact number.', 'bubbahub' ) );
+    }
+}
+
+function bubbahub_stage2_um_profile_save( $user_id, $changes = array() ) {
+    if ( ! is_user_logged_in() || (int) $user_id !== get_current_user_id() ) return;
+    if ( empty( $_POST['_um_account_tab'] ) || 'bubbahub_profile' !== sanitize_key( wp_unslash( $_POST['_um_account_tab'] ) ) ) return;
+
+    $map = array(
+        'bubbahub_relationship_to_children' => 'sanitize_key',
+        'bubbahub_phone'                    => 'sanitize_text_field',
+        'bubbahub_address1'                 => 'sanitize_text_field',
+        'bubbahub_address2'                 => 'sanitize_text_field',
+        'bubbahub_town'                     => 'sanitize_text_field',
+        'bubbahub_county'                   => 'sanitize_text_field',
+        'bubbahub_postcode'                 => 'sanitize_text_field',
+        'bubbahub_billing_address1'         => 'sanitize_text_field',
+        'bubbahub_billing_address2'         => 'sanitize_text_field',
+        'bubbahub_billing_town'             => 'sanitize_text_field',
+        'bubbahub_billing_county'           => 'sanitize_text_field',
+        'bubbahub_billing_postcode'         => 'sanitize_text_field',
+    );
+
+    foreach ( $map as $key => $sanitizer ) {
+        if ( isset( $_POST[ $key ] ) ) {
+            update_user_meta( $user_id, $key, call_user_func( $sanitizer, wp_unslash( $_POST[ $key ] ) ) );
+        }
+    }
+
+    if ( ! empty( $_POST['bubbahub_billing_same'] ) ) {
+        $pairs = array(
+            'bubbahub_address1' => 'bubbahub_billing_address1',
+            'bubbahub_address2' => 'bubbahub_billing_address2',
+            'bubbahub_town'     => 'bubbahub_billing_town',
+            'bubbahub_county'   => 'bubbahub_billing_county',
+            'bubbahub_postcode' => 'bubbahub_billing_postcode',
+        );
+        foreach ( $pairs as $source => $target ) {
+            update_user_meta( $user_id, $target, get_user_meta( $user_id, $source, true ) );
+        }
+    }
+}
+
 function bubbahub_stage2_payment_methods_url() {
     $url = apply_filters( 'bubbahub_getpaid_payment_methods_url', '' );
     if ( $url ) return esc_url_raw( $url );
@@ -1561,7 +1749,7 @@ function bubbahub_account_settings_stage2_shortcode() {
     $payment_url = bubbahub_stage2_payment_url();
     $pricing_url = bubbahub_stage2_pricing_url();
 
-    if ( 'profile' === $section ) $content = bubbahub_stage2_render_profile( $user );
+    if ( 'profile' === $section ) { $profile_url = add_query_arg( 'um_tab', 'bubbahub_profile', bubbahub_stage2_account_url() ); wp_safe_redirect( $profile_url ); exit; }
     elseif ( 'notifications' === $section ) $content = bubbahub_stage2_render_notifications();
     elseif ( 'consent' === $section ) $content = bubbahub_stage2_render_consent();
     elseif ( 'preferences' === $section || 'interests' === $section || 'family_needs' === $section ) $content = bubbahub_stage2_render_preferences();
@@ -1583,7 +1771,7 @@ function bubbahub_account_settings_stage2_shortcode() {
         <div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, membership and payment details in one place.</p><?php if($is_pro): ?><div class="bh-pro-pill">⭐ Pro Member Active</div><?php endif; ?></div><a class="bh-profile-back light" href="<?php echo esc_url(remove_query_arg('bh_account_settings')); ?>">‹ Back to My Hub</a></div>
         <?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?>
         <div id="bh-account-settings-list" class="bh-settings-list" role="navigation" aria-label="Account settings">
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'profile'))); ?>">
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg('um_tab', 'bubbahub_profile', $um_url)); ?>">
                 <span class="bh-account-settings-icon" aria-hidden="true">👤</span><span class="bh-account-settings-content"><h3>Edit my profile</h3><p>Personal details, contact information, addresses and search radius.</p></span>
             </a></div>
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'pro'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">⭐</span><span class="bh-account-settings-content"><h3>Manage my Pro Account</h3><p><?php echo $is_pro ? 'Manage your active membership and billing.' : 'View Pro options and membership information.'; ?></p></span></a></div>

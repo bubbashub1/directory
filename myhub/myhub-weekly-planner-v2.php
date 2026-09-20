@@ -115,7 +115,7 @@ function bubbahub_myhub_calendar_filter_ajax() {
     check_ajax_referer( 'bubbahub_calendar_filter', 'nonce' );
 
     $allowed = array(
-        'bh_view','bh_planner_mode','bh_week','bh_search','bh_location','bh_region','bh_town',
+        'bh_view','bh_planner_mode','bh_week','bh_search','bh_location','bh_region','bh_town','bh_edit_calendar',
         'bh_category','bh_day','bh_term_time','bh_age','bh_price','bh_radius','bh_lat','bh_lng','bh_acf'
     );
     $request = array();

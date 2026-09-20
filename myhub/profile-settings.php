@@ -19,7 +19,7 @@ function bubbahub_profile_settings_register() {
 
 function bubbahub_profile_settings_assets() {
     if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) return;
-    wp_register_style( 'bubbahub-profile-settings', BUBBAHUB_MYHUB_URL . 'profile-settings.css', array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.3.0' );
+    wp_enqueue_style( 'bubbahub-profile-settings', BUBBAHUB_MYHUB_URL . 'profile-settings.css', array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.3.0' );
     wp_register_script( 'bubbahub-profile-settings', BUBBAHUB_MYHUB_URL . 'profile-settings.js', array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.3.0', true );
 }
 

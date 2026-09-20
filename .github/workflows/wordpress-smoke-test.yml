@@ -60,10 +60,24 @@ jobs:
           set -e
           find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      - name: Activate plugin with debug logging
+      - name: Activate plugin and report activation output
         run: |
           cd /tmp/wp
-          wp plugin activate bubbahub-directory --debug
+          wp eval '
+          $plugin = "bubbahub-directory/bubbahub-directory.php";
+          $result = activate_plugin( $plugin );
+          if ( is_wp_error( $result ) ) {
+              echo "ACTIVATION_ERROR=" . $result->get_error_message() . PHP_EOL;
+              $data = $result->get_error_data();
+              if ( is_string( $data ) && $data !== "" ) {
+                  echo "UNEXPECTED_OUTPUT=" . json_encode( $data ) . PHP_EOL;
+              } elseif ( null !== $data ) {
+                  echo "ACTIVATION_ERROR_DATA=" . json_encode( $data ) . PHP_EOL;
+              }
+              exit( 1 );
+          }
+          echo "PLUGIN_ACTIVATED=yes" . PHP_EOL;
+          '
 
       - name: WordPress runtime bootstrap
         run: |

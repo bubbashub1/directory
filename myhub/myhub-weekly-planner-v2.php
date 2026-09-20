@@ -49,18 +49,62 @@ function bubbahub_myhub_planner_v2_save_custom_calendar() {
     else $name = substr( $name, 0, 80 );
 
     $saved = bubbahub_myhub_planner_v2_saved_calendars();
-    $saved[] = array(
-        'id'     => wp_generate_uuid4(),
-        'name'   => $name,
-        'view'   => isset( $_POST['bh_planner_mode'] ) ? sanitize_key( wp_unslash( $_POST['bh_planner_mode'] ) ) : 'week',
-        'params' => bubbahub_myhub_planner_v2_saved_params_from_request( $_POST ),
-        'saved'  => current_time( 'mysql' ),
-    );
-    if ( count( $saved ) > 20 ) $saved = array_slice( $saved, -20 );
+    $edit_id = isset( $_POST['calendar_id'] ) ? sanitize_text_field( wp_unslash( $_POST['calendar_id'] ) ) : '';
+    $view = isset( $_POST['bh_planner_mode'] ) ? sanitize_key( wp_unslash( $_POST['bh_planner_mode'] ) ) : 'week';
+    $params = bubbahub_myhub_planner_v2_saved_params_from_request( $_POST );
+
+    if ( $edit_id ) {
+        $updated = false;
+        foreach ( $saved as &$calendar ) {
+            if ( ! empty( $calendar['id'] ) && hash_equals( (string) $calendar['id'], $edit_id ) ) {
+                $calendar['name']   = $name;
+                $calendar['view']   = $view;
+                $calendar['params'] = $params;
+                $calendar['saved']  = current_time( 'mysql' );
+                $updated = true;
+                break;
+            }
+        }
+        unset( $calendar );
+        if ( ! $updated ) wp_send_json_error( array( 'message' => 'That saved calendar could not be found.' ), 404 );
+    } else {
+        $saved[] = array(
+            'id'     => wp_generate_uuid4(),
+            'name'   => $name,
+            'view'   => $view,
+            'params' => $params,
+            'saved'  => current_time( 'mysql' ),
+        );
+        if ( count( $saved ) > 20 ) $saved = array_slice( $saved, -20 );
+    }
 
     update_user_meta( get_current_user_id(), 'bubbahub_saved_planner_calendars', $saved );
 
-    wp_send_json_success( array( 'message' => 'Calendar saved.', 'id' => end( $saved )['id'] ) );
+    wp_send_json_success( array( 'message' => $edit_id ? 'Calendar updated.' : 'Calendar saved.', 'id' => $edit_id ? $edit_id : end( $saved )['id'] ) );
+}
+
+add_action( 'wp_ajax_bubbahub_delete_custom_calendar', 'bubbahub_myhub_planner_v2_delete_custom_calendar' );
+function bubbahub_myhub_planner_v2_delete_custom_calendar() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in.' ), 403 );
+    check_ajax_referer( 'bubbahub_save_custom_calendar', 'nonce' );
+
+    $id = isset( $_POST['calendar_id'] ) ? sanitize_text_field( wp_unslash( $_POST['calendar_id'] ) ) : '';
+    if ( '' === $id ) wp_send_json_error( array( 'message' => 'No calendar was selected.' ), 400 );
+
+    $saved = bubbahub_myhub_planner_v2_saved_calendars();
+    $kept = array();
+    $found = false;
+    foreach ( $saved as $calendar ) {
+        if ( ! empty( $calendar['id'] ) && hash_equals( (string) $calendar['id'], $id ) ) {
+            $found = true;
+            continue;
+        }
+        $kept[] = $calendar;
+    }
+    if ( ! $found ) wp_send_json_error( array( 'message' => 'That saved calendar could not be found.' ), 404 );
+
+    update_user_meta( get_current_user_id(), 'bubbahub_saved_planner_calendars', $kept );
+    wp_send_json_success( array( 'message' => 'Calendar removed.' ) );
 }
 
 add_shortcode( 'bubbahub_weekly_planner_v2', 'bubbahub_myhub_weekly_planner_v2_shortcode' );
@@ -389,6 +433,16 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
 
     $saved_calendars = bubbahub_myhub_planner_v2_saved_calendars();
     $saved_calendar_id = isset( $_GET['bh_saved_calendar'] ) ? sanitize_text_field( wp_unslash( $_GET['bh_saved_calendar'] ) ) : '';
+    $edit_calendar_id = isset( $_GET['bh_edit_calendar'] ) ? sanitize_text_field( wp_unslash( $_GET['bh_edit_calendar'] ) ) : '';
+    $edit_calendar_name = '';
+    if ( $edit_calendar_id ) {
+        foreach ( $saved_calendars as $saved_calendar ) {
+            if ( ! empty( $saved_calendar['id'] ) && hash_equals( (string) $saved_calendar['id'], $edit_calendar_id ) ) {
+                $edit_calendar_name = ! empty( $saved_calendar['name'] ) ? $saved_calendar['name'] : '';
+                break;
+            }
+        }
+    }
     if ( $saved_calendar_id ) {
         foreach ( $saved_calendars as $saved_calendar ) {
             if ( ! empty( $saved_calendar['id'] ) && hash_equals( (string) $saved_calendar['id'], $saved_calendar_id ) ) {
@@ -556,7 +610,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     $list_rows=$rows;usort($list_rows,function($a,$b){return ($a['date'].' '.$a['start'])<=>($b['date'].' '.$b['start']);});
 
     ob_start(); ?>
-    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>" data-save-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_save_custom_calendar' ) ); ?>">
+    <section class="bh-myhub-section bh-weekly-planner bh-weekly-planner-v2" data-calendar-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-calendar-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_calendar_filter' ) ); ?>" data-save-nonce="<?php echo esc_attr( wp_create_nonce( 'bubbahub_save_custom_calendar' ) ); ?>" data-edit-calendar="<?php echo esc_attr($edit_calendar_id); ?>">
       <div class="bh-myhub-section-heading">
         <div><div class="bh-myhub-kicker">YOUR CALENDAR</div><h2>Calendar</h2></div>
       </div>
@@ -579,11 +633,11 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <div class="bh-calendar-search-actions">
           <button type="submit" class="bh-calendar-search-button">Search</button>
           <button type="button" class="bh-calendar-advanced-toggle" aria-expanded="false">Advanced search <span aria-hidden="true">⌄</span></button>
-          <button type="button" class="bh-calendar-save-button" data-save-calendar>Save calendar</button>
+          <button type="button" class="bh-calendar-save-button" data-save-calendar><?php echo $edit_calendar_id ? 'Edit calendar' : 'Save calendar'; ?></button>
         </div>
         <div class="bh-calendar-save-panel" data-save-panel hidden>
-          <label for="bh-calendar-save-name">Name this custom calendar</label>
-          <div><input id="bh-calendar-save-name" type="text" maxlength="80" placeholder="e.g. Baby groups near Exeter"><button type="button" data-confirm-save>Save</button><button type="button" data-cancel-save>Cancel</button></div>
+          <label for="bh-calendar-save-name"><?php echo $edit_calendar_id ? 'Edit custom calendar name' : 'Name this custom calendar'; ?></label>
+          <div><input id="bh-calendar-save-name" type="text" maxlength="80" value="<?php echo esc_attr($edit_calendar_name); ?>" placeholder="e.g. Baby groups near Exeter"><button type="button" data-confirm-save><?php echo $edit_calendar_id ? 'Update' : 'Save'; ?></button><button type="button" data-cancel-save>Cancel</button></div>
         </div>
         <div class="bh-calendar-advanced-search" hidden aria-hidden="true">
           <?php
@@ -1164,6 +1218,8 @@ document.addEventListener('DOMContentLoaded',function(){
         saveConfirm.disabled=true;
         var data=new FormData(searchForm);
         data.append('action','bubbahub_save_custom_calendar');
+        var editCalendarId=planner.getAttribute('data-edit-calendar')||'';
+        if(editCalendarId)data.append('calendar_id',editCalendarId);
         data.append('calendar_name',name);
         data.append('nonce',planner.getAttribute('data-save-nonce')||'');
         fetch(planner.getAttribute('data-calendar-ajax'),{method:'POST',credentials:'same-origin',body:data})

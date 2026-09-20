@@ -172,7 +172,7 @@ function bubbahub_push_get_access_token() {
 }
 
 function bubbahub_push_send( $user_id, $title, $message, $url = '', $data = array() ) {
-    if ( ! bubbahub_push_is_configured() || ! bubbahub_notification_channel_enabled( $user_id, 'booking', 'push' ) && empty( $data['force'] ) ) return false;
+    $type = isset( $data['type'] ) ? sanitize_key( $data['type'] ) : 'booking';\n    if ( ! bubbahub_push_is_configured() || ! bubbahub_notification_channel_enabled( $user_id, $type, 'push' ) && empty( $data['force'] ) ) return false;
     $c = bubbahub_push_config();
     $token = bubbahub_push_get_access_token();
     if ( ! $token ) return false;

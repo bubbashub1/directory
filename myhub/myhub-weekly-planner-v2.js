@@ -19,4 +19,41 @@ $(document).on('click','.bh-weekly-planner-v2 .bh-calendar-use-location',functio
   $button.prop('disabled',false).text('✓');calendarAjax($section,$form);
  },function(){$button.prop('disabled',false).text('⌖');},{enableHighAccuracy:false,timeout:10000,maximumAge:300000});
 });
+$(document).on('click','.bh-weekly-planner-v2 [data-scroll-saved-calendars]',function(){
+ var $button=$(this),$track=$button.closest('.bh-saved-calendars').find('[data-saved-calendars-track]').first();
+ if(!$track.length)return;
+ var direction=parseInt($button.attr('data-scroll-saved-calendars'),10)||1;
+ var card=$track.find('.bh-saved-calendar-card').first();
+ var distance=card.length ? card.outerWidth(true) : Math.max(260,$track.innerWidth()*0.85);
+ $track[0].scrollBy({left:direction*distance,behavior:'smooth'});
+});
+$(document).on('click','.bh-weekly-planner-v2 [data-delete-saved-calendar]',function(){
+ var $button=$(this),$section=$button.closest('.bh-weekly-planner-v2'),id=$button.attr('data-calendar-id'),nonce=$section.attr('data-save-nonce');
+ if(!id||!nonce||$button.prop('disabled'))return;
+ if(!window.confirm('Remove this custom calendar from My Hub?'))return;
+ $button.prop('disabled',true).text('Removing…');
+ $.ajax({
+  url:$section.attr('data-calendar-ajax'),
+  type:'POST',
+  dataType:'json',
+  data:{action:'bubbahub_delete_custom_calendar',calendar_id:id,nonce:nonce}
+ }).done(function(response){
+  if(response&&response.success){
+   var $card=$button.closest('.bh-saved-calendar-card');
+   var wasActive=$card.hasClass('is-active');
+   $card.slideUp(180,function(){
+    $card.remove();
+    var $track=$section.find('[data-saved-calendars-track]').first();
+    if(!$track.find('.bh-saved-calendar-card').length)$section.find('.bh-saved-calendars').remove();
+    if(wasActive)window.location.href=window.location.href.replace(/([?&])bh_saved_calendar=[^&]*/,'$1').replace(/[?&]$/,'');
+   });
+  }else{
+   $button.prop('disabled',false).text('Remove');
+   window.alert(response&&response.data&&response.data.message?response.data.message:'The calendar could not be removed.');
+  }
+ }).fail(function(){
+  $button.prop('disabled',false).text('Remove');
+  window.alert('The calendar could not be removed. Please try again.');
+ });
+});
 })(jQuery);

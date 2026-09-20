@@ -39,3 +39,14 @@
 }
 
 .bh-weekly-planner-v2 .bh-planner-calendar-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:0 0 auto}.bh-weekly-planner-v2 .bh-planner-calendar{padding:6px 9px;border-radius:9px;text-decoration:none;font-size:11px;font-weight:800;background:#edf4f0;white-space:nowrap}.bh-weekly-planner-v2 .bh-planner-calendar:hover{background:#e2eee8}.bh-weekly-planner-v2 .bh-planner-calendar-note{font-size:9px;line-height:1.2;max-width:150px;text-align:right;color:#71807a}@media(max-width:600px){.bh-weekly-planner-v2 .bh-planner-calendar-wrap{width:100%;align-items:flex-start;margin-left:56px}.bh-weekly-planner-v2 .bh-planner-calendar-note{text-align:left}}
+/* Keep Calendar aligned to the full My Hub content column. */
+.bh-weekly-planner-v2{width:100%;max-width:none;box-sizing:border-box}
+.bh-weekly-planner-v2 .bh-myhub-section-heading{width:100%;box-sizing:border-box}
+.bh-weekly-planner-v2 .bh-planner-results,
+.bh-weekly-planner-v2 .bh-planner-calendar-toolbar,
+.bh-weekly-planner-v2 .bh-calendar-search-form,
+.bh-weekly-planner-v2 .bh-saved-calendars{width:100%;box-sizing:border-box}
+@media(max-width:600px){
+ .bh-weekly-planner-v2 .bh-myhub-section-heading{gap:10px}
+ .bh-weekly-planner-v2 .bh-weekly-planner-preferences{margin-left:auto}
+}

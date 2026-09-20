@@ -414,10 +414,10 @@ function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
     if ( ! $snapshot ) return;
 
     update_post_meta( $post_id, '_bh_consent_snapshot', $snapshot );
-    update_post_meta( $post_id, '_bh_child_profile_id', absint( $snapshot['child_profile_id'] ) );
+    update_post_meta( $post_id, '_bh_child_profile_id_internal', absint( $snapshot['child_profile_id'] ) );
     update_post_meta( $post_id, '_bh_child_year_of_birth', sanitize_text_field( $snapshot['child_year_of_birth'] ) );
+    /* Provider-facing child profile data is deliberately limited to year of birth. */
     update_post_meta( $post_id, '_bh_child_profile_for_provider', array(
-        'name' => isset( $snapshot['child_profile']['name'] ) ? sanitize_text_field( $snapshot['child_profile']['name'] ) : '',
         'year_of_birth' => sanitize_text_field( $snapshot['child_year_of_birth'] ),
     ) );
     update_post_meta( $post_id, '_bh_consent_version', sanitize_text_field( $snapshot['version'] ) );

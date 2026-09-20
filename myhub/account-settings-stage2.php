@@ -139,6 +139,12 @@ function bubbahub_stage2_taxonomy_terms() {
     return is_wp_error( $terms ) ? array() : $terms;
 }
 
+function bubbahub_stage2_category_terms() {
+    if ( ! taxonomy_exists( 'category' ) || ! is_object_in_taxonomy( 'group', 'category' ) ) return array();
+    $terms = get_terms( array( 'taxonomy' => 'category', 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
+    return is_wp_error( $terms ) ? array() : $terms;
+}
+
 function bubbahub_stage2_location_taxonomy() {
     $preferred = array( 'location', 'locations', 'region', 'regions', 'area', 'areas', 'group_location', 'group_locations' );
     foreach ( $preferred as $taxonomy ) {
@@ -478,6 +484,18 @@ function bubbahub_stage2_handle_interests() {
     bubbahub_stage2_update_meta( 'bubbahub_interest_taxonomy', $taxonomy );
     bubbahub_stage2_update_meta( 'bubbahub_interest_term_ids', array_values( array_unique( $term_ids ) ) );
 
+    $preferred_group_types = array();
+    if ( isset( $_POST['preferred_group_types'] ) ) {
+        $raw_group_types = is_array( $_POST['preferred_group_types'] ) ? $_POST['preferred_group_types'] : array( $_POST['preferred_group_types'] );
+        foreach ( $raw_group_types as $group_type ) {
+            $group_type = sanitize_text_field( wp_unslash( $group_type ) );
+            if ( '' !== $group_type ) $preferred_group_types[] = function_exists( 'mb_substr' ) ? mb_substr( $group_type, 0, 100 ) : substr( $group_type, 0, 100 );
+        }
+    }
+    $preferred_group_types = array_values( array_unique( array_slice( $preferred_group_types, 0, 30 ) ) );
+    bubbahub_stage2_update_meta( 'bubbahub_preferred_group_types', $preferred_group_types );
+    update_user_meta( get_current_user_id(), 'preferred_group_types', $preferred_group_types );
+
     $preferred_locations = array();
     if ( isset( $_POST['preferred_locations'] ) ) {
         $raw_locations = is_array( $_POST['preferred_locations'] ) ? $_POST['preferred_locations'] : array( $_POST['preferred_locations'] );
@@ -788,6 +806,8 @@ function bubbahub_stage2_render_interests() {
         }
     }
 
+    $group_type_terms = bubbahub_stage2_category_terms();
+    $preferred_group_types = (array) bubbahub_stage2_user_meta('bubbahub_preferred_group_types', array());
     $location_terms = bubbahub_stage2_location_terms();
     $age_range = bubbahub_stage2_pref_array('bubbahub_preferred_age_range');
     $session_length = bubbahub_stage2_pref_array('bubbahub_preferred_session_length');
@@ -830,19 +850,30 @@ function bubbahub_stage2_render_interests() {
             <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?>
             <input type="hidden" name="bh_stage2_action" value="interests">
 
-            <div class="bh-preference-section">
-                <div class="bh-preference-heading"><h4>My Interests <small>(User_interest)</small></h4><p>Start typing to get suggestions from tags already used by Bubba Hub groups, or enter your own interest.</p></div>
-                <div class="bh-chip-editor" data-bh-chip-editor data-field="user_interest">
-                    <div class="bh-chip-list" data-bh-chip-list>
-                        <?php foreach ( $user_interests as $interest ) : ?>
-                            <span class="bh-preference-chip"><span><?php echo esc_html($interest); ?></span><button type="button" data-bh-remove aria-label="Remove <?php echo esc_attr($interest); ?>">×</button><input type="hidden" name="user_interest[]" value="<?php echo esc_attr($interest); ?>"></span>
+            <div class="bh-interest-group-grid">
+                <div class="bh-preference-section">
+                    <div class="bh-preference-heading"><h4>My Interests</h4><p>Start typing to get suggestions from tags already used by Bubba Hub groups, or enter your own interest.</p></div>
+                    <div class="bh-chip-editor" data-bh-chip-editor data-field="user_interest">
+                        <div class="bh-chip-list" data-bh-chip-list>
+                            <?php foreach ( $user_interests as $interest ) : ?>
+                                <span class="bh-preference-chip"><span><?php echo esc_html($interest); ?></span><button type="button" data-bh-remove aria-label="Remove <?php echo esc_attr($interest); ?>">×</button><input type="hidden" name="user_interest[]" value="<?php echo esc_attr($interest); ?>"></span>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="bh-chip-input-row">
+                            <input type="text" data-bh-chip-input list="bh-interest-suggestions" placeholder="e.g. messy play, baby music, swimming" autocomplete="off">
+                            <button type="button" class="bh-chip-add" data-bh-add>Add</button>
+                        </div>
+                        <datalist id="bh-interest-suggestions"><?php foreach ( $terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
+                    </div>
+                </div>
+                <div class="bh-preference-section">
+                    <div class="bh-preference-heading"><h4>Preferred Group Types</h4><p>Choose the types of groups and activities you would like to discover.</p></div>
+                    <div class="bh-group-type-options">
+                        <?php foreach ( $group_type_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_group_types, true ); ?>
+                            <label class="bh-group-type-option"><input type="checkbox" name="preferred_group_types[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>><span><?php echo esc_html($name); ?></span></label>
                         <?php endforeach; ?>
+                        <?php if ( ! $group_type_terms ) : ?><span class="bh-location-empty">No Group category options are currently available.</span><?php endif; ?>
                     </div>
-                    <div class="bh-chip-input-row">
-                        <input type="text" data-bh-chip-input list="bh-interest-suggestions" placeholder="e.g. messy play, baby music, swimming" autocomplete="off">
-                        <button type="button" class="bh-chip-add" data-bh-add>Add</button>
-                    </div>
-                    <datalist id="bh-interest-suggestions"><?php foreach ( $terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
                 </div>
             </div>
 
@@ -950,6 +981,12 @@ function bubbahub_stage2_render_interests() {
     }());
     </script>
     <style>
+        .bh-interest-group-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;margin-bottom:18px!important}
+        .bh-interest-group-grid>.bh-preference-section{min-width:0!important;padding:16px!important;border:1px solid #e4ece8!important;border-radius:16px!important;background:#fff!important;box-sizing:border-box!important}
+        .bh-group-type-options{display:flex!important;flex-wrap:wrap!important;gap:8px!important;max-height:190px!important;overflow:auto!important;padding:2px!important}
+        .bh-group-type-option{display:inline-flex!important;align-items:center!important;gap:7px!important;padding:8px 10px!important;border:1px solid #dbe7e1!important;border-radius:999px!important;background:#fbfdfc!important;color:#31584b!important;font-size:12px!important;font-weight:700!important;cursor:pointer!important}
+        .bh-group-type-option input{width:16px!important;height:16px!important;margin:0!important;accent-color:#5f9183!important}
+        @media(max-width:620px){.bh-interest-group-grid{grid-template-columns:1fr!important;gap:12px!important}.bh-group-type-options{max-height:none!important}}
         /* Keep the three discovery preferences visually prominent below Preferred Locations. */
         .bh-preference-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;margin-top:18px!important;width:100%!important}
         .bh-preference-grid .bh-preference-section{display:block!important;visibility:visible!important;min-width:0!important;padding:16px!important;border:1px solid #e4ece8!important;border-radius:16px!important;background:#fff!important;box-sizing:border-box!important}

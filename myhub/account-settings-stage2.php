@@ -756,7 +756,7 @@ function bubbahub_account_settings_stage2_shortcode() {
                 <span class="bh-account-icon" aria-hidden="true">✨</span><span class="bh-account-card-body"><h3>My Interests & Groups</h3><p>Choose interests from tags already used by Bubba Hub groups.</p></span><span class="bh-account-card-arrow" aria-hidden="true">→</span>
             </a>
             <a class="bh-account-card" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notifications'))); ?>">
-                <span class="bh-account-icon" aria-hidden="true">🔔</span><span class="bh-account-card-body"><h3>Notification preferences</h3><p>Manage class, community, email and SMS notification choices.</p></span><span class="bh-account-card-arrow" aria-hidden="true">→</span>
+                <span class="bh-account-icon" aria-hidden="true">🔔</span><span class="bh-account-card-body"><h3>Notification preferences</h3><p>Manage every optional notification type, including new groups, updates, suggestions, bookings and planner alerts.</p></span><span class="bh-account-card-arrow" aria-hidden="true">→</span>
             </a>
             <a class="bh-account-card" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'consent'))); ?>">
                 <span class="bh-account-icon" aria-hidden="true">🛡️</span><span class="bh-account-card-body"><h3>Class Consent & Safety</h3><p>Manage safety information, contact consent and media permissions.</p></span><span class="bh-account-card-arrow" aria-hidden="true">→</span>

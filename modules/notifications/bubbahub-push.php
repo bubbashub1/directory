@@ -186,9 +186,11 @@ function bubbahub_push_send( $user_id, $title, $message, $url = '', $data = arra
         $payload = array(
             'message' => array(
                 'token' => $device_token,
-                'notification' => array( 'title' => wp_strip_all_tags( $title ), 'body' => wp_strip_all_tags( $message ) ),
                 'data' => array_merge( array( 'url' => $url ? esc_url_raw( $url ) : home_url( '/my-hub/' ), 'title' => wp_strip_all_tags( $title ), 'body' => wp_strip_all_tags( $message ) ), array_map( 'strval', $data ) ),
-                'webpush' => array( 'fcm_options' => array( 'link' => $url ? esc_url_raw( $url ) : home_url( '/my-hub/' ) ) ),
+                'webpush' => array(
+                    'fcm_options' => array( 'link' => $url ? esc_url_raw( $url ) : home_url( '/my-hub/' ) ),
+                    'headers' => array( 'Urgency' => 'normal' ),
+                ),
             ),
         );
         $response = wp_remote_post( 'https://fcm.googleapis.com/v1/projects/' . rawurlencode( $c['projectId'] ) . '/messages:send', array(

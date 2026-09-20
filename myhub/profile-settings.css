@@ -254,3 +254,16 @@
  .bh-preference-section{padding:15px 0}
 }
 
+
+
+/* Account Settings visual repair - 2026-09-20 */
+.bh-profile-shell .bh-account-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;width:100%!important;align-items:stretch!important}
+.bh-profile-shell .bh-account-card{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:start!important;column-gap:12px!important;width:100%!important;min-width:0!important;min-height:120px!important;height:auto!important;padding:18px!important;overflow:visible!important;box-sizing:border-box!important;color:#1e3330!important;font-family:inherit!important;text-decoration:none!important}
+.bh-profile-shell .bh-account-card .bh-account-icon{display:flex!important;align-items:flex-start!important;justify-content:center!important;width:30px!important;min-width:30px!important;height:30px!important;flex:0 0 30px!important;margin:0!important;padding:0!important;font-size:22px!important;line-height:1.2!important;visibility:visible!important;opacity:1!important}
+.bh-profile-shell .bh-account-card .bh-account-card-body{display:block!important;width:auto!important;min-width:0!important;max-width:none!important;flex:1 1 auto!important;margin:0!important;padding:0!important;visibility:visible!important;opacity:1!important;overflow:visible!important}
+.bh-profile-shell .bh-account-card .bh-account-card-body h3{display:block!important;width:auto!important;margin:0 0 5px!important;padding:0!important;color:#1e3330!important;font-family:inherit!important;font-size:14px!important;font-weight:800!important;line-height:1.3!important;visibility:visible!important;opacity:1!important}
+.bh-profile-shell .bh-account-card .bh-account-card-body p{display:block!important;width:auto!important;margin:0!important;padding:0!important;color:#668785!important;font-family:inherit!important;font-size:11px!important;font-weight:500!important;line-height:1.55!important;white-space:normal!important;overflow:visible!important;visibility:visible!important;opacity:1!important}
+.bh-profile-shell .bh-account-card .bh-account-card-arrow{display:flex!important;align-items:flex-start!important;justify-content:flex-end!important;width:20px!important;min-width:20px!important;height:24px!important;margin:0!important;padding:0!important;color:#668785!important;font-size:17px!important;font-weight:700!important;line-height:1.2!important;flex:0 0 20px!important;visibility:visible!important;opacity:1!important}
+.bh-profile-shell .bh-account-card:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(30,51,48,.07);border-color:#a8c2bc!important}
+@media(max-width:900px){.bh-profile-shell .bh-account-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:620px){.bh-profile-shell .bh-account-grid{grid-template-columns:1fr!important;gap:12px!important}.bh-profile-shell .bh-account-card{min-height:96px!important;padding:15px!important}}

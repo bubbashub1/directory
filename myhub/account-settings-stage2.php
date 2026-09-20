@@ -942,7 +942,6 @@ function bubbahub_stage2_render_preferences() {
                         <?php if ( ! $group_type_terms ) : ?><span class="bh-location-empty">No Group category options are currently available.</span><?php endif; ?>
                     </div>
                 </div>
-            </div>
 
             <div id="bh-pref-locations" class="bh-preference-section bh-location-preference-section bh-preference-anchor">
                 <div class="bh-preference-heading"><h4>📍 Preferred Locations</h4><p>Select locations from the <strong>Location</strong> hierarchy used by Bubba Hub groups. You can choose a region, town or area at any level.</p></div>

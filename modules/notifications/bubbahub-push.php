@@ -60,6 +60,7 @@ function bubbahub_push_enqueue_assets() {
             'appId' => $c['appId'],
         ),
         'vapidKey' => $c['vapidKey'],
+        'icon' => get_site_icon_url( 192 ),
         'swUrl' => rest_url( 'bubbahub/v1/push-sw.js' ),
         'registerUrl' => rest_url( 'bubbahub/v1/push/register' ),
         'unregisterUrl' => rest_url( 'bubbahub/v1/push/unregister' ),

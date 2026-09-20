@@ -190,6 +190,26 @@ function bubbahub_notification_log( $user_id, $type, $title, $message, $url = ''
     return $items[0]['id'];
 }
 
+function bubbahub_notification_alert_key_for_type( $type ) {
+    $map = array(
+        'class_booking' => 'class_booking', 'booking' => 'class_booking',
+        'booking_reminder' => 'booking_reminders', 'reminder' => 'booking_reminders',
+        'saved_group' => 'saved_groups', 'group_update' => 'group_updates',
+        'calendar' => 'calendar_reminders', 'calendar_reminder' => 'calendar_reminders', 'calendar_event' => 'calendar_reminders',
+        'planner' => 'planner_reminders', 'planner_reminder' => 'planner_reminders',
+        'message' => 'messages', 'support' => 'messages', 'community' => 'community',
+        'new_group' => 'new_groups', 'new_suggestion' => 'new_suggestions', 'new_class' => 'new_classes', 'whats_on' => 'whats_on',
+        'email_digest' => 'email_digest'
+    );
+    return isset( $map[ $type ] ) ? $map[ $type ] : '';
+}
+function bubbahub_notification_channel_enabled( $user_id, $type, $channel ) {
+    $key = bubbahub_notification_alert_key_for_type( $type );
+    if ( ! $key ) return false;
+    $channels = bubbahub_notification_alert_channels( $user_id );
+    return ! empty( $channels[ $key ][ $channel ] );
+}
+
 function bubbahub_notification_email_enabled( $user_id, $type ) {
     $prefs = bubbahub_notification_preferences( $user_id );
     if ( in_array( $type, array( 'class_booking', 'booking' ), true ) ) return ! empty( $prefs['class_booking'] );
@@ -219,10 +239,10 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
         'subject' => $title,
     ) );
 
-    if ( $options['portal'] && bubbahub_notification_preferences( $user_id )['channel_in_hub'] ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
+    if ( $options['portal'] && bubbahub_notification_channel_enabled( $user_id, $type, 'in_hub' ) ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
 
     $sent = false;
-    if ( $options['email'] && bubbahub_notification_preferences( $user_id )['channel_email'] && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {
+    if ( $options['email'] && bubbahub_notification_channel_enabled( $user_id, $type, 'email' ) && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {
         $body = "Hi {$user->display_name},\n\n{$message}\n\n";
         if ( $url ) $body .= "View this in your Bubba Hub account:\n{$url}\n\n";
         $body .= "Bubba Hub";

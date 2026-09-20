@@ -15,6 +15,7 @@ function bubbahub_notification_defaults() {
         'booking_reminders' => 1,
         'saved_groups'      => 1,
         'planner_reminders' => 1,
+        'calendar_reminders' => 1,
         'messages'          => 1,
         'email_digest'      => 1,
         'sms_reminders'     => 0,
@@ -40,6 +41,7 @@ function bubbahub_notification_preferences( $user_id = 0 ) {
         'booking_reminders' => isset( $saved['booking_reminders'] ) ? (int) (bool) $saved['booking_reminders'] : $defaults['booking_reminders'],
         'saved_groups'      => isset( $saved['saved_groups'] ) ? (int) (bool) $saved['saved_groups'] : $defaults['saved_groups'],
         'planner_reminders' => isset( $saved['planner_reminders'] ) ? (int) (bool) $saved['planner_reminders'] : $defaults['planner_reminders'],
+        'calendar_reminders' => isset( $saved['calendar_reminders'] ) ? (int) (bool) $saved['calendar_reminders'] : $defaults['calendar_reminders'],
         'messages'          => isset( $saved['messages'] ) ? (int) (bool) $saved['messages'] : $defaults['messages'],
         'email_digest'      => isset( $saved['email_digest'] ) ? (int) (bool) $saved['email_digest'] : $defaults['email_digest'],
         'sms_reminders'     => 0,
@@ -159,6 +161,7 @@ function bubbahub_notification_email_enabled( $user_id, $type ) {
     if ( in_array( $type, array( 'class_booking', 'booking' ), true ) ) return ! empty( $prefs['class_booking'] );
     if ( in_array( $type, array( 'booking_reminder', 'reminder' ), true ) ) return ! empty( $prefs['booking_reminders'] );
     if ( in_array( $type, array( 'saved_group', 'group_update' ), true ) ) return ! empty( $prefs['saved_groups'] );
+    if ( in_array( $type, array( 'calendar', 'calendar_reminder', 'calendar_event' ), true ) ) return ! empty( $prefs['calendar_reminders'] );
     if ( in_array( $type, array( 'planner', 'planner_reminder' ), true ) ) return ! empty( $prefs['planner_reminders'] );
     if ( in_array( $type, array( 'message', 'support' ), true ) ) return ! empty( $prefs['messages'] );
     if ( 'community' === $type ) return ! empty( $prefs['community'] );

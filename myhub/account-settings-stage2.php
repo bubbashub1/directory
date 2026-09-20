@@ -1831,6 +1831,21 @@ function bubbahub_stage2_render_payments() {
             <div class="bh-settings-list bh-payment-options-list" role="navigation" aria-label="Payment settings">
                 <div class="bh-account-settings-menu-container">
                     <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
+                        <span class="bh-account-settings-icon" aria-hidden="true">👛</span>
+                        <span class="bh-account-settings-content">
+                            <h3>Wallet balance</h3>
+                            <p>Use the native GetPaid Wallet component to view your balance and manage wallet funds.</p>
+                            <?php if ( $wallet_output ) : ?>
+                                <div class="bh-getpaid-native-component"><?php echo $wallet_output; ?></div>
+                            <?php else : ?>
+                                <p class="bh-muted">The GetPaid Wallet extension is not currently exposing its Wallet component on this site.</p>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bh-account-settings-menu-container">
+                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
                         <span class="bh-account-settings-icon" aria-hidden="true">💳</span>
                         <span class="bh-account-settings-content">
                             <h3>Payment methods</h3>
@@ -1847,21 +1862,6 @@ function bubbahub_stage2_render_payments() {
                             <h3>Invoices</h3>
                             <p>View your GetPaid invoice history and payment status.</p>
                             <a class="bh-payment-option-link" href="<?php echo esc_url( $invoice_url ); ?>">View invoices →</a>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="bh-account-settings-menu-container">
-                    <div class="bh-account-settings-item bh-payment-option bh-payment-option-panel">
-                        <span class="bh-account-settings-icon" aria-hidden="true">👛</span>
-                        <span class="bh-account-settings-content">
-                            <h3>Wallet balance</h3>
-                            <p>Use the native GetPaid Wallet component to view your balance and manage wallet funds.</p>
-                            <?php if ( $wallet_output ) : ?>
-                                <div class="bh-getpaid-native-component"><?php echo $wallet_output; ?></div>
-                            <?php else : ?>
-                                <p class="bh-muted">The GetPaid Wallet extension is not currently exposing its Wallet component on this site.</p>
-                            <?php endif; ?>
                         </span>
                     </div>
                 </div>

@@ -40,42 +40,37 @@ if ( file_exists( $bh_platform_loader ) ) {
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 
-// Advanced directory search: ACF-linked filters, region/category, schedule day, term time and location.
+// Optional modules are loaded through the runtime guard so a broken/updated
+// add-on module cannot take the whole Bubba Hub site offline.
 $bh_advanced_search = plugin_dir_path( __FILE__ ) . 'modules/core/bubbahub-advanced-search.php';
-if ( file_exists( $bh_advanced_search ) ) require_once $bh_advanced_search;
+bubbahub_runtime_safe_require( $bh_advanced_search, 'advanced search' );
 
-// Leader/admin listing change notifications.
 $bh_listing_notifications = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-listing-notifications.php';
-if ( file_exists( $bh_listing_notifications ) ) require_once $bh_listing_notifications;
+bubbahub_runtime_safe_require( $bh_listing_notifications, 'listing notifications' );
 
-// Support Hub: family questions, specialist articles, useful links and apps.
 $bh_support_module = plugin_dir_path( __FILE__ ) . 'modules/support/bubbahub-support.php';
-if ( file_exists( $bh_support_module ) ) require_once $bh_support_module;
+bubbahub_runtime_safe_require( $bh_support_module, 'support hub' );
 
 if ( is_admin() ) {
-    require_once plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
+    $bh_directory_builder = plugin_dir_path( __FILE__ ) . 'admin/directory-builder.php';
+    bubbahub_runtime_safe_require( $bh_directory_builder, 'directory builder' );
 }
 
-// User notification preferences and portal notification feed.
 $bh_notification_preferences = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-notification-preferences.php';
-if ( file_exists( $bh_notification_preferences ) ) require_once $bh_notification_preferences;
+bubbahub_runtime_safe_require( $bh_notification_preferences, 'notification preferences' );
 
-// Firebase web push notifications for the installed Bubba Hub PWA.
 $bh_push_notifications = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-push.php';
-if ( file_exists( $bh_push_notifications ) ) require_once $bh_push_notifications;
+bubbahub_runtime_safe_require( $bh_push_notifications, 'Firebase push notifications' );
 
-// SMS safety policy, quotas and leader alerts.
 $bh_sms_policy = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-sms-policy.php';
-if ( file_exists( $bh_sms_policy ) ) require_once $bh_sms_policy;
+bubbahub_runtime_safe_require( $bh_sms_policy, 'SMS policy' );
 
-// TextBee SMS provider for the notification centre.
 $bh_textbee_sms = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-textbee-sms.php';
-if ( file_exists( $bh_textbee_sms ) ) require_once $bh_textbee_sms;
+bubbahub_runtime_safe_require( $bh_textbee_sms, 'TextBee SMS' );
 
-// Listing CSV / Google Sheets import and export.
 if ( is_admin() ) {
     $bh_csv_module = plugin_dir_path( __FILE__ ) . 'admin/listing-csv.php';
-    if ( file_exists( $bh_csv_module ) ) require_once $bh_csv_module;
+    bubbahub_runtime_safe_require( $bh_csv_module, 'listing CSV' );
 }
 
 add_action( 'wp_enqueue_scripts', 'bubbahub_directory_assets' );

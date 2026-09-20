@@ -99,7 +99,31 @@ function bubbahub_stage2_account_url() {
 }
 
 function bubbahub_stage2_payment_url() {
-    return bubbahub_stage2_url( 'bubbahub_getpaid_account_url', '/wpi-checkout/wpi-history/' );
+    $url = apply_filters( 'bubbahub_getpaid_account_url', '' );
+    if ( $url ) return esc_url_raw( $url );
+
+    // GetPaid stores its customer invoice history on the page configured
+    // under GetPaid > Settings > General > Page Settings > Invoice History.
+    // Do not assume a particular page slug because sites can rename this page.
+    if ( shortcode_exists( 'wpinv_history' ) ) {
+        $pages = get_pages(
+            array(
+                'post_status' => 'publish',
+                'number'       => 50,
+                'orderby'      => 'ID',
+                'order'        => 'ASC',
+            )
+        );
+        foreach ( $pages as $page ) {
+            if ( has_shortcode( (string) $page->post_content, 'wpinv_history' ) ) {
+                return esc_url_raw( get_permalink( $page->ID ) );
+            }
+        }
+    }
+
+    // Last-resort legacy fallback. The configured GetPaid page above should
+    // normally be found before this is reached.
+    return home_url( '/wpi-checkout/wpi-history/' );
 }
 
 /* -------------------------------------------------------------------------

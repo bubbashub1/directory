@@ -531,27 +531,35 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     </div>
                     <a class="bh-myhub-button" href="<?php echo esc_url( $planner_page_url ); ?>">Open Calendar</a>
                 </div>
-                <div class="bh-myhub-custom-calendars-grid">
-                    <?php foreach ( $saved_calendars as $saved_calendar ) :
-                        if ( empty( $saved_calendar['id'] ) || empty( $saved_calendar['name'] ) ) continue;
-                        $calendar_id = sanitize_text_field( $saved_calendar['id'] );
-                        $calendar_url = add_query_arg( 'bh_saved_calendar', $calendar_id, $planner_page_url );
-                        $edit_url = add_query_arg( array( 'bh_saved_calendar' => $calendar_id, 'bh_edit_calendar' => $calendar_id ), $planner_page_url );
-                    ?>
-                        <div class="bh-myhub-custom-calendar-card" data-saved-calendar-id="<?php echo esc_attr( $calendar_id ); ?>">
-                            <a class="bh-myhub-custom-calendar-main" href="<?php echo esc_url( $calendar_url ); ?>">
-                                <span class="bh-myhub-custom-calendar-icon" aria-hidden="true">★</span>
-                                <span class="bh-myhub-custom-calendar-content">
-                                    <strong><?php echo esc_html( $saved_calendar['name'] ); ?></strong>
-                                    <span>Open this custom calendar →</span>
-                                </span>
-                            </a>
-                            <div class="bh-myhub-custom-calendar-actions">
-                                <a class="bh-myhub-calendar-edit" href="<?php echo esc_url( $edit_url ); ?>">Edit</a>
-                                <button type="button" class="bh-myhub-calendar-remove" data-remove-calendar="<?php echo esc_attr( $calendar_id ); ?>">Remove</button>
-                            </div>
+                <div class="bh-myhub-custom-calendars-carousel">
+                    <div class="bh-myhub-custom-calendars-viewport">
+                        <div class="bh-myhub-custom-calendars-grid" data-custom-calendars-track tabindex="0">
+                            <?php foreach ( $saved_calendars as $saved_calendar ) :
+                                if ( empty( $saved_calendar['id'] ) || empty( $saved_calendar['name'] ) ) continue;
+                                $calendar_id = sanitize_text_field( $saved_calendar['id'] );
+                                $calendar_url = add_query_arg( 'bh_saved_calendar', $calendar_id, $planner_page_url );
+                                $edit_url = add_query_arg( array( 'bh_saved_calendar' => $calendar_id, 'bh_edit_calendar' => $calendar_id ), $planner_page_url );
+                            ?>
+                                <article class="bh-myhub-custom-calendar-card" data-saved-calendar-id="<?php echo esc_attr( $calendar_id ); ?>">
+                                    <a class="bh-myhub-custom-calendar-main" href="<?php echo esc_url( $calendar_url ); ?>">
+                                        <span class="bh-myhub-custom-calendar-icon" aria-hidden="true">★</span>
+                                        <span class="bh-myhub-custom-calendar-content">
+                                            <strong><?php echo esc_html( $saved_calendar['name'] ); ?></strong>
+                                            <span>Open this custom calendar →</span>
+                                        </span>
+                                    </a>
+                                    <div class="bh-myhub-custom-calendar-actions">
+                                        <a class="bh-myhub-calendar-edit" href="<?php echo esc_url( $edit_url ); ?>">Edit</a>
+                                        <button type="button" class="bh-myhub-calendar-remove" data-remove-calendar="<?php echo esc_attr( $calendar_id ); ?>">Remove</button>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
+                    <div class="bh-myhub-custom-calendars-carousel-controls">
+                        <button type="button" class="bh-myhub-carousel-arrow bh-myhub-custom-calendar-prev" aria-label="Previous custom calendar">‹</button>
+                        <button type="button" class="bh-myhub-carousel-arrow bh-myhub-custom-calendar-next" aria-label="Next custom calendar">›</button>
+                    </div>
                 </div>
                 <script>
                 (function(){

@@ -847,18 +847,23 @@ function bubbahub_stage2_render_interests() {
             </div>
 
             <div class="bh-preference-section">
-                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Add as many towns, areas or regions as you like. Each preference is listed separately.</p></div>
-                <div class="bh-chip-editor" data-bh-chip-editor data-field="preferred_locations">
-                    <div class="bh-chip-list" data-bh-chip-list>
-                        <?php foreach ( $preferred_locations as $location ) : ?>
-                            <span class="bh-preference-chip"><span><?php echo esc_html($location); ?></span><button type="button" data-bh-remove aria-label="Remove <?php echo esc_attr($location); ?>">×</button><input type="hidden" name="preferred_locations[]" value="<?php echo esc_attr($location); ?>"></span>
+                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select one or more towns, areas or regions. You can choose multiple locations from the dropdown.</p></div>
+                <div class="bh-location-multiselect" data-bh-location-multiselect>
+                    <button type="button" class="bh-location-select" aria-expanded="false" aria-haspopup="listbox">
+                        <span data-bh-location-label><?php echo $preferred_locations ? esc_html(count($preferred_locations) . ' location' . ( count($preferred_locations ) === 1 ? '' : 's' ) . ' selected') : 'Select locations'; ?></span>
+                        <span aria-hidden="true">▾</span>
+                    </button>
+                    <div class="bh-location-options" role="listbox" aria-label="Preferred locations" aria-multiselectable="true" hidden>
+                        <?php foreach ( $location_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_locations, true ); ?>
+                            <label class="bh-location-option">
+                                <input type="checkbox" name="preferred_locations[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>>
+                                <span><?php echo esc_html($name); ?></span>
+                            </label>
                         <?php endforeach; ?>
+                        <?php if ( ! $location_terms ) : ?>
+                            <span class="bh-location-empty">No location options are currently available.</span>
+                        <?php endif; ?>
                     </div>
-                    <div class="bh-chip-input-row">
-                        <input type="text" data-bh-chip-input list="bh-location-suggestions" placeholder="e.g. Torbay, Exeter, Paignton" autocomplete="off">
-                        <button type="button" class="bh-chip-add" data-bh-add>Add location</button>
-                    </div>
-                    <datalist id="bh-location-suggestions"><?php foreach ( $location_terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
                 </div>
             </div>
 
@@ -931,6 +936,45 @@ function bubbahub_stage2_render_interests() {
             });
         }
         document.querySelectorAll('[data-bh-chip-editor]').forEach(initChipEditor);
+    }());
+    </script>
+    <style>
+        .bh-location-multiselect{position:relative;width:100%;max-width:100%}
+        .bh-location-select{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:11px 13px;border:1px solid #e6ebe9;border-radius:13px;background:#fff;color:#1e3330;font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+        .bh-location-select:focus{outline:2px solid rgba(95,145,131,.25);outline-offset:2px}
+        .bh-location-options{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:100%;max-height:280px;overflow:auto;padding:7px;background:#fff;border:1px solid #dbe7e1;border-radius:14px;box-shadow:0 10px 30px rgba(30,51,48,.12)}
+        .bh-location-option{display:flex!important;flex-direction:row!important;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:12px!important;font-weight:600!important;cursor:pointer}
+        .bh-location-option:hover{background:#f4f8f6}
+        .bh-location-option input{width:17px!important;height:17px!important;margin:0;flex:0 0 17px;accent-color:#5f9183}
+        .bh-location-empty{display:block;padding:10px;color:#718079;font-size:12px}
+        @media(max-width:620px){.bh-location-options{max-height:240px}.bh-location-option{padding:10px}}
+    </style>
+    <script>
+    (function(){
+        document.querySelectorAll('[data-bh-location-multiselect]').forEach(function(wrapper){
+            if(wrapper.dataset.ready) return;
+            wrapper.dataset.ready='1';
+            var trigger=wrapper.querySelector('.bh-location-select');
+            var menu=wrapper.querySelector('.bh-location-options');
+            var label=wrapper.querySelector('[data-bh-location-label]');
+            var boxes=wrapper.querySelectorAll('input[name="preferred_locations[]"]');
+            if(!trigger||!menu) return;
+            function sync(){
+                var count=0;
+                boxes.forEach(function(box){if(box.checked) count++;});
+                label.textContent=count ? count+' location'+(count===1?'':'s')+' selected' : 'Select locations';
+            }
+            function close(){menu.hidden=true;trigger.setAttribute('aria-expanded','false');}
+            trigger.addEventListener('click',function(){
+                var open=menu.hidden;
+                menu.hidden=!open;
+                trigger.setAttribute('aria-expanded',open?'true':'false');
+            });
+            boxes.forEach(function(box){box.addEventListener('change',sync);});
+            document.addEventListener('click',function(event){if(!wrapper.contains(event.target)) close();});
+            document.addEventListener('keydown',function(event){if(event.key==='Escape') close();});
+            sync();
+        });
     }());
     </script>
     <?php return ob_get_clean();

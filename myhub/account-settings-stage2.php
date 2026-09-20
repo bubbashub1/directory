@@ -11,9 +11,45 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'init', 'bubbahub_account_settings_stage2_register', 36 );
+add_action( 'template_redirect', 'bubbahub_stage2_post_redirect', 20 );
+
+$GLOBALS['bubbahub_stage2_post_result'] = null;
 
 function bubbahub_account_settings_stage2_register() {
     add_shortcode( 'bubbahub_account_settings_stage2', 'bubbahub_account_settings_stage2_shortcode' );
+}
+
+function bubbahub_stage2_post_redirect() {
+    if ( ! is_user_logged_in() || 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['bh_stage2_action'] ) ) return;
+
+    $action = sanitize_key( wp_unslash( $_POST['bh_stage2_action'] ) );
+    $handlers = array(
+        'profile'       => 'bubbahub_stage2_handle_profile',
+        'notifications' => 'bubbahub_stage2_handle_notifications',
+        'consent'       => 'bubbahub_stage2_handle_consent',
+        'interests'     => 'bubbahub_stage2_handle_interests',
+    );
+    if ( empty( $handlers[ $action ] ) || ! function_exists( $handlers[ $action ] ) ) return;
+
+    $result = call_user_func( $handlers[ $action ] );
+    $GLOBALS['bubbahub_stage2_post_result'] = $result;
+
+    $successful_results = array(
+        'Profile details updated successfully.',
+        'Notification preferences saved.',
+        'Consent and safety details saved.',
+        'Interests and group preferences saved.',
+    );
+
+    if ( in_array( $result, $successful_results, true ) ) {
+        $dashboard_url = add_query_arg(
+            'bh_account_settings',
+            '1',
+            remove_query_arg( 'bh_settings_section', wp_get_referer() ?: home_url( '/' ) )
+        );
+        wp_safe_redirect( $dashboard_url );
+        exit;
+    }
 }
 
 /* -------------------------------------------------------------------------
@@ -458,10 +494,14 @@ function bubbahub_account_settings_stage2_shortcode() {
     wp_enqueue_style( 'bubbahub-profile-settings' );
 
     $message = '';
-    $message .= bubbahub_stage2_handle_profile();
-    $message .= bubbahub_stage2_handle_notifications();
-    $message .= bubbahub_stage2_handle_consent();
-    $message .= bubbahub_stage2_handle_interests();
+    if ( null !== $GLOBALS['bubbahub_stage2_post_result'] ) {
+        $message = (string) $GLOBALS['bubbahub_stage2_post_result'];
+    } else {
+        $message .= bubbahub_stage2_handle_profile();
+        $message .= bubbahub_stage2_handle_notifications();
+        $message .= bubbahub_stage2_handle_consent();
+        $message .= bubbahub_stage2_handle_interests();
+    }
 
     $section = isset( $_GET['bh_settings_section'] ) ? sanitize_key( wp_unslash( $_GET['bh_settings_section'] ) ) : 'home';
     $user = wp_get_current_user();

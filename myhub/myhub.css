@@ -338,3 +338,15 @@ body.bh-baby-modal-open{overflow:hidden}
 .bh-myhub-groups-track>.bh-myhub-group-card{flex:0 0 min(330px,82vw);scroll-snap-align:start;}
 .bh-myhub-groups-track:focus{outline:2px solid #78a99b;outline-offset:2px;}
 @media(max-width:620px){.bh-myhub-family-add-buttons{width:100%;justify-content:stretch;}.bh-myhub-family-add-buttons a{flex:1 1 0;}.bh-myhub-family-carousel .bh-myhub-family-grid{padding-bottom:13px;}.bh-myhub-groups-track>.bh-myhub-group-card{flex-basis:84vw;}}
+
+
+/* Custom saved calendar shortcut */
+.bh-myhub-custom-calendars-section .bh-myhub-section-heading{align-items:center}
+.bh-myhub-custom-calendars-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px}
+.bh-myhub-custom-calendar-card{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #dfe8e5;border-radius:16px;background:#fff;text-decoration:none!important;box-shadow:0 3px 12px rgba(60,80,72,.05);transition:transform .15s ease,box-shadow .15s ease}
+.bh-myhub-custom-calendar-card:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(60,80,72,.09)}
+.bh-myhub-custom-calendar-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:#fff1ec;color:#c97c67;font-size:20px}
+.bh-myhub-custom-calendar-content{display:flex;flex-direction:column;gap:3px;min-width:0}
+.bh-myhub-custom-calendar-content strong{color:#33413d;font-size:15px;line-height:1.25}
+.bh-myhub-custom-calendar-content span{color:#73817c;font-size:12px;line-height:1.3}
+@media(max-width:600px){.bh-myhub-custom-calendars-grid{grid-template-columns:1fr}.bh-myhub-custom-calendars-section .bh-myhub-section-heading{align-items:flex-start}.bh-myhub-custom-calendars-section .bh-myhub-section-heading .bh-myhub-button{width:100%;text-align:center;box-sizing:border-box}}

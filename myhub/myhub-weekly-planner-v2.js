@@ -81,6 +81,7 @@ $(document).on('click','.bh-weekly-planner-v2 [data-confirm-save]',function(){
   window.alert('The calendar could not be saved. Please try again.');
  });
 });
+$(document).on('change','.bh-weekly-planner-v2 [data-planner-view-select]',function(){if(this.value)window.location.href=this.value;});
 $(document).on('submit','.bh-weekly-planner-v2 .bh-calendar-search-form',function(e){e.preventDefault();calendarAjax($(this).closest('.bh-weekly-planner-v2'),this);});
 $(document).on('change','.bh-weekly-planner-v2 .bh-calendar-advanced-search select',function(){calendarAjax($(this).closest('.bh-weekly-planner-v2'),$(this).closest('.bh-calendar-search-form'));});
 $(document).on('click','.bh-weekly-planner-v2 .bh-calendar-use-location',function(){

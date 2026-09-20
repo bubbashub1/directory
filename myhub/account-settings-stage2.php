@@ -27,8 +27,7 @@ function bubbahub_stage2_post_redirect() {
         'profile'       => 'bubbahub_stage2_handle_profile',
         'notifications' => 'bubbahub_stage2_handle_notifications',
         'consent'       => 'bubbahub_stage2_handle_consent',
-        'interests'     => 'bubbahub_stage2_handle_interests',
-        'family_needs'  => 'bubbahub_stage2_handle_family_needs',
+        'preferences'   => 'bubbahub_stage2_handle_preferences',
                 'calendar'     => 'bubbahub_stage2_handle_calendar_settings',
         'notification_test' => 'bubbahub_stage2_handle_notification_test',
         'privacy'      => 'bubbahub_stage2_handle_privacy',
@@ -44,6 +43,7 @@ function bubbahub_stage2_post_redirect() {
         'Consent and safety details saved.',
         'Interests and group preferences saved.',
         'Family needs and discovery preferences saved.',
+        'My Bubba Hub Preferences saved.',
         'Calendar settings saved.',
         'Test notification sent.',
         'Privacy request saved.',
@@ -161,6 +161,30 @@ function bubbahub_stage2_location_terms() {
     if ( ! $taxonomy ) return array();
     $terms = get_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => false, 'number' => 200, 'orderby' => 'name', 'order' => 'ASC' ) );
     return is_wp_error( $terms ) ? array() : $terms;
+}
+
+function bubbahub_stage2_location_term_tree( $terms ) {
+    $tree = array();
+    foreach ( (array) $terms as $term ) {
+        $parent = isset( $term->parent ) ? (int) $term->parent : 0;
+        if ( ! isset( $tree[ $parent ] ) ) $tree[ $parent ] = array();
+        $tree[ $parent ][] = $term;
+    }
+    return $tree;
+}
+function bubbahub_stage2_render_location_options( $tree, $parent = 0, $depth = 0, $selected = array() ) {
+    if ( empty( $tree[ $parent ] ) ) return '';
+    $html = '';
+    foreach ( $tree[ $parent ] as $term ) {
+        $name = $term->name;
+        $is_selected = in_array( $name, $selected, true );
+        $prefix = $depth ? str_repeat('— ', min(3, $depth)) : '';
+        $html .= '<label class="bh-location-option bh-location-depth-'.$depth.'">';
+        $html .= '<input type="checkbox" name="preferred_locations[]" value="'.esc_attr($name).'" '.checked($is_selected,true,false).'>';
+        $html .= '<span>'.esc_html($prefix.$name).'</span></label>';
+        $html .= bubbahub_stage2_render_location_options( $tree, (int) $term->term_id, $depth + 1, $selected );
+    }
+    return $html;
 }
 
 /* -------------------------------------------------------------------------
@@ -554,6 +578,16 @@ function bubbahub_stage2_handle_family_needs() {
 
     return 'Family needs and discovery preferences saved.';
 }
+function bubbahub_stage2_handle_preferences() {
+    if ( ! is_user_logged_in() || 'preferences' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
+    $_POST['bh_stage2_action'] = 'interests';
+    $interests_result = bubbahub_stage2_handle_interests();
+    $_POST['bh_stage2_action'] = 'family_needs';
+    $family_result = bubbahub_stage2_handle_family_needs();
+    if ( false !== strpos( (string) $interests_result, 'Security check failed' ) || false !== strpos( (string) $family_result, 'Security check failed' ) ) return 'Security check failed. Please try again.';
+    return 'My Bubba Hub Preferences saved.';
+}
+
 function bubbahub_stage2_handle_calendar_settings() {
     if ( ! is_user_logged_in() || 'calendar' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
@@ -770,7 +804,7 @@ function bubbahub_stage2_pref_array( $key, $fallback = array() ) {
     return $fallback;
 }
 
-function bubbahub_stage2_render_interests() {
+function bubbahub_stage2_render_preferences() {
     $taxonomy = bubbahub_stage2_taxonomy();
     $terms = bubbahub_stage2_taxonomy_terms();
 
@@ -839,11 +873,11 @@ function bubbahub_stage2_render_interests() {
     ob_start(); ?>
     <div class="bh-preference-card">
         <div class="bh-profile-card-heading">
-            <div><h3>My Interests</h3><span>Tell us what you and your family enjoy</span></div>
+            <div><h3>My Bubba Hub Preferences</h3><span>Personalise what Bubba Hub shows your family, where you would like to go and when.</span></div>
         </div>
         <form method="post" class="bh-stage2-form bh-preferences-form" data-bh-preferences-form>
             <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?>
-            <input type="hidden" name="bh_stage2_action" value="interests">
+            <input type="hidden" name="bh_stage2_action" value="preferences">
 
             <div class="bh-interest-group-grid">
                 <div class="bh-preference-section">
@@ -873,7 +907,7 @@ function bubbahub_stage2_render_interests() {
             </div>
 
             <div class="bh-preference-section bh-location-preference-section">
-                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select one or more locations from the same <strong>Location</strong> taxonomy used by Bubba Hub groups.</p></div>
+                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select locations from the <strong>Location</strong> hierarchy used by Bubba Hub groups. You can choose a region, town or area at any level.</p></div>
                 <div class="bh-location-columns">
                     <div class="bh-location-column">
                         <div class="bh-location-column-title">Select locations</div>
@@ -883,12 +917,7 @@ function bubbahub_stage2_render_interests() {
                                 <span aria-hidden="true">▾</span>
                             </button>
                             <div class="bh-location-options" role="listbox" aria-label="Preferred locations" aria-multiselectable="true" hidden>
-                                <?php foreach ( $location_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_locations, true ); ?>
-                                    <label class="bh-location-option">
-                                        <input type="checkbox" name="preferred_locations[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>>
-                                        <span><?php echo esc_html($name); ?></span>
-                                    </label>
-                                <?php endforeach; ?>
+                                <?php $location_tree = bubbahub_stage2_location_term_tree( $location_terms ); echo bubbahub_stage2_render_location_options( $location_tree, 0, 0, $preferred_locations ); ?>
                                 <?php if ( ! $location_terms ) : ?>
                                     <span class="bh-location-empty">No group Location taxonomy options are currently available.</span>
                                 <?php endif; ?>
@@ -919,7 +948,33 @@ function bubbahub_stage2_render_interests() {
                 </div>
             </div>
 
-            <div class="bh-profile-actions"><button type="submit">Save interests & preferences</button></div>
+            <div class="bh-preference-section bh-family-preferences-section">
+                <div class="bh-preference-heading"><h4>Family Needs & Discovery</h4><p>Choose the accessibility, activity, timing and search preferences that help Bubba Hub find suitable groups for your family.</p></div>
+                <div class="bh-settings-option-grid">
+                    <?php
+                    $family_data = array(
+                        'accessibility_needs' => array('step-free'=>'Step-free access','accessible-toilet'=>'Accessible toilet','quiet-space'=>'Quiet / low-stimulation space','hearing-support'=>'Hearing support','visual-support'=>'Visual support','sensory-friendly'=>'Sensory-friendly','other'=>'Other support'),
+                        'sen_friendly' => array('sen-friendly'=>'SEN friendly'),
+                        'activity_setting' => array('indoor'=>'Indoor','outdoor'=>'Outdoor'),
+                        'term_holiday' => array('term-time'=>'Term-time','school-holidays'=>'School holidays'),
+                        'preferred_days' => array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday'),
+                        'preferred_times' => array('morning'=>'Morning','afternoon'=>'Afternoon','early-evening'=>'Early evening'),
+                    );
+                    foreach($family_data as $name=>$opts):
+                        $selected=bubbahub_stage2_pref_array('bubbahub_'.$name);
+                    ?>
+                        <fieldset class="bh-settings-fieldset"><legend><?php echo esc_html(ucwords(str_replace('_',' ',$name))); ?></legend><div class="bh-settings-check-grid">
+                        <?php foreach($opts as $v=>$label): ?><label><input type="checkbox" name="<?php echo esc_attr($name); ?>[]" value="<?php echo esc_attr($v); ?>" <?php checked(in_array($v,$selected,true)); ?>><span><?php echo esc_html($label); ?></span></label><?php endforeach; ?>
+                        </div></fieldset>
+                    <?php endforeach; ?>
+                </div>
+                <div class="bh-family-search-controls">
+                    <label class="bh-inline-setting"><input type="checkbox" name="free_activities_only" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_free_activities_only'),'1'); ?>><span><strong>Free activities only</strong><small>Limit discovery to activities marked as free.</small></span></label>
+                    <?php $radius=bubbahub_stage2_user_meta('bubbahub_search_radius','10 miles'); ?>
+                    <label class="bh-preference-field bh-search-radius-field"><span>Default search radius</span><select name="search_radius"><?php foreach(array('5 miles','10 miles','15 miles','20 miles','25 miles') as $r): ?><option value="<?php echo esc_attr($r); ?>" <?php selected($radius,$r); ?>><?php echo esc_html($r); ?></option><?php endforeach; ?></select></label>
+                </div>
+            </div>
+            <div class="bh-profile-actions"><button type="submit">Save My Bubba Hub Preferences</button></div>
         </form>
     </div>
 
@@ -1061,6 +1116,12 @@ function bubbahub_stage2_render_interests() {
         });
     }());
     </script>
+    <style>
+      .bh-family-preferences-section{margin-top:18px}
+      .bh-family-search-controls{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;margin-top:14px;align-items:start}
+      .bh-location-depth-1{padding-left:18px!important}.bh-location-depth-2{padding-left:36px!important}.bh-location-depth-3{padding-left:54px!important}
+      @media(max-width:650px){.bh-family-search-controls{grid-template-columns:1fr}.bh-location-depth-1{padding-left:14px!important}.bh-location-depth-2{padding-left:26px!important}.bh-location-depth-3{padding-left:38px!important}}
+    </style>
     <?php return ob_get_clean();
 }
 
@@ -1175,8 +1236,7 @@ function bubbahub_account_settings_stage2_shortcode() {
     if ( 'profile' === $section ) $content = bubbahub_stage2_render_profile( $user );
     elseif ( 'notifications' === $section ) $content = bubbahub_stage2_render_notifications();
     elseif ( 'consent' === $section ) $content = bubbahub_stage2_render_consent();
-    elseif ( 'interests' === $section ) $content = bubbahub_stage2_render_interests();
-    elseif ( 'family_needs' === $section ) $content = bubbahub_stage2_render_family_needs();
+    elseif ( 'preferences' === $section || 'interests' === $section || 'family_needs' === $section ) $content = bubbahub_stage2_render_preferences();
     elseif ( 'calendar' === $section ) $content = bubbahub_stage2_render_calendar_settings();
     elseif ( 'privacy' === $section ) $content = bubbahub_stage2_render_privacy();
     elseif ( 'notification_test' === $section ) $content = bubbahub_stage2_render_notification_test();
@@ -1199,8 +1259,8 @@ function bubbahub_account_settings_stage2_shortcode() {
                 <span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">👤</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">Edit my profile</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Personal details, contact information, addresses and search radius.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span>
             </a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'pro'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">⭐</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">Manage my Pro Account</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;"><?php echo $is_pro ? 'Manage your active membership and billing.' : 'View Pro options and membership information.'; ?></p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
-            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'interests'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">✨</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">My Interests & Groups</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Choose interests from tags already used by Bubba Hub groups.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
-            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'family_needs'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">🧩</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">My Family & Search Preferences</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Family needs, preferred activities, times, free activities and search area.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
+            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'preferences'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">✨</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">My Interests & Groups</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Choose interests from tags already used by Bubba Hub groups.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
+            
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'calendar'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">🗓️</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">Calendar Settings</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Choose reminder timing and your preferred calendar workflow.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notification_test'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">🧪</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">Notification Test</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Send a test email to check your account notification delivery.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'privacy'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-settings-row-icon" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">🔐</span><span class="bh-settings-row-content" style="display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;position:static!important;float:none!important;transform:none!important;"><h3 style="display:block!important;margin:0 0 4px!important;padding:0!important;width:auto!important;white-space:normal!important;">Privacy & Security</h3><p style="display:block!important;margin:0!important;padding:0!important;width:auto!important;white-space:normal!important;">Open account security and submit data or deletion requests.</p></span><span class="bh-settings-row-arrow" aria-hidden="true" style="display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;position:static!important;float:none!important;transform:none!important;">→</span></a>

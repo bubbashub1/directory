@@ -99,7 +99,7 @@ function bubbahub_stage2_account_url() {
 }
 
 function bubbahub_stage2_payment_url() {
-    return bubbahub_stage2_url( 'bubbahub_getpaid_account_url', '/my-bookings/' );
+    return bubbahub_stage2_url( 'bubbahub_getpaid_account_url', '/wpi-checkout/wpi-history/' );
 }
 
 /* -------------------------------------------------------------------------

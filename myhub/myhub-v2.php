@@ -337,6 +337,13 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
             return '<div class="bh-myhub-login"><h2>Welcome to My Hub</h2><p>Please log in to see your family dashboard.</p></div>';
         }
 
+        // Opening/editing a saved calendar from My Hub should render the planner itself,
+        // even when the planner shortcode is on a page that also contains My Hub.
+        if ( ( isset( $_GET['bh_saved_calendar'] ) || isset( $_GET['bh_edit_calendar'] ) )
+            && function_exists( 'bubbahub_myhub_weekly_planner_v2_shortcode' ) ) {
+            return bubbahub_myhub_weekly_planner_v2_shortcode();
+        }
+
         // Saved calendars belong to the logged-in user and must be prepared in the My Hub render scope.
         $saved_calendars = function_exists( 'bubbahub_myhub_planner_v2_saved_calendars' ) ? bubbahub_myhub_planner_v2_saved_calendars() : array();
         $planner_page_url = '';
@@ -527,17 +534,58 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 <div class="bh-myhub-custom-calendars-grid">
                     <?php foreach ( $saved_calendars as $saved_calendar ) :
                         if ( empty( $saved_calendar['id'] ) || empty( $saved_calendar['name'] ) ) continue;
-                        $calendar_url = add_query_arg( 'bh_saved_calendar', sanitize_text_field( $saved_calendar['id'] ), $planner_page_url );
+                        $calendar_id = sanitize_text_field( $saved_calendar['id'] );
+                        $calendar_url = add_query_arg( 'bh_saved_calendar', $calendar_id, $planner_page_url );
+                        $edit_url = add_query_arg( array( 'bh_saved_calendar' => $calendar_id, 'bh_edit_calendar' => $calendar_id ), $planner_page_url );
                     ?>
-                        <a class="bh-myhub-custom-calendar-card" href="<?php echo esc_url( $calendar_url ); ?>">
-                            <span class="bh-myhub-custom-calendar-icon" aria-hidden="true">★</span>
-                            <span class="bh-myhub-custom-calendar-content">
-                                <strong><?php echo esc_html( $saved_calendar['name'] ); ?></strong>
-                                <span>Open this custom calendar →</span>
-                            </span>
-                        </a>
+                        <div class="bh-myhub-custom-calendar-card" data-saved-calendar-id="<?php echo esc_attr( $calendar_id ); ?>">
+                            <a class="bh-myhub-custom-calendar-main" href="<?php echo esc_url( $calendar_url ); ?>">
+                                <span class="bh-myhub-custom-calendar-icon" aria-hidden="true">★</span>
+                                <span class="bh-myhub-custom-calendar-content">
+                                    <strong><?php echo esc_html( $saved_calendar['name'] ); ?></strong>
+                                    <span>Open this custom calendar →</span>
+                                </span>
+                            </a>
+                            <div class="bh-myhub-custom-calendar-actions">
+                                <a class="bh-myhub-calendar-edit" href="<?php echo esc_url( $edit_url ); ?>">Edit</a>
+                                <button type="button" class="bh-myhub-calendar-remove" data-remove-calendar="<?php echo esc_attr( $calendar_id ); ?>">Remove</button>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
+                <script>
+                (function(){
+                    var section=document.querySelector('.bh-myhub-custom-calendars-section');
+                    if(!section)return;
+                    var buttons=section.querySelectorAll('[data-remove-calendar]');
+                    buttons.forEach(function(button){
+                        button.addEventListener('click',function(){
+                            if(!window.confirm('Remove this saved calendar from My Hub?'))return;
+                            var data=new FormData();
+                            data.append('action','bubbahub_delete_custom_calendar');
+                            data.append('calendar_id',button.getAttribute('data-remove-calendar')||'');
+                            data.append('nonce','<?php echo esc_js( wp_create_nonce( 'bubbahub_save_custom_calendar' ) ); ?>');
+                            button.disabled=true;
+                            fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',{method:'POST',credentials:'same-origin',body:data})
+                                .then(function(response){return response.json();})
+                                .then(function(result){
+                                    if(result&&result.success){
+                                        var card=button.closest('.bh-myhub-custom-calendar-card');
+                                        if(card)card.remove();
+                                        if(!section.querySelector('.bh-myhub-custom-calendar-card'))window.location.reload();
+                                    }else{
+                                        button.disabled=false;
+                                        window.alert(result&&result.data&&result.data.message?result.data.message:'Unable to remove this calendar.');
+                                    }
+                                })
+                                .catch(function(){
+                                    button.disabled=false;
+                                    window.alert('Unable to remove this calendar. Please try again.');
+                                });
+                        });
+                    });
+                })();
+                </script>
             </section>
             <?php else : ?>
             <section class="bh-myhub-section bh-myhub-custom-calendars-section bh-myhub-custom-calendars-empty">

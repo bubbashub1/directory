@@ -2,12 +2,32 @@
 'use strict';
 function calendarAjax($section,form){
  var $form=$(form);if(!$section.length||!$form.length||$section.data('calendarLoading'))return;
+ var advancedOpen=$section.attr('data-advanced-open')==='1';
  var data=$form.serializeArray();data.push({name:'action',value:'bubbahub_calendar_filter'},{name:'nonce',value:$section.attr('data-calendar-nonce')});
  $section.data('calendarLoading',true).addClass('is-loading');
  $.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'}).done(function(response){
-  if(response&&response.success&&response.data&&response.data.html){$section.replaceWith($(response.data.html));}
+  if(response&&response.success&&response.data&&response.data.html){
+  var $replacement=$(response.data.html);
+  $replacement.attr('data-advanced-open',advancedOpen?'1':'0');
+  $section.replaceWith($replacement);
+  if(advancedOpen) setAdvancedSearch($replacement,true);
+}
  }).fail(function(){$section.find('.bh-calendar-search-actions').append('<span class="bh-calendar-ajax-error" role="alert">Sorry, the calendar could not be updated. Please try again.</span>');}).always(function(){$section.data('calendarLoading',false).removeClass('is-loading');});
 }
+function setAdvancedSearch($section,open){
+ var $panel=$section.find('.bh-calendar-advanced-search').first();
+ var $toggle=$section.find('.bh-calendar-advanced-toggle').first();
+ if(!$panel.length||!$toggle.length)return;
+ $panel.prop('hidden',!open).attr('aria-hidden',open?'false':'true');
+ $toggle.attr('aria-expanded',open?'true':'false');
+ $section.attr('data-advanced-open',open?'1':'0');
+}
+$(document).on('click','.bh-weekly-planner-v2 .bh-calendar-advanced-toggle',function(e){
+ e.preventDefault();
+ var $section=$(this).closest('.bh-weekly-planner-v2');
+ var isOpen=$section.attr('data-advanced-open')==='1';
+ setAdvancedSearch($section,!isOpen);
+});
 $(document).on('submit','.bh-weekly-planner-v2 .bh-calendar-search-form',function(e){e.preventDefault();calendarAjax($(this).closest('.bh-weekly-planner-v2'),this);});
 $(document).on('change','.bh-weekly-planner-v2 .bh-calendar-advanced-search select',function(){calendarAjax($(this).closest('.bh-weekly-planner-v2'),$(this).closest('.bh-calendar-search-form'));});
 $(document).on('click','.bh-weekly-planner-v2 .bh-calendar-use-location',function(){

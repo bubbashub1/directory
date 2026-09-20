@@ -60,7 +60,7 @@ if ( is_admin() ) {
 $bh_notification_preferences = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-notification-preferences.php';
 if ( file_exists( $bh_notification_preferences ) ) require_once $bh_notification_preferences;
 
-// SMS safety policy, quotas and leader alerts.
+// Firebase web push notifications for the installed Bubba Hub PWA.\n$bh_push_notifications = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-push.php';\nif ( file_exists( $bh_push_notifications ) ) require_once $bh_push_notifications;\n\n// SMS safety policy, quotas and leader alerts.
 $bh_sms_policy = plugin_dir_path( __FILE__ ) . 'modules/notifications/bubbahub-sms-policy.php';
 if ( file_exists( $bh_sms_policy ) ) require_once $bh_sms_policy;
 

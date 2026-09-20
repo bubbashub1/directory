@@ -11,10 +11,14 @@ if ( ! defined( 'BUBBAHUB_NOTIFICATIONS_VERSION' ) ) define( 'BUBBAHUB_NOTIFICAT
 
 function bubbahub_notification_defaults() {
     return array(
-        'class_booking' => 1,
-        'email_digest'  => 1,
-        'sms_reminders' => 0,
-        'community'     => 1,
+        'class_booking'       => 1,
+        'booking_reminders' => 1,
+        'saved_groups'      => 1,
+        'planner_reminders' => 1,
+        'messages'          => 1,
+        'email_digest'      => 1,
+        'sms_reminders'     => 0,
+        'community'         => 1,
     );
 }
 
@@ -27,10 +31,14 @@ function bubbahub_notification_preferences( $user_id = 0 ) {
     if ( ! is_array( $saved ) ) $saved = array();
 
     return array(
-        'class_booking' => isset( $saved['class_booking'] ) ? (int) (bool) $saved['class_booking'] : $defaults['class_booking'],
-        'email_digest'  => isset( $saved['email_digest'] ) ? (int) (bool) $saved['email_digest'] : $defaults['email_digest'],
-        'sms_reminders' => isset( $saved['sms_reminders'] ) ? (int) (bool) $saved['sms_reminders'] : $defaults['sms_reminders'],
-        'community'     => isset( $saved['community'] ) ? (int) (bool) $saved['community'] : $defaults['community'],
+        'class_booking'       => isset( $saved['class_booking'] ) ? (int) (bool) $saved['class_booking'] : $defaults['class_booking'],
+        'booking_reminders' => isset( $saved['booking_reminders'] ) ? (int) (bool) $saved['booking_reminders'] : $defaults['booking_reminders'],
+        'saved_groups'      => isset( $saved['saved_groups'] ) ? (int) (bool) $saved['saved_groups'] : $defaults['saved_groups'],
+        'planner_reminders' => isset( $saved['planner_reminders'] ) ? (int) (bool) $saved['planner_reminders'] : $defaults['planner_reminders'],
+        'messages'          => isset( $saved['messages'] ) ? (int) (bool) $saved['messages'] : $defaults['messages'],
+        'email_digest'      => isset( $saved['email_digest'] ) ? (int) (bool) $saved['email_digest'] : $defaults['email_digest'],
+        'sms_reminders'     => 0,
+        'community'         => isset( $saved['community'] ) ? (int) (bool) $saved['community'] : $defaults['community'],
     );
 }
 
@@ -38,7 +46,7 @@ function bubbahub_notification_save_preferences( $user_id, $preferences ) {
     $defaults = bubbahub_notification_defaults();
     $clean = array();
     foreach ( $defaults as $key => $default ) {
-        $clean[ $key ] = ! empty( $preferences[ $key ] ) ? 1 : 0;
+        $clean[ $key ] = ( 'sms_reminders' === $key ) ? 0 : ( ! empty( $preferences[ $key ] ) ? 1 : 0 );
     }
     update_user_meta( absint( $user_id ), 'bubbahub_notification_preferences', $clean );
     return $clean;
@@ -87,7 +95,11 @@ function bubbahub_notification_log( $user_id, $type, $title, $message, $url = ''
 function bubbahub_notification_email_enabled( $user_id, $type ) {
     $prefs = bubbahub_notification_preferences( $user_id );
     if ( in_array( $type, array( 'class_booking', 'booking' ), true ) ) return ! empty( $prefs['class_booking'] );
-    if ( in_array( $type, array( 'community', 'support' ), true ) ) return ! empty( $prefs['community'] );
+    if ( in_array( $type, array( 'booking_reminder', 'reminder' ), true ) ) return ! empty( $prefs['booking_reminders'] );
+    if ( in_array( $type, array( 'saved_group', 'group_update' ), true ) ) return ! empty( $prefs['saved_groups'] );
+    if ( in_array( $type, array( 'planner', 'planner_reminder' ), true ) ) return ! empty( $prefs['planner_reminders'] );
+    if ( in_array( $type, array( 'message', 'support' ), true ) ) return ! empty( $prefs['messages'] );
+    if ( 'community' === $type ) return ! empty( $prefs['community'] );
     return ! empty( $prefs['email_digest'] );
 }
 
@@ -113,7 +125,8 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
         $sent = wp_mail( $user->user_email, $options['subject'], $body );
     }
 
-    if ( $options['sms'] && bubbahub_notification_preferences( $user_id )['sms_reminders'] ) {
+    // SMS is currently disabled across Bubba Hub. Legacy SMS preferences are retained but sending is blocked.
+    if ( false && $options['sms'] && bubbahub_notification_preferences( $user_id )['sms_reminders'] ) {
         $phone = get_user_meta( $user_id, 'bubbahub_notification_phone', true );
         if ( $phone ) {
             do_action( 'bubbahub_send_sms_notification', $phone, $title, $message, $user_id );
@@ -267,7 +280,7 @@ function bubbahub_notification_admin_page() {
             <li>Support — specialist questions and replies</li>
             <li>Community — relevant local updates</li>
             <li>Email digest — future daily/weekly round-up</li>
-            <li>SMS reminders — ready for an SMS provider connection</li>
+            <li>SMS — currently disabled; no SMS notifications are sent</li>
         </ul>
     </div>
     <?php
@@ -285,7 +298,7 @@ function bubbahub_notification_preferences_shortcode() {
             <div>
                 <span class="bh-notification-kicker">YOUR NOTIFICATIONS</span>
                 <h2 id="bh-notification-title">Notification Preferences</h2>
-                <p>Choose how Bubba Hub keeps you up to date. You can change these settings at any time.</p>
+                <p>Choose the updates you want from Bubba Hub. You can change these settings at any time.</p>
             </div>
         </div>
 
@@ -312,19 +325,32 @@ function bubbahub_notification_preferences_shortcode() {
             </label>
 
             <label class="bh-notification-option">
-                <span class="bh-notification-icon">📱</span>
-                <span class="bh-notification-copy"><strong>SMS reminders</strong><small>Receive relevant Bubba Hub updates through this channel.</small></span>
-                <input type="checkbox" name="notification[sms_reminders]" value="1" <?php checked( $prefs['sms_reminders'], 1 ); ?>>
+                <span class="bh-notification-icon">⏰</span>
+                <span class="bh-notification-copy"><strong>Booking reminders</strong><small>Get reminders before your upcoming booked classes.</small></span>
+                <input type="checkbox" name="notification[booking_reminders]" value="1" <?php checked( $prefs['booking_reminders'], 1 ); ?>>
                 <span class="bh-notification-toggle" aria-hidden="true"></span>
             </label>
 
-            <?php if ( $prefs['sms_reminders'] ) : ?>
-                <div class="bh-notification-phone">
-                    <label for="bh-notification-phone">Mobile number for reminders</label>
-                    <input id="bh-notification-phone" type="tel" name="notification_phone" value="<?php echo esc_attr( $phone ); ?>" placeholder="+44 7...">
-                    <small>SMS sending will use the Bubba Hub SMS provider when connected.</small>
-                </div>
-            <?php endif; ?>
+            <label class="bh-notification-option">
+                <span class="bh-notification-icon">❤️</span>
+                <span class="bh-notification-copy"><strong>Saved group updates</strong><small>Hear about changes and useful updates from groups you follow or save.</small></span>
+                <input type="checkbox" name="notification[saved_groups]" value="1" <?php checked( $prefs['saved_groups'], 1 ); ?>>
+                <span class="bh-notification-toggle" aria-hidden="true"></span>
+            </label>
+
+            <label class="bh-notification-option">
+                <span class="bh-notification-icon">🗓️</span>
+                <span class="bh-notification-copy"><strong>Planner reminders</strong><small>Receive reminders for activities and events in your family planner.</small></span>
+                <input type="checkbox" name="notification[planner_reminders]" value="1" <?php checked( $prefs['planner_reminders'], 1 ); ?>>
+                <span class="bh-notification-toggle" aria-hidden="true"></span>
+            </label>
+
+            <label class="bh-notification-option">
+                <span class="bh-notification-icon">💬</span>
+                <span class="bh-notification-copy"><strong>Messages &amp; support</strong><small>Be notified when a specialist or support contact replies to you.</small></span>
+                <input type="checkbox" name="notification[messages]" value="1" <?php checked( $prefs['messages'], 1 ); ?>>
+                <span class="bh-notification-toggle" aria-hidden="true"></span>
+            </label>
 
             <label class="bh-notification-option">
                 <span class="bh-notification-icon">🏡</span>

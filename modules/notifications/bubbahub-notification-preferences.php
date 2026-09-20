@@ -25,6 +25,10 @@ function bubbahub_notification_defaults() {
         'new_suggestions'  => 1,
         'new_classes'      => 1,
         'whats_on'         => 1,
+        'channel_email'    => 1,
+        'channel_in_hub'   => 1,
+        'channel_push'     => 0,
+        'channel_sms'      => 0,
     );
 }
 
@@ -51,6 +55,10 @@ function bubbahub_notification_preferences( $user_id = 0 ) {
         'new_suggestions'  => isset( $saved['new_suggestions'] ) ? (int) (bool) $saved['new_suggestions'] : $defaults['new_suggestions'],
         'new_classes'      => isset( $saved['new_classes'] ) ? (int) (bool) $saved['new_classes'] : $defaults['new_classes'],
         'whats_on'         => isset( $saved['whats_on'] ) ? (int) (bool) $saved['whats_on'] : $defaults['whats_on'],
+        'channel_email'    => isset( $saved['channel_email'] ) ? (int) (bool) $saved['channel_email'] : $defaults['channel_email'],
+        'channel_in_hub'   => isset( $saved['channel_in_hub'] ) ? (int) (bool) $saved['channel_in_hub'] : $defaults['channel_in_hub'],
+        'channel_push'     => isset( $saved['channel_push'] ) ? (int) (bool) $saved['channel_push'] : $defaults['channel_push'],
+        'channel_sms'      => 0,
     );
 }
 
@@ -185,10 +193,10 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
         'subject' => $title,
     ) );
 
-    if ( $options['portal'] ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
+    if ( $options['portal'] && bubbahub_notification_preferences( $user_id )['channel_in_hub'] ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
 
     $sent = false;
-    if ( $options['email'] && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {
+    if ( $options['email'] && bubbahub_notification_preferences( $user_id )['channel_email'] && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {
         $body = "Hi {$user->display_name},\n\n{$message}\n\n";
         if ( $url ) $body .= "View this in your Bubba Hub account:\n{$url}\n\n";
         $body .= "Bubba Hub";
@@ -380,56 +388,41 @@ function bubbahub_notification_preferences_shortcode() {
             <?php wp_nonce_field( 'bubbahub_notification_preferences', 'bubbahub_notification_nonce' ); ?>
             <input type="hidden" name="bubbahub_notification_action" value="save">
 
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">📅</span>
-                <span class="bh-notification-copy"><strong>Class &amp; booking alerts</strong><small>Receive relevant Bubba Hub updates through this channel.</small></span>
-                <input type="checkbox" name="notification[class_booking]" value="1" <?php checked( $prefs['class_booking'], 1 ); ?>>
+            <div class="bh-notification-section-heading"><span>📣</span><div><h3>How would you like to hear from us?</h3><p>Choose the ways Bubba Hub can contact you. You can use more than one.</p></div></div>
+
+            <label class="bh-notification-channel">
+                <span class="bh-notification-channel-icon">✉️</span>
+                <span class="bh-notification-copy"><strong>Email alerts</strong><small>Receive optional Bubba Hub alerts and reminders by email.</small></span>
+                <input type="checkbox" name="notification[channel_email]" value="1" <?php checked( $prefs['channel_email'], 1 ); ?>>
                 <span class="bh-notification-toggle" aria-hidden="true"></span>
             </label>
-
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">✉️</span>
-                <span class="bh-notification-copy"><strong>Email digest</strong><small>Receive relevant Bubba Hub updates through this channel.</small></span>
-                <input type="checkbox" name="notification[email_digest]" value="1" <?php checked( $prefs['email_digest'], 1 ); ?>>
+            <label class="bh-notification-channel">
+                <span class="bh-notification-channel-icon">🔔</span>
+                <span class="bh-notification-copy"><strong>Notifications in My Hub</strong><small>Show relevant alerts in your Bubba Hub notification centre.</small></span>
+                <input type="checkbox" name="notification[channel_in_hub]" value="1" <?php checked( $prefs['channel_in_hub'], 1 ); ?>>
                 <span class="bh-notification-toggle" aria-hidden="true"></span>
             </label>
+            <div class="bh-notification-channel bh-notification-channel-disabled">
+                <span class="bh-notification-channel-icon">📲</span>
+                <span class="bh-notification-copy"><strong>Push notifications</strong><small>Browser/app push notifications will be available when push delivery is enabled for your device.</small></span>
+                <span class="bh-notification-status">Coming soon</span>
+            </div>
+            <div class="bh-notification-channel bh-notification-channel-disabled">
+                <span class="bh-notification-channel-icon">💬</span>
+                <span class="bh-notification-copy"><strong>SMS alerts</strong><small>SMS reminders will be available when SMS delivery is enabled for your account.</small></span>
+                <span class="bh-notification-status">Coming soon</span>
+            </div>
 
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">⏰</span>
-                <span class="bh-notification-copy"><strong>Booking reminders</strong><small>Get reminders before your upcoming booked classes.</small></span>
-                <input type="checkbox" name="notification[booking_reminders]" value="1" <?php checked( $prefs['booking_reminders'], 1 ); ?>>
-                <span class="bh-notification-toggle" aria-hidden="true"></span>
-            </label>
+            <div class="bh-notification-section-heading bh-notification-section-heading-spaced"><span>🧩</span><div><h3>What would you like to be told about?</h3><p>Turn individual types of optional notification on or off.</p></div></div>
 
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">❤️</span>
-                <span class="bh-notification-copy"><strong>Saved group updates</strong><small>Hear about changes and useful updates from groups you follow or save.</small></span>
-                <input type="checkbox" name="notification[saved_groups]" value="1" <?php checked( $prefs['saved_groups'], 1 ); ?>>
-                <span class="bh-notification-toggle" aria-hidden="true"></span>
-            </label>
-
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">🗓️</span>
-                <span class="bh-notification-copy"><strong>Planner reminders</strong><small>Receive reminders for activities and events in your family planner.</small></span>
-                <input type="checkbox" name="notification[planner_reminders]" value="1" <?php checked( $prefs['planner_reminders'], 1 ); ?>>
-                <span class="bh-notification-toggle" aria-hidden="true"></span>
-            </label>
-
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">💬</span>
-                <span class="bh-notification-copy"><strong>Messages &amp; support</strong><small>Be notified when a specialist or support contact replies to you.</small></span>
-                <input type="checkbox" name="notification[messages]" value="1" <?php checked( $prefs['messages'], 1 ); ?>>
-                <span class="bh-notification-toggle" aria-hidden="true"></span>
-            </label>
-
-            <label class="bh-notification-option">
-                <span class="bh-notification-icon">🏡</span>
-                <span class="bh-notification-copy"><strong>Community alerts</strong><small>Receive relevant Bubba Hub updates through this channel.</small></span>
-                <input type="checkbox" name="notification[community]" value="1" <?php checked( $prefs['community'], 1 ); ?>>
-                <span class="bh-notification-toggle" aria-hidden="true"></span>
-            </label>
-
-            <button type="submit" class="bh-notification-save">Save notification preferences</button>
+            <label class="bh-notification-option"><span class="bh-notification-icon">📅</span><span class="bh-notification-copy"><strong>Class &amp; booking alerts</strong><small>Updates about bookings, confirmations and relevant class activity.</small></span><input type="checkbox" name="notification[class_booking]" value="1" <?php checked( $prefs['class_booking'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">✉️</span><span class="bh-notification-copy"><strong>Email digest</strong><small>Receive a summary of relevant Bubba Hub updates by email.</small></span><input type="checkbox" name="notification[email_digest]" value="1" <?php checked( $prefs['email_digest'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">⏰</span><span class="bh-notification-copy"><strong>Booking reminders</strong><small>Get reminders before your upcoming booked classes.</small></span><input type="checkbox" name="notification[booking_reminders]" value="1" <?php checked( $prefs['booking_reminders'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">❤️</span><span class="bh-notification-copy"><strong>Saved group updates</strong><small>Hear about changes and useful updates from groups you follow or save.</small></span><input type="checkbox" name="notification[saved_groups]" value="1" <?php checked( $prefs['saved_groups'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">🗓️</span><span class="bh-notification-copy"><strong>Planner &amp; calendar reminders</strong><small>Receive reminders for activities and events in your family planner and calendar.</small></span><input type="checkbox" name="notification[planner_reminders]" value="1" <?php checked( $prefs['planner_reminders'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">💬</span><span class="bh-notification-copy"><strong>Messages &amp; support</strong><small>Be notified when a specialist or support contact replies to you.</small></span><input type="checkbox" name="notification[messages]" value="1" <?php checked( $prefs['messages'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+            <label class="bh-notification-option"><span class="bh-notification-icon">🏡</span><span class="bh-notification-copy"><strong>Community alerts</strong><small>Receive relevant Bubba Hub community updates.</small></span><input type="checkbox" name="notification[community]" value="1" <?php checked( $prefs['community'], 1 ); ?>><span class="bh-notification-toggle" aria-hidden="true"></span></label>
+        <button type="submit" class="bh-notification-save">Save notification preferences</button>
         </form>
 
         <div class="bh-notification-note"><strong>Important:</strong> Essential account, booking and payment emails may still be sent when needed to complete or manage a transaction.</div>
@@ -467,6 +460,9 @@ function bubbahub_notification_assets() {
     wp_add_inline_style( 'bubbahub-notifications', '
         .bh-notification-centre{margin:30px 0;padding:28px;background:#fff;border:1px solid #e1e9e4;border-radius:24px;box-shadow:0 7px 22px rgba(27,64,52,.06)}
         .bh-notification-header{margin-bottom:20px}.bh-notification-kicker{display:inline-flex;border-radius:999px;padding:5px 10px;background:#dff3df;color:#23583f;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}.bh-notification-header h2,.bh-notification-feed h2{margin:7px 0 5px;color:#173f32;font-size:26px}.bh-notification-header p{margin:0;color:#65776f;line-height:1.55}
+        .bh-notification-section-heading{display:flex;gap:12px;align-items:flex-start;margin:4px 0 8px;padding:14px 15px;background:#f7faf8;border-radius:16px}.bh-notification-section-heading>span{font-size:21px}.bh-notification-section-heading h3{margin:0 0 3px;color:#23493d;font-size:15px}.bh-notification-section-heading p{margin:0;color:#718079;font-size:11px;line-height:1.45}.bh-notification-section-heading-spaced{margin-top:22px}
+        .bh-notification-channel{display:grid;grid-template-columns:44px 1fr auto 42px;gap:14px;align-items:center;padding:15px 0;border-top:1px solid #e8eeea;cursor:pointer;position:relative}.bh-notification-channel-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#f1f6f2;font-size:20px}.bh-notification-channel input{position:absolute;opacity:0;pointer-events:none}.bh-notification-channel-disabled{cursor:default;opacity:.72}.bh-notification-status{padding:5px 8px;border-radius:999px;background:#edf1ef;color:#6d7b75;font-size:9px;font-weight:800;white-space:nowrap}
+        @media(max-width:600px){.bh-notification-channel{grid-template-columns:40px 1fr 42px;gap:10px}.bh-notification-channel-disabled{grid-template-columns:40px 1fr auto}.bh-notification-channel-icon{width:36px;height:36px;font-size:18px}}
         .bh-notification-option{display:grid;grid-template-columns:44px 1fr 0 44px;gap:14px;align-items:center;padding:17px 0;border-top:1px solid #e8eeea;cursor:pointer;position:relative}.bh-notification-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#f1f6f2;font-size:20px}.bh-notification-copy{display:flex;flex-direction:column;gap:4px}.bh-notification-copy strong{color:#23493d;font-size:15px}.bh-notification-copy small{color:#74847e;font-size:12px;line-height:1.45}.bh-notification-option input{position:absolute;opacity:0;pointer-events:none}.bh-notification-toggle{width:42px;height:24px;border-radius:999px;background:#ccd8d2;position:relative;transition:.2s}.bh-notification-toggle:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:.2s}.bh-notification-option input:checked + .bh-notification-toggle{background:#2f6c52}.bh-notification-option input:checked + .bh-notification-toggle:after{transform:translateX(18px)}
         .bh-notification-phone{margin:-4px 0 14px;padding:14px 16px;background:#f7faf8;border-radius:14px}.bh-notification-phone label{display:block;font-weight:800;font-size:12px;color:#31554a;margin-bottom:6px}.bh-notification-phone input{width:100%;box-sizing:border-box;border:1px solid #d7e1db;border-radius:10px;padding:11px 13px;font:inherit}.bh-notification-phone small{display:block;margin-top:6px;color:#7b8984;font-size:11px}
         .bh-notification-save{border:0;border-radius:12px;padding:12px 18px;background:#1e513b;color:#fff;font-weight:800;cursor:pointer;margin-top:18px}.bh-notification-success{padding:12px 14px;border-radius:12px;background:#e8f7e9;color:#245d3f;font-weight:700;margin-bottom:16px}.bh-notification-note{margin-top:16px;padding:12px 14px;background:#f7faf8;border-radius:12px;color:#65766f;font-size:11px;line-height:1.5}

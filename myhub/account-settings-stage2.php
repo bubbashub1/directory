@@ -1803,9 +1803,8 @@ function bubbahub_stage2_render_payments() {
                 <strong>Secure payment management</strong>
                 <p>Your full card details are not displayed or stored by Bubba Hub. Payment information is handled by the connected payment provider.</p>
             </div>
-        </div>
 
-        <div class="bh-settings-list bh-payment-options-list" role="navigation" aria-label="Payment settings">
+            <div class="bh-settings-list bh-payment-options-list" role="navigation" aria-label="Payment settings">
             <?php foreach ( $payment_sections as $item ) : ?>
                 <div class="bh-account-settings-menu-container">
                     <a class="bh-account-settings-item bh-payment-option" href="<?php echo esc_url( $item['url'] ); ?>">

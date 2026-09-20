@@ -12,11 +12,23 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_action( 'init', 'bubbahub_account_settings_stage2_register', 36 );
 add_action( 'template_redirect', 'bubbahub_stage2_post_redirect', 20 );
+add_action( 'template_redirect', 'bubbahub_stage2_profile_redirect', 19 );
 
 $GLOBALS['bubbahub_stage2_post_result'] = null;
 
 function bubbahub_account_settings_stage2_register() {
     add_shortcode( 'bubbahub_account_settings_stage2', 'bubbahub_account_settings_stage2_shortcode' );
+}
+
+function bubbahub_stage2_profile_redirect() {
+    if ( ! is_user_logged_in() || empty( $_GET['bh_account_settings'] ) ) return;
+    if ( 'profile' !== sanitize_key( wp_unslash( $_GET['bh_settings_section'] ?? '' ) ) ) return;
+    if ( ! function_exists( 'um_get_core_page' ) ) return;
+    $account_url = bubbahub_stage2_account_url();
+    if ( ! $account_url ) return;
+    $profile_url = add_query_arg( 'um_tab', 'bubbahub_profile', $account_url );
+    wp_safe_redirect( $profile_url );
+    exit;
 }
 
 function bubbahub_stage2_post_redirect() {
@@ -1749,7 +1761,7 @@ function bubbahub_account_settings_stage2_shortcode() {
     $payment_url = bubbahub_stage2_payment_url();
     $pricing_url = bubbahub_stage2_pricing_url();
 
-    if ( 'profile' === $section ) { $profile_url = add_query_arg( 'um_tab', 'bubbahub_profile', bubbahub_stage2_account_url() ); wp_safe_redirect( $profile_url ); exit; }
+    if ( 'profile' === $section ) $content = '<div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My Bubba Hub Profile</h3><span>Ultimate Member account</span></div><p>Your profile details are managed in the Ultimate Member account area.</p><div class="bh-profile-actions"><a class="bh-stage2-button" href="'.esc_url( add_query_arg( 'um_tab', 'bubbahub_profile', $um_url ) ).'">Open My Bubba Hub Profile</a></div></div>';
     elseif ( 'notifications' === $section ) $content = bubbahub_stage2_render_notifications();
     elseif ( 'consent' === $section ) $content = bubbahub_stage2_render_consent();
     elseif ( 'preferences' === $section || 'interests' === $section || 'family_needs' === $section ) $content = bubbahub_stage2_render_preferences();
@@ -1772,7 +1784,7 @@ function bubbahub_account_settings_stage2_shortcode() {
         <?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?>
         <div id="bh-account-settings-list" class="bh-settings-list" role="navigation" aria-label="Account settings">
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg('um_tab', 'bubbahub_profile', $um_url)); ?>">
-                <span class="bh-account-settings-icon" aria-hidden="true">👤</span><span class="bh-account-settings-content"><h3>Edit my profile</h3><p>Personal details, contact information, addresses and search radius.</p></span>
+                <span class="bh-account-settings-icon" aria-hidden="true">👤</span><span class="bh-account-settings-content"><h3>Edit my profile</h3><p>Personal details, contact information and account addresses.</p></span>
             </a></div>
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'pro'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">⭐</span><span class="bh-account-settings-content"><h3>Manage my Pro Account</h3><p><?php echo $is_pro ? 'Manage your active membership and billing.' : 'View Pro options and membership information.'; ?></p></span></a></div>
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'family_needs'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">✨</span><span class="bh-account-settings-content"><h3>My Bubba Hub Directory Preferences</h3><p>Manage your interests, family needs, preferred locations and search preferences in one place.</p></span></a></div>

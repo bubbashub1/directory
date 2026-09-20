@@ -1752,11 +1752,74 @@ function bubbahub_stage2_render_pro() {
 }
 
 function bubbahub_stage2_render_payments() {
-    $url = bubbahub_stage2_payment_methods_url();
+    $payment_url = bubbahub_stage2_payment_methods_url();
+
+    $payment_sections = array(
+        array(
+            'icon'  => '💳',
+            'title' => 'Payment methods',
+            'text'  => 'Manage your saved payment methods securely through your connected payment provider.',
+            'url'   => apply_filters( 'bubbahub_getpaid_payment_methods_url', $payment_url ),
+            'label' => 'Manage payment methods',
+        ),
+        array(
+            'icon'  => '🧾',
+            'title' => 'Invoices',
+            'text'  => 'View your GetPaid invoices, payment status and invoice history.',
+            'url'   => apply_filters( 'bubbahub_getpaid_invoices_url', $payment_url ),
+            'label' => 'View invoices',
+        ),
+        array(
+            'icon'  => '👛',
+            'title' => 'Wallet balance',
+            'text'  => 'View and manage your GetPaid wallet balance when the Wallet extension is enabled.',
+            'url'   => apply_filters( 'bubbahub_getpaid_wallet_url', $payment_url ),
+            'label' => 'Open wallet',
+        ),
+        array(
+            'icon'  => '↔️',
+            'title' => 'Transactions',
+            'text'  => 'Review your payments and transaction history.',
+            'url'   => apply_filters( 'bubbahub_getpaid_transactions_url', $payment_url ),
+            'label' => 'View transactions',
+        ),
+        array(
+            'icon'  => '🔄',
+            'title' => 'Subscriptions',
+            'text'  => 'View recurring payments and subscription information.',
+            'url'   => apply_filters( 'bubbahub_getpaid_subscriptions_url', $payment_url ),
+            'label' => 'View subscriptions',
+        ),
+    );
+
     ob_start(); ?>
-    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My Connected Payment Options</h3><span>Secure payment provider</span></div>
-    <div class="bh-pro-status"><strong>💳 Your payment details stay with the payment provider.</strong><p>Bubba Hub does not display or store full card numbers here. Use the connected GetPaid / Stripe customer area to add, remove or update a payment method.</p></div>
-    <div class="bh-profile-actions"><a class="bh-stage2-button" href="<?php echo esc_url($url); ?>">Open My Connected Payment Options</a></div></div>
+    <div class="bh-payment-settings">
+        <div class="bh-profile-card">
+            <div class="bh-profile-card-heading">
+                <h3>My Payments, Invoices &amp; Wallet</h3>
+                <span>GetPaid &amp; secure payments</span>
+            </div>
+            <div class="bh-pro-status">
+                <strong>Secure payment management</strong>
+                <p>Your full card details are not displayed or stored by Bubba Hub. Payment information is handled by the connected payment provider.</p>
+            </div>
+        </div>
+
+        <div class="bh-settings-list bh-payment-options-list" role="navigation" aria-label="Payment settings">
+            <?php foreach ( $payment_sections as $item ) : ?>
+                <div class="bh-account-settings-menu-container">
+                    <a class="bh-account-settings-item bh-payment-option" href="<?php echo esc_url( $item['url'] ); ?>">
+                        <span class="bh-account-settings-icon" aria-hidden="true"><?php echo esc_html( $item['icon'] ); ?></span>
+                        <span class="bh-account-settings-content">
+                            <h3><?php echo esc_html( $item['title'] ); ?></h3>
+                            <p><?php echo esc_html( $item['text'] ); ?></p>
+                            <span class="bh-payment-option-link"><?php echo esc_html( $item['label'] ); ?> →</span>
+                        </span>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <?php return ob_get_clean();
 }
 

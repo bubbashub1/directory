@@ -1115,11 +1115,12 @@ function bubbahub_stage2_render_consent() {
                   if ( $profile_relationship && isset( $relationship_options[ $profile_relationship ] ) ) $saved_relationships = array( $profile_relationship );
               }
               ?>
-              <div class="bh-consent-multi-options">
+              <select class="bh-consent-multi-select" name="relationship[]" multiple size="5" aria-label="Relationship to child or participant">
                 <?php foreach ( $relationship_options as $value => $label ) : ?>
-                  <label><input type="checkbox" name="relationship[]" value="<?php echo esc_attr($value); ?>" <?php checked(in_array($value, $saved_relationships, true)); ?>><span><?php echo esc_html($label); ?></span></label>
+                  <option value="<?php echo esc_attr($value); ?>" <?php selected(in_array($value, $saved_relationships, true)); ?>><?php echo esc_html($label); ?></option>
                 <?php endforeach; ?>
-              </div>
+              </select>
+              <small class="bh-muted">Select one or more options. Hold Ctrl/Cmd to select multiple options.</small>
             </label>
             <label class="bh-consent-field-wide"><span>Child profile(s) for this consent <em>Required*</em></span>
               <?php
@@ -1130,14 +1131,18 @@ function bubbahub_stage2_render_consent() {
               }
               $children_for_consent = bubbahub_stage2_children();
               ?>
-              <div class="bh-consent-multi-options">
-                <?php foreach ( $children_for_consent as $child ) :
-                    $child_name = function_exists('bubbahub_profile_field') ? bubbahub_profile_field($child->ID, 'child_name', $child->post_title) : $child->post_title;
-                ?>
-                  <label><input type="checkbox" name="child_profile_ids[]" value="<?php echo absint($child->ID); ?>" <?php checked(in_array((int)$child->ID, $saved_child_ids, true)); ?>><span><?php echo esc_html($child_name); ?></span></label>
-                <?php endforeach; ?>
-                <?php if ( ! $children_for_consent ) : ?><p class="bh-muted">No saved child profiles yet. Use the participant name below.</p><?php endif; ?>
-              </div>
+              <?php if ( $children_for_consent ) : ?>
+                <select class="bh-consent-multi-select" name="child_profile_ids[]" multiple size="5" aria-label="Child profiles for this consent">
+                  <?php foreach ( $children_for_consent as $child ) :
+                      $child_name = function_exists('bubbahub_profile_field') ? bubbahub_profile_field($child->ID, 'child_name', $child->post_title) : $child->post_title;
+                  ?>
+                    <option value="<?php echo absint($child->ID); ?>" <?php selected(in_array((int)$child->ID, $saved_child_ids, true)); ?>><?php echo esc_html($child_name); ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <small class="bh-muted">Select one or more saved children. Only each child's year of birth can be shared with a class leader, subject to your Privacy &amp; Security settings.</small>
+              <?php else : ?>
+                <p class="bh-muted">No saved child profiles yet. Use the participant name below.</p>
+              <?php endif; ?>
               <small class="bh-muted">Select one or more saved children. Only each child's year of birth can be shared with a class leader, subject to your Privacy &amp; Security settings.</small>
             </label>
             <label class="bh-consent-field-wide"><span>Participant / child name <em>Required if not using a saved child profile</em></span><input name="participant_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_name')); ?>" placeholder="Complete this if different from the children in your profiles"></label>

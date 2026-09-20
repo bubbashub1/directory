@@ -1,18 +1,33 @@
 (function($){
 'use strict';
 function calendarAjax($section,form){
- var $form=$(form);if(!$section.length||!$form.length||$section.data('calendarLoading'))return;
+ var $form=$(form);if(!$section.length||!$form.length)return;
  var advancedOpen=$section.attr('data-advanced-open')==='1';
+ var requestId=(parseInt($section.attr('data-calendar-request-id'),10)||0)+1;
+ $section.attr('data-calendar-request-id',requestId);
+ var previousRequest=$section.data('calendarRequest');
+ if(previousRequest&&previousRequest.readyState!==4)previousRequest.abort();
  var data=$form.serializeArray();data.push({name:'action',value:'bubbahub_calendar_filter'},{name:'nonce',value:$section.attr('data-calendar-nonce')});
  $section.data('calendarLoading',true).addClass('is-loading');
- $.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'}).done(function(response){
+ var request=$.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'});
+ $section.data('calendarRequest',request);
+ request.done(function(response){
+  if(requestId!==parseInt($section.attr('data-calendar-request-id'),10))return;
   if(response&&response.success&&response.data&&response.data.html){
   var $replacement=$(response.data.html);
   $replacement.attr('data-advanced-open',advancedOpen?'1':'0');
   $section.replaceWith($replacement);
   if(advancedOpen) setAdvancedSearch($replacement,true);
 }
- }).fail(function(){$section.find('.bh-calendar-search-actions').append('<span class="bh-calendar-ajax-error" role="alert">Sorry, the calendar could not be updated. Please try again.</span>');}).always(function(){$section.data('calendarLoading',false).removeClass('is-loading');});
+ }).fail(function(xhr,status){
+  if(status==='abort'||requestId!==parseInt($section.attr('data-calendar-request-id'),10))return;
+  $section.find('.bh-calendar-ajax-error').remove();
+  $section.find('.bh-calendar-search-actions').append('<span class="bh-calendar-ajax-error" role="alert">Sorry, the calendar could not be updated. Please try again.</span>');
+ }).always(function(){
+  if(requestId!==parseInt($section.attr('data-calendar-request-id'),10))return;
+  $section.data('calendarLoading',false).removeClass('is-loading');
+  $section.removeData('calendarRequest');
+ });
 }
 function setAdvancedSearch($section,open){
  var $panel=$section.find('.bh-calendar-advanced-search').first();
@@ -27,6 +42,39 @@ $(document).on('click','.bh-weekly-planner-v2 .bh-calendar-advanced-toggle',func
  var $section=$(this).closest('.bh-weekly-planner-v2');
  var isOpen=$section.attr('data-advanced-open')==='1';
  setAdvancedSearch($section,!isOpen);
+});
+$(document).on('click','.bh-weekly-planner-v2 [data-save-calendar]',function(){
+ var $button=$(this),$section=$button.closest('.bh-weekly-planner-v2'),$panel=$section.find('[data-save-panel]').first();
+ if(!$panel.length)return;
+ $panel.prop('hidden',false).removeAttr('aria-hidden');
+ $panel.find('input').first().trigger('focus');
+});
+$(document).on('click','.bh-weekly-planner-v2 [data-cancel-save]',function(){
+ var $panel=$(this).closest('[data-save-panel]');
+ $panel.prop('hidden',true);
+});
+$(document).on('click','.bh-weekly-planner-v2 [data-confirm-save]',function(){
+ var $button=$(this),$section=$button.closest('.bh-weekly-planner-v2'),$form=$section.find('.bh-calendar-search-form').first(),$panel=$button.closest('[data-save-panel]'),$name=$panel.find('input').first();
+ var name=$.trim($name.val()||''),nonce=$section.attr('data-save-nonce');
+ if(!name){$name.trigger('focus');return;}
+ if(!nonce||!$form.length||$button.prop('disabled'))return;
+ var data=$form.serializeArray();
+ data.push({name:'action',value:'bubbahub_save_custom_calendar'},{name:'nonce',value:nonce},{name:'calendar_name',value:name});
+ var editId=$section.attr('data-edit-calendar')||'';
+ if(editId)data.push({name:'calendar_id',value:editId});
+ $button.prop('disabled',true).text(editId?'Updating…':'Saving…');
+ $.ajax({url:$section.attr('data-calendar-ajax'),type:'POST',data:data,dataType:'json'}).done(function(response){
+  if(response&&response.success){
+   window.location.href=window.location.href.replace(/([?&])bh_edit_calendar=[^&]*/,'$1').replace(/[?&]$/,'');
+   if(!editId)window.location.reload();
+  }else{
+   $button.prop('disabled',false).text(editId?'Update':'Save');
+   window.alert(response&&response.data&&response.data.message?response.data.message:'The calendar could not be saved.');
+  }
+ }).fail(function(){
+  $button.prop('disabled',false).text(editId?'Update':'Save');
+  window.alert('The calendar could not be saved. Please try again.');
+ });
 });
 $(document).on('submit','.bh-weekly-planner-v2 .bh-calendar-search-form',function(e){e.preventDefault();calendarAjax($(this).closest('.bh-weekly-planner-v2'),this);});
 $(document).on('change','.bh-weekly-planner-v2 .bh-calendar-advanced-search select',function(){calendarAjax($(this).closest('.bh-weekly-planner-v2'),$(this).closest('.bh-calendar-search-form'));});

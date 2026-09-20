@@ -331,6 +331,49 @@ if ( ! function_exists( 'bubbahub_myhub_v3_support_requests' ) ) {
     }
 }
 
+if ( ! function_exists( 'bubbahub_myhub_v3_family_snapshot' ) ) {
+    function bubbahub_myhub_v3_family_snapshot( $uid, $children, $bookings, $saved_calendars ) {
+        $upcoming = array_slice( (array) $bookings, 0, 3 );
+        $stats = array(
+            'children' => count( (array) $children ),
+            'bookings' => count( (array) $bookings ),
+            'calendars' => count( (array) $saved_calendars ),
+        );
+        ob_start(); ?>
+        <section class="bh-myhub-snapshot" aria-label="Family snapshot">
+            <div class="bh-myhub-snapshot-main">
+                <div class="bh-myhub-kicker">YOUR FAMILY AT A GLANCE</div>
+                <h2>Everything your family needs, in one place.</h2>
+                <p>Keep your children, activities, plans and bookings connected through Bubba Hub.</p>
+                <div class="bh-myhub-quick-actions">
+                    <a class="bh-myhub-quick-action primary" href="<?php echo esc_url( home_url( '/find-a-group/' ) ); ?>"><span>🔎</span><strong>Find a Group</strong></a>
+                    <a class="bh-myhub-quick-action" href="<?php echo esc_url( add_query_arg( 'bh_account_settings', '1', get_permalink() ) ); ?>"><span>⚙️</span><strong>Account Settings</strong></a>
+                    <a class="bh-myhub-quick-action" href="<?php echo esc_url( home_url( '/my-groups/' ) ); ?>"><span>♡</span><strong>My Groups</strong></a>
+                </div>
+            </div>
+            <div class="bh-myhub-snapshot-stats">
+                <div><strong><?php echo esc_html( $stats['children'] ); ?></strong><span>Family profiles</span></div>
+                <div><strong><?php echo esc_html( $stats['bookings'] ); ?></strong><span>Upcoming bookings</span></div>
+                <div><strong><?php echo esc_html( $stats['calendars'] ); ?></strong><span>Saved calendars</span></div>
+            </div>
+            <?php if ( $upcoming ) : ?>
+            <div class="bh-myhub-snapshot-upcoming">
+                <div class="bh-myhub-snapshot-upcoming-head"><strong>Coming up</strong><a href="<?php echo esc_url( home_url( '/my-bookings/' ) ); ?>">View bookings →</a></div>
+                <?php foreach ( $upcoming as $booking ) : ?>
+                    <a class="bh-myhub-upcoming-item" href="<?php echo esc_url( home_url( '/my-bookings/' ) ); ?>">
+                        <span class="bh-myhub-upcoming-date"><?php echo esc_html( bubbahub_myhub_booking_date_label( $booking['date'], $booking['start'] ) ); ?></span>
+                        <span><strong><?php echo esc_html( $booking['title'] ? $booking['title'] : $booking['group'] ); ?></strong><?php if ( ! empty( $booking['venue'] ) ) : ?><small>⌖ <?php echo esc_html( $booking['venue'] ); ?></small><?php endif; ?></span>
+                        <span aria-hidden="true">→</span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
 if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
     function bubbahub_myhub_v3_render() {
         if ( ! is_user_logged_in() ) {

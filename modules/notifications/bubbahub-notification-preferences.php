@@ -16,7 +16,8 @@ function bubbahub_notification_defaults() {
         'saved_groups'      => 1,
         'planner_reminders' => 1,
         'calendar_reminders' => 1,
-        'messages'          => 1,\n        'support_replies'   => 1,
+        'messages'          => 1,
+        'support_replies'   => 1,
         'email_digest'      => 1,
         'sms_reminders'     => 0,
         'community'         => 1,
@@ -122,7 +123,8 @@ function bubbahub_notification_group_matches_user( $group_id, $user_id ) {
     $locations = (array) get_user_meta( $user_id, 'bubbahub_preferred_locations', true );
     if ( ! $interests ) {
         $legacy = get_user_meta( $user_id, 'User_interest', true );
-        if ( is_string( $legacy ) ) $interests = array_filter( array_map( 'trim', preg_split( '/[,\\n]+/', $legacy ) ) );
+        if ( is_string( $legacy ) ) $interests = array_filter( array_map( 'trim', preg_split( '/[,\
+]+/', $legacy ) ) );
     }
     $haystack = strtolower( get_the_title( $group_id ) . ' ' . wp_strip_all_tags( get_post_field( 'post_content', $group_id ) ) );
     foreach ( array_merge( $interests, $locations ) as $term ) {
@@ -241,12 +243,23 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
         'subject' => $title,
     ) );
 
-    if ( $options['portal'] && bubbahub_notification_channel_enabled( $user_id, $type, 'in_hub' ) ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );\n\n    if ( bubbahub_notification_channel_enabled( $user_id, $type, 'push' ) && function_exists( 'bubbahub_push_send' ) ) {\n        bubbahub_push_send( $user_id, $title, $message, $url, array( 'type' => sanitize_key( $type ) ) );\n    }
+    if ( $options['portal'] && bubbahub_notification_channel_enabled( $user_id, $type, 'in_hub' ) ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
+
+    if ( bubbahub_notification_channel_enabled( $user_id, $type, 'push' ) && function_exists( 'bubbahub_push_send' ) ) {
+        bubbahub_push_send( $user_id, $title, $message, $url, array( 'type' => sanitize_key( $type ) ) );
+    }
 
     $sent = false;
     if ( $options['email'] && bubbahub_notification_channel_enabled( $user_id, $type, 'email' ) && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {
-        $body = "Hi {$user->display_name},\n\n{$message}\n\n";
-        if ( $url ) $body .= "View this in your Bubba Hub account:\n{$url}\n\n";
+        $body = "Hi {$user->display_name},
+
+{$message}
+
+";
+        if ( $url ) $body .= "View this in your Bubba Hub account:
+{$url}
+
+";
         $body .= "Bubba Hub";
         $sent = wp_mail( $user->user_email, $options['subject'], $body );
     }
@@ -417,7 +430,9 @@ function bubbahub_notification_preferences_shortcode() {
 
     $prefs = bubbahub_notification_preferences();
     $phone = get_user_meta( get_current_user_id(), 'bubbahub_notification_phone', true );
-    $alert_channels = bubbahub_notification_alert_channels( get_current_user_id() );\n    $push_ready = function_exists( 'bubbahub_push_is_configured' ) && bubbahub_push_is_configured();\n    $push_enabled = (bool) get_user_meta( get_current_user_id(), 'bubbahub_push_enabled', true );
+    $alert_channels = bubbahub_notification_alert_channels( get_current_user_id() );
+    $push_ready = function_exists( 'bubbahub_push_is_configured' ) && bubbahub_push_is_configured();
+    $push_enabled = (bool) get_user_meta( get_current_user_id(), 'bubbahub_push_enabled', true );
 
     ob_start(); ?>
     <section class="bh-notification-centre" aria-labelledby="bh-notification-title">

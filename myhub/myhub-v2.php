@@ -462,6 +462,8 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                 </div>
             </section>
 
+            <?php echo bubbahub_myhub_v3_family_snapshot( $uid, $children, function_exists( 'bubbahub_stage9_get_bookings' ) ? bubbahub_stage9_get_bookings() : array(), $saved_calendars ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+
             <section class="bh-myhub-section">
                 <div class="bh-myhub-section-heading">
                     <div>

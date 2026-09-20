@@ -109,13 +109,16 @@ function bubbahub_profile_handle_child_post() {
     $result = bubbahub_profile_handle_child_action();
     if ( empty( $result ) ) return;
 
+    /* Successful Add/Edit saves always return to My Hub, never to the editor/referrer. */
+    if ( ! empty( $result['success'] ) ) {
+        wp_safe_redirect( home_url( '/my-hub/#' ) );
+        exit;
+    }
+
+    /* Keep validation/save errors on the form so the user can correct them. */
     $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
     if ( ! $return_to ) $return_to = home_url( '/my-hub/' );
-
-    $return_to = remove_query_arg( array( 'child_saved', 'child_error' ), $return_to );
-    if ( ! empty( $result['success'] ) ) {
-        $return_to = add_query_arg( 'child_saved', '1', $return_to );
-    } elseif ( ! empty( $result['error'] ) ) {
+    if ( ! empty( $result['error'] ) ) {
         $return_to = add_query_arg( 'child_error', rawurlencode( $result['error'] ), $return_to );
     }
     wp_safe_redirect( $return_to );

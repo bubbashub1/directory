@@ -876,7 +876,7 @@ function bubbahub_stage2_render_interests() {
                         </div>
                     </div>
                 </div>
-            </div>/div>
+            </div>
 
             <div class="bh-preference-grid">
                 <div class="bh-preference-section">

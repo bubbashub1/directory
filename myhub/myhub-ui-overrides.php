@@ -15,16 +15,372 @@ function bubbahub_myhub_ui_overrides_stable() {
 CSS;
     $css .= <<<'CSS'
 
-/* Account Settings - all settings rows match the Edit my profile row */
-.bh-profile-shell .bh-settings-list{display:flex!important;flex-direction:column!important;gap:12px!important;width:100%!important;margin:0 0 20px!important;padding:0!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row{display:flex!important;align-items:center!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;float:none!important;position:static!important;inset:auto!important;transform:none!important;background:#fff!important;border:1px solid #e6ebe9!important;border-radius:16px!important;box-shadow:0 2px 8px rgba(0,0,0,.025)!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-icon{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:40px!important;margin:0 14px 0 0!important;padding:0!important;line-height:1!important;font-size:22px!important;position:static!important;inset:auto!important;float:none!important;transform:none!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-content{display:block!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;overflow:visible!important;position:static!important;inset:auto!important;float:none!important;transform:none!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-content h3{display:block!important;width:auto!important;margin:0 0 4px!important;padding:0!important;color:#1e3330!important;font-size:15px!important;font-weight:800!important;line-height:1.3!important;white-space:normal!important;overflow-wrap:anywhere!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-content p{display:block!important;width:auto!important;margin:0!important;padding:0!important;color:#668785!important;font-size:12px!important;font-weight:500!important;line-height:1.45!important;white-space:normal!important;overflow-wrap:anywhere!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-arrow{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 24px!important;width:24px!important;min-width:24px!important;height:40px!important;margin:0 0 0 14px!important;padding:0!important;color:#668785!important;font-size:18px!important;line-height:1!important;font-weight:700!important;position:static!important;inset:auto!important;float:none!important;transform:none!important}
-.bh-profile-shell .bh-settings-list > .bh-settings-row:hover{border-color:#b8ccc6!important;box-shadow:0 5px 16px rgba(30,51,48,.07)!important;transform:none!important}
-@media(max-width:620px){.bh-profile-shell .bh-settings-list{gap:10px!important}.bh-profile-shell .bh-settings-list > .bh-settings-row{min-height:72px!important;padding:14px!important}.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-icon{flex-basis:34px!important;width:34px!important;min-width:34px!important;height:34px!important;margin-right:11px!important;font-size:20px!important}.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-content h3{font-size:14px!important}.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-content p{font-size:11px!important}.bh-profile-shell .bh-settings-list > .bh-settings-row > .bh-settings-row-arrow{flex-basis:20px!important;width:20px!important;min-width:20px!important;height:34px!important;margin-left:11px!important}}
+/* Account Settings — rebuilt from scratch.
+ * This screen is intentionally isolated from theme/plugin card, grid and link rules.
+ */
+#bh-account-settings-screen,
+#bh-account-settings-screen *{box-sizing:border-box}
+
+#bh-account-settings-screen{
+  width:100%!important;
+  max-width:1100px!important;
+  margin:0 auto!important;
+  padding:24px 16px 70px!important;
+  color:#1e3330!important;
+  overflow:visible!important;
+}
+
+#bh-account-settings-screen .bh-profile-header{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:24px!important;
+  width:100%!important;
+  margin:0 0 20px!important;
+  padding:28px!important;
+  background:#1e3330!important;
+  color:#fff!important;
+  border:1px solid #2d4743!important;
+  border-radius:24px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.04)!important;
+}
+
+#bh-account-settings-screen .bh-profile-header>div{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+
+#bh-account-settings-screen .bh-profile-kicker{
+  display:block!important;
+  margin:0 0 7px!important;
+  color:#bc6c25!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  letter-spacing:.16em!important;
+}
+
+#bh-account-settings-screen .bh-profile-header h1{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  color:#fff!important;
+  font-size:26px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+}
+
+#bh-account-settings-screen .bh-profile-header p{
+  display:block!important;
+  margin:7px 0 0!important;
+  padding:0!important;
+  color:#a8c2bc!important;
+  font-size:13px!important;
+  line-height:1.6!important;
+}
+
+#bh-account-settings-screen .bh-profile-back{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  padding:10px 12px!important;
+  margin:0!important;
+  color:#faedcd!important;
+  background:transparent!important;
+  border:1px solid rgba(250,237,205,.35)!important;
+  border-radius:11px!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+  position:static!important;
+  transform:none!important;
+}
+
+#bh-account-settings-screen .bh-profile-success{
+  width:100%!important;
+  margin:0 0 16px!important;
+}
+
+#bh-account-settings-list{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  width:100%!important;
+  margin:0 0 20px!important;
+  padding:0!important;
+  list-style:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item{
+  all:unset!important;
+  display:grid!important;
+  grid-template-columns:40px minmax(0,1fr) 28px!important;
+  align-items:center!important;
+  column-gap:14px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:78px!important;
+  height:auto!important;
+  margin:0!important;
+  padding:16px 18px!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  position:relative!important;
+  cursor:pointer!important;
+  background:#fff!important;
+  color:#1e3330!important;
+  border:1px solid #e6ebe9!important;
+  border-radius:16px!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.025)!important;
+  text-decoration:none!important;
+  font-family:inherit!important;
+  font-size:inherit!important;
+  line-height:normal!important;
+  float:none!important;
+  transform:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item:before,
+#bh-account-settings-list>.bh-account-settings-item:after{
+  display:none!important;
+  content:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item:hover,
+#bh-account-settings-list>.bh-account-settings-item:focus,
+#bh-account-settings-list>.bh-account-settings-item:focus-visible{
+  color:#1e3330!important;
+  background:#fff!important;
+  border-color:#b8ccc6!important;
+  box-shadow:0 5px 16px rgba(30,51,48,.07)!important;
+  text-decoration:none!important;
+  outline:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item:focus-visible{
+  outline:3px solid rgba(95,145,131,.25)!important;
+  outline-offset:2px!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-icon{
+  all:unset!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  color:#31584b!important;
+  font-size:22px!important;
+  line-height:1!important;
+  text-align:center!important;
+  position:static!important;
+  float:none!important;
+  transform:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-content{
+  all:unset!important;
+  display:block!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  color:#1e3330!important;
+  overflow:hidden!important;
+  position:static!important;
+  float:none!important;
+  transform:none!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-content h3{
+  all:unset!important;
+  display:block!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0 0 4px!important;
+  padding:0!important;
+  color:#1e3330!important;
+  font-size:15px!important;
+  line-height:1.3!important;
+  font-weight:800!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-content p{
+  all:unset!important;
+  display:block!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  color:#668785!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+  font-weight:500!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+
+#bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-arrow{
+  all:unset!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:28px!important;
+  min-width:28px!important;
+  height:40px!important;
+  margin:0!important;
+  padding:0!important;
+  color:#668785!important;
+  font-size:18px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  text-align:center!important;
+  position:static!important;
+  float:none!important;
+  transform:none!important;
+}
+
+#bh-account-settings-screen>.bh-profile-card{
+  width:100%!important;
+  margin:0 0 16px!important;
+  background:#fff!important;
+  border:1px solid #e6ebe9!important;
+  border-radius:20px!important;
+  padding:22px!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.025)!important;
+}
+
+#bh-account-settings-screen>.bh-profile-card:last-child{
+  margin-bottom:0!important;
+}
+
+#bh-account-settings-screen .bh-profile-card-heading{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  width:100%!important;
+  margin:0 0 17px!important;
+  padding:0 0 13px!important;
+  border-bottom:1px solid #e6ebe9!important;
+}
+
+#bh-account-settings-screen .bh-profile-card-heading h3{
+  margin:0!important;
+  color:#1e3330!important;
+  font-size:16px!important;
+  line-height:1.3!important;
+  font-weight:800!important;
+}
+
+#bh-account-settings-screen .bh-profile-card-heading span,
+#bh-account-settings-screen .bh-profile-card-heading a{
+  color:#668785!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+  text-decoration:none!important;
+}
+
+@media(max-width:620px){
+  #bh-account-settings-screen{
+    max-width:100%!important;
+    padding:14px 10px 48px!important;
+    overflow-x:hidden!important;
+  }
+
+  #bh-account-settings-screen .bh-profile-header{
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:14px!important;
+    padding:20px 16px!important;
+    border-radius:20px!important;
+  }
+
+  #bh-account-settings-screen .bh-profile-header h1{
+    font-size:22px!important;
+  }
+
+  #bh-account-settings-screen .bh-profile-header p{
+    font-size:12px!important;
+    line-height:1.5!important;
+  }
+
+  #bh-account-settings-screen .bh-profile-back{
+    width:100%!important;
+  }
+
+  #bh-account-settings-list{
+    gap:10px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item{
+    grid-template-columns:34px minmax(0,1fr) 22px!important;
+    column-gap:11px!important;
+    min-height:72px!important;
+    padding:14px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-icon{
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    font-size:20px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-content h3{
+    font-size:14px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-content p{
+    font-size:11px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-arrow{
+    width:22px!important;
+    min-width:22px!important;
+    height:34px!important;
+    font-size:17px!important;
+  }
+
+  #bh-account-settings-screen>.bh-profile-card{
+    padding:17px 14px!important;
+    border-radius:18px!important;
+  }
+}
+
+@media(max-width:380px){
+  #bh-account-settings-screen{
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item{
+    grid-template-columns:30px minmax(0,1fr) 20px!important;
+    column-gap:9px!important;
+    padding:12px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-icon{
+    width:30px!important;
+    min-width:30px!important;
+    font-size:18px!important;
+  }
+
+  #bh-account-settings-list>.bh-account-settings-item>.bh-account-settings-arrow{
+    width:20px!important;
+    min-width:20px!important;
+    font-size:16px!important;
+  }
+}
 
 CSS;
     wp_add_inline_style( 'bubbahub-myhub-ui-overrides-stable', $css );

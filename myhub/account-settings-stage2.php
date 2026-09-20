@@ -591,12 +591,43 @@ function bubbahub_stage2_handle_preferences() {
 function bubbahub_stage2_handle_calendar_settings() {
     if ( ! is_user_logged_in() || 'calendar' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
+
     $reminder = isset( $_POST['calendar_reminder_minutes'] ) ? sanitize_key( wp_unslash( $_POST['calendar_reminder_minutes'] ) ) : '60';
     $calendar = isset( $_POST['default_calendar'] ) ? sanitize_key( wp_unslash( $_POST['default_calendar'] ) ) : 'bubba';
+    $view = isset( $_POST['calendar_default_view'] ) ? sanitize_key( wp_unslash( $_POST['calendar_default_view'] ) ) : 'week';
+    $price = isset( $_POST['calendar_price_filter'] ) ? sanitize_key( wp_unslash( $_POST['calendar_price_filter'] ) ) : 'all';
+
+    $allowed_days = array( 'monday','tuesday','wednesday','thursday','friday','saturday','sunday' );
+    $hidden_days = array();
+    $selected_hidden = isset( $_POST['calendar_hidden_days'] ) ? (array) $_POST['calendar_hidden_days'] : array();
+    foreach ( $selected_hidden as $day ) {
+        $day = sanitize_key( wp_unslash( $day ) );
+        if ( in_array( $day, $allowed_days, true ) ) $hidden_days[] = $day;
+    }
+    $hidden_days = array_values( array_unique( $hidden_days ) );
+
+    $time_options = array( 'morning','afternoon','evening' );
+    $time_of_day = array();
+    $selected_times = isset( $_POST['calendar_time_of_day'] ) ? (array) $_POST['calendar_time_of_day'] : array();
+    foreach ( $selected_times as $time ) {
+        $time = sanitize_key( wp_unslash( $time ) );
+        if ( in_array( $time, $time_options, true ) ) $time_of_day[] = $time;
+    }
+    $time_of_day = array_values( array_unique( $time_of_day ) );
+
     if ( ! in_array( $reminder, array( '15','30','60','120','1440' ), true ) ) $reminder = '60';
     if ( ! in_array( $calendar, array( 'bubba','google','apple','ics' ), true ) ) $calendar = 'bubba';
+    if ( ! in_array( $view, array( 'list','today','week','month' ), true ) ) $view = 'week';
+    if ( ! in_array( $price, array( 'all','free','paid' ), true ) ) $price = 'all';
+
     bubbahub_stage2_update_meta( 'bubbahub_calendar_reminder_minutes', $reminder );
     bubbahub_stage2_update_meta( 'bubbahub_default_calendar', $calendar );
+    bubbahub_stage2_update_meta( 'bubbahub_calendar_default_view', $view );
+    bubbahub_stage2_update_meta( 'bubbahub_calendar_hidden_days', $hidden_days );
+    bubbahub_stage2_update_meta( 'bubbahub_calendar_time_of_day', $time_of_day );
+    bubbahub_stage2_update_meta( 'bubbahub_calendar_price_filter', $price );
+    bubbahub_stage2_update_meta( 'bubbahub_calendar_use_nap_schedule', ! empty( $_POST['calendar_use_nap_schedule'] ) ? '1' : '0' );
+
     return 'Calendar settings saved.';
 }
 function bubbahub_stage2_handle_notification_test() {
@@ -1176,10 +1207,91 @@ function bubbahub_stage2_render_family_needs() {
     <?php return ob_get_clean();
 }
 function bubbahub_stage2_render_calendar_settings() {
-    $reminder=bubbahub_stage2_user_meta('bubbahub_calendar_reminder_minutes','60'); $calendar=bubbahub_stage2_user_meta('bubbahub_default_calendar','bubba');
-    $options=array('bubba'=>'Bubba Hub planner','google'=>'Google Calendar (ICS import)','apple'=>'Apple Calendar (ICS import)','ics'=>'Downloadable ICS');
-    ob_start(); ?><div class="bh-profile-card"><div class="bh-profile-card-heading"><div><h3>Calendar settings</h3><span>Control reminders and your preferred calendar workflow</span></div></div>
-    <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="calendar"><div class="bh-profile-grid two"><label><span>Reminder timing</span><select name="calendar_reminder_minutes"><?php foreach(array('15'=>'15 minutes','30'=>'30 minutes','60'=>'1 hour','120'=>'2 hours','1440'=>'1 day') as $v=>$l): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($reminder,$v); ?>><?php echo esc_html($l); ?></option><?php endforeach; ?></select></label><label><span>Default calendar workflow</span><select name="default_calendar"><?php foreach($options as $v=>$l): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar,$v); ?>><?php echo esc_html($l); ?></option><?php endforeach; ?></select></label></div><p class="bh-muted">ICS is supported for compatible calendar apps. A live Google/Apple sync still requires the relevant provider permissions and is not enabled by this preference alone.</p><div class="bh-profile-actions"><button type="submit">Save calendar settings</button></div></form></div><?php return ob_get_clean();
+    $reminder = bubbahub_stage2_user_meta('bubbahub_calendar_reminder_minutes','60');
+    $calendar = bubbahub_stage2_user_meta('bubbahub_default_calendar','bubba');
+    $view = bubbahub_stage2_user_meta('bubbahub_calendar_default_view','week');
+    $hidden_days = bubbahub_stage2_pref_array('bubbahub_calendar_hidden_days');
+    $time_of_day = bubbahub_stage2_pref_array('bubbahub_calendar_time_of_day');
+    $price = bubbahub_stage2_user_meta('bubbahub_calendar_price_filter','all');
+    $use_naps = bubbahub_stage2_user_meta('bubbahub_calendar_use_nap_schedule','1');
+    $options = array('bubba'=>'Bubba Hub planner','google'=>'Google Calendar (ICS import)','apple'=>'Apple Calendar (ICS import)','ics'=>'Downloadable ICS');
+    $days = array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday');
+    $times = array('morning'=>'Morning','afternoon'=>'Afternoon','evening'=>'Evening');
+    ob_start(); ?>
+    <div class="bh-profile-card bh-calendar-settings-card">
+      <div class="bh-profile-card-heading"><div><h3>Calendar settings</h3><span>Make your Bubba Hub calendar fit your family's routine</span></div></div>
+      <p class="bh-muted bh-calendar-settings-intro">Choose how the calendar opens, which days and times you normally want to see, and whether free or paid activities should be included by default.</p>
+      <form method="post" class="bh-stage2-form">
+        <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?>
+        <input type="hidden" name="bh_stage2_action" value="calendar">
+
+        <div class="bh-calendar-settings-grid">
+          <div class="bh-calendar-setting-card">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">🗓️</span><div><h4>Default view</h4><p>Choose the view shown when you open Calendar.</p></div></div>
+            <select name="calendar_default_view" aria-label="Default calendar view">
+              <?php foreach(array('week'=>'Week','today'=>'Today','month'=>'Monthly','list'=>'List') as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($view,$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?>
+            </select>
+          </div>
+          <div class="bh-calendar-setting-card">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">💷</span><div><h4>Activities to show</h4><p>Set the default price filter for your calendar.</p></div></div>
+            <select name="calendar_price_filter" aria-label="Default activity price filter">
+              <?php foreach(array('all'=>'Free & paid','free'=>'Free only','paid'=>'Paid only') as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($price,$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?>
+            </select>
+          </div>
+          <div class="bh-calendar-setting-card bh-calendar-setting-wide">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">☀️</span><div><h4>Time of day</h4><p>Show only the parts of the day that suit your family. Leave all unchecked to show every time.</p></div></div>
+            <div class="bh-calendar-check-pills">
+              <?php foreach($times as $v=>$label): ?><label><input type="checkbox" name="calendar_time_of_day[]" value="<?php echo esc_attr($v); ?>" <?php checked(in_array($v,$time_of_day,true)); ?>><span><?php echo esc_html($label); ?></span></label><?php endforeach; ?>
+            </div>
+          </div>
+          <div class="bh-calendar-setting-card bh-calendar-setting-wide">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">📅</span><div><h4>Show days</h4><p>Choose which days are normally visible. Untick a day to hide it from your calendar.</p></div></div>
+            <div class="bh-calendar-check-pills">
+              <?php foreach($days as $v=>$label): ?><label><input type="checkbox" name="calendar_hidden_days[]" value="<?php echo esc_attr($v); ?>" <?php checked(in_array($v,$hidden_days,true)); ?>><span><?php echo esc_html($label); ?></span></label><?php endforeach; ?>
+            </div>
+          </div>
+          <div class="bh-calendar-setting-card bh-calendar-setting-wide">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">😴</span><div><h4>Nap schedule</h4><p>Use your children's saved nap times when showing calendar activities.</p></div></div>
+            <label class="bh-calendar-toggle"><input type="checkbox" name="calendar_use_nap_schedule" value="1" <?php checked($use_naps,'1'); ?>><span class="bh-calendar-toggle-track" aria-hidden="true"></span><span class="bh-calendar-toggle-copy"><strong>Use nap schedule</strong><small>Highlight activities that overlap a saved child nap time.</small></span></label>
+          </div>
+          <div class="bh-calendar-setting-card">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">🔔</span><div><h4>Reminder timing</h4><p>Default reminder timing for calendar reminders.</p></div></div>
+            <select name="calendar_reminder_minutes"><?php foreach(array('15'=>'15 minutes','30'=>'30 minutes','60'=>'1 hour','120'=>'2 hours','1440'=>'1 day') as $v=>$l): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($reminder,$v); ?>><?php echo esc_html($l); ?></option><?php endforeach; ?></select>
+          </div>
+          <div class="bh-calendar-setting-card">
+            <div class="bh-calendar-setting-heading"><span class="bh-calendar-setting-icon">🔗</span><div><h4>Calendar workflow</h4><p>Choose the calendar format you normally use.</p></div></div>
+            <select name="default_calendar"><?php foreach($options as $v=>$l): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar,$v); ?>><?php echo esc_html($l); ?></option><?php endforeach; ?></select>
+          </div>
+        </div>
+
+        <p class="bh-muted bh-calendar-settings-note">Your saved preferences are defaults for Calendar. You can still use the calendar's search and advanced filters to change what you are viewing. ICS is supported for compatible calendar apps; a live Google/Apple sync still requires the relevant provider permissions.</p>
+        <div class="bh-profile-actions"><button type="submit">Save calendar settings</button></div>
+      </form>
+    </div>
+    <style>
+      .bh-calendar-settings-intro{margin:0 0 18px;line-height:1.55}
+      .bh-calendar-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .bh-calendar-setting-card{min-width:0;padding:16px;border:1px solid #e4ece8;border-radius:16px;background:#fbfdfc;box-sizing:border-box}
+      .bh-calendar-setting-wide{grid-column:1/-1}
+      .bh-calendar-setting-heading{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+      .bh-calendar-setting-icon{display:flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;height:38px;border-radius:11px;background:#eaf3ef;font-size:18px}
+      .bh-calendar-setting-heading h4{margin:0 0 3px;color:#31584b;font-size:14px;font-weight:800}
+      .bh-calendar-setting-heading p{margin:0;color:#718079;font-size:11px;line-height:1.45}
+      .bh-calendar-setting-card select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #dbe7e1;border-radius:11px;background:#fff;color:#1e3330;font:inherit;font-size:13px}
+      .bh-calendar-check-pills{display:flex;flex-wrap:wrap;gap:8px}
+      .bh-calendar-check-pills label{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #dbe7e1;border-radius:999px;background:#fff;color:#40574f;font-size:12px;font-weight:700;cursor:pointer}
+      .bh-calendar-check-pills input{width:16px;height:16px;margin:0;accent-color:#5f9183}
+      .bh-calendar-toggle{display:flex;align-items:center;gap:10px;cursor:pointer}
+      .bh-calendar-toggle input{position:absolute;opacity:0;pointer-events:none}
+      .bh-calendar-toggle-track{position:relative;flex:0 0 44px;width:44px;height:25px;border-radius:999px;background:#cbd7d1;transition:.2s}
+      .bh-calendar-toggle-track:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:.2s}
+      .bh-calendar-toggle input:checked + .bh-calendar-toggle-track{background:#5f9183}
+      .bh-calendar-toggle input:checked + .bh-calendar-toggle-track:after{transform:translateX(19px)}
+      .bh-calendar-toggle-copy{display:flex;flex-direction:column;gap:2px}.bh-calendar-toggle-copy strong{color:#31584b;font-size:13px}.bh-calendar-toggle-copy small{color:#718079;font-size:11px;line-height:1.4}
+      .bh-calendar-settings-note{margin:16px 0 0;line-height:1.5}
+      @media(max-width:650px){.bh-calendar-settings-grid{grid-template-columns:1fr}.bh-calendar-setting-wide{grid-column:auto}.bh-calendar-setting-card{padding:14px}.bh-calendar-check-pills label{padding:8px 10px}}
+    </style>
+    <?php return ob_get_clean();
 }
 function bubbahub_stage2_render_privacy() {
     $existing=bubbahub_stage2_user_meta('bubbahub_privacy_request','');

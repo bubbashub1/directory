@@ -19,6 +19,11 @@ function bubbahub_notification_defaults() {
         'email_digest'      => 1,
         'sms_reminders'     => 0,
         'community'         => 1,
+        'new_groups'        => 1,
+        'group_updates'    => 1,
+        'new_suggestions'  => 1,
+        'new_classes'      => 1,
+        'whats_on'         => 1,
     );
 }
 
@@ -39,6 +44,11 @@ function bubbahub_notification_preferences( $user_id = 0 ) {
         'email_digest'      => isset( $saved['email_digest'] ) ? (int) (bool) $saved['email_digest'] : $defaults['email_digest'],
         'sms_reminders'     => 0,
         'community'         => isset( $saved['community'] ) ? (int) (bool) $saved['community'] : $defaults['community'],
+        'new_groups'        => isset( $saved['new_groups'] ) ? (int) (bool) $saved['new_groups'] : $defaults['new_groups'],
+        'group_updates'    => isset( $saved['group_updates'] ) ? (int) (bool) $saved['group_updates'] : $defaults['group_updates'],
+        'new_suggestions'  => isset( $saved['new_suggestions'] ) ? (int) (bool) $saved['new_suggestions'] : $defaults['new_suggestions'],
+        'new_classes'      => isset( $saved['new_classes'] ) ? (int) (bool) $saved['new_classes'] : $defaults['new_classes'],
+        'whats_on'         => isset( $saved['whats_on'] ) ? (int) (bool) $saved['whats_on'] : $defaults['whats_on'],
     );
 }
 
@@ -70,6 +80,52 @@ function bubbahub_notification_handle_preferences() {
 }
 add_action( 'template_redirect', 'bubbahub_notification_handle_preferences' );
 
+function bubbahub_notification_group_matches_user( $group_id, $user_id ) {
+    $interests = (array) get_user_meta( $user_id, 'bubbahub_user_interest', true );
+    $locations = (array) get_user_meta( $user_id, 'bubbahub_preferred_locations', true );
+    if ( ! $interests ) {
+        $legacy = get_user_meta( $user_id, 'User_interest', true );
+        if ( is_string( $legacy ) ) $interests = array_filter( array_map( 'trim', preg_split( '/[,\\n]+/', $legacy ) ) );
+    }
+    $haystack = strtolower( get_the_title( $group_id ) . ' ' . wp_strip_all_tags( get_post_field( 'post_content', $group_id ) ) );
+    foreach ( array_merge( $interests, $locations ) as $term ) {
+        $term = strtolower( trim( (string) $term ) );
+        if ( $term && false !== strpos( $haystack, $term ) ) return true;
+    }
+    $region_terms = wp_get_post_terms( $group_id, 'region', array( 'fields' => 'names' ) );
+    if ( ! is_wp_error( $region_terms ) ) {
+        foreach ( $locations as $location ) foreach ( $region_terms as $region ) {
+            if ( false !== stripos( $region, (string) $location ) || false !== stripos( (string) $location, $region ) ) return true;
+        }
+    }
+    return empty( $interests ) && empty( $locations );
+}
+
+function bubbahub_notification_group_family_alert( $group_id, $is_update ) {
+    if ( 'group' !== get_post_type( $group_id ) || 'publish' !== get_post_status( $group_id ) ) return;
+    if ( wp_is_post_revision( $group_id ) || wp_is_post_autosave( $group_id ) ) return;
+    if ( function_exists( 'bubbahub_directory_notification_is_import' ) && bubbahub_directory_notification_is_import() ) return;
+    $users = get_users( array( 'fields' => array( 'ID' ), 'role__not_in' => array( 'administrator' ), 'number' => 5000 ) );
+    foreach ( $users as $user ) {
+        $uid = absint( $user->ID );
+        if ( ! bubbahub_notification_group_matches_user( $group_id, $uid ) ) continue;
+        $type = $is_update ? 'group_update' : 'new_group';
+        $enabled = bubbahub_notification_preferences( $uid );
+        if ( $is_update && empty( $enabled['group_updates'] ) ) continue;
+        if ( ! $is_update && empty( $enabled['new_groups'] ) ) continue;
+        $name = get_the_title( $group_id );
+        $url = get_permalink( $group_id );
+        $message = $is_update
+            ? 'A group that may be relevant to your family has been updated: ' . $name . '.'
+            : 'A new group that may be relevant to your family has been added to Bubba Hub: ' . $name . '.';
+        bubbahub_notify_user( $uid, $type, $is_update ? 'Group updated – ' . $name : 'New group – ' . $name, $message, $url );
+    }
+}
+add_action( 'transition_post_status', function( $new_status, $old_status, $post ) {
+    if ( ! $post || 'group' !== $post->post_type || 'publish' !== $new_status ) return;
+    bubbahub_notification_group_family_alert( $post->ID, 'publish' === $old_status );
+}, 60, 3 );
+
 function bubbahub_notification_log( $user_id, $type, $title, $message, $url = '' ) {
     $user_id = absint( $user_id );
     if ( ! $user_id ) return 0;
@@ -100,6 +156,11 @@ function bubbahub_notification_email_enabled( $user_id, $type ) {
     if ( in_array( $type, array( 'planner', 'planner_reminder' ), true ) ) return ! empty( $prefs['planner_reminders'] );
     if ( in_array( $type, array( 'message', 'support' ), true ) ) return ! empty( $prefs['messages'] );
     if ( 'community' === $type ) return ! empty( $prefs['community'] );
+    if ( 'new_group' === $type ) return ! empty( $prefs['new_groups'] );
+    if ( 'group_update' === $type ) return ! empty( $prefs['group_updates'] );
+    if ( 'new_suggestion' === $type ) return ! empty( $prefs['new_suggestions'] );
+    if ( 'new_class' === $type ) return ! empty( $prefs['new_classes'] );
+    if ( 'whats_on' === $type ) return ! empty( $prefs['whats_on'] );
     return ! empty( $prefs['email_digest'] );
 }
 

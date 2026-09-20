@@ -166,6 +166,18 @@ if ( ! function_exists( 'bubbahub_myhub_v3_school_tracker' ) ) {
         $tracker_class = $has_school ? 'school-hub' : 'school-application';
         $title = $has_school ? 'School & Childcare Hub' : 'School Application';
 
+        $saved_calendars = function_exists( 'bubbahub_myhub_planner_v2_saved_calendars' ) ? bubbahub_myhub_planner_v2_saved_calendars() : array();
+        $planner_page_url = '';
+        $planner_pages = get_pages( array( 'post_status' => 'publish', 'number' => 100 ) );
+        foreach ( $planner_pages as $planner_page ) {
+            if ( has_shortcode( $planner_page->post_content, 'bubbahub_weekly_planner_v2' ) ) {
+                $planner_page_url = get_permalink( $planner_page->ID );
+                break;
+            }
+        }
+        if ( ! $planner_page_url ) {
+            $planner_page_url = home_url( '/my-hub/' );
+        }
         ob_start();
         ?>
         <div class="bh-myhub-tracker bh-myhub-school-tracker <?php echo esc_attr( $tracker_class ); ?>">
@@ -499,6 +511,44 @@ if ( ! function_exists( 'bubbahub_myhub_v3_render' ) ) {
                     </div>
                 </div>
             </section>
+
+            <?php if ( ! empty( $saved_calendars ) ) : ?>
+            <section class="bh-myhub-section bh-myhub-custom-calendars-section">
+                <div class="bh-myhub-section-heading">
+                    <div>
+                        <div class="bh-myhub-kicker">YOUR CALENDAR</div>
+                        <h2>Custom Saved Calendars</h2>
+                        <p>Quickly return to the calendars you created from Advanced Search.</p>
+                    </div>
+                    <a class="bh-myhub-button" href="<?php echo esc_url( $planner_page_url ); ?>">Open Calendar</a>
+                </div>
+                <div class="bh-myhub-custom-calendars-grid">
+                    <?php foreach ( $saved_calendars as $saved_calendar ) :
+                        if ( empty( $saved_calendar['id'] ) || empty( $saved_calendar['name'] ) ) continue;
+                        $calendar_url = add_query_arg( 'bh_saved_calendar', sanitize_text_field( $saved_calendar['id'] ), $planner_page_url );
+                    ?>
+                        <a class="bh-myhub-custom-calendar-card" href="<?php echo esc_url( $calendar_url ); ?>">
+                            <span class="bh-myhub-custom-calendar-icon" aria-hidden="true">★</span>
+                            <span class="bh-myhub-custom-calendar-content">
+                                <strong><?php echo esc_html( $saved_calendar['name'] ); ?></strong>
+                                <span>Open this custom calendar →</span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+            <?php else : ?>
+            <section class="bh-myhub-section bh-myhub-custom-calendars-section bh-myhub-custom-calendars-empty">
+                <div class="bh-myhub-section-heading">
+                    <div>
+                        <div class="bh-myhub-kicker">YOUR CALENDAR</div>
+                        <h2>Custom Saved Calendars</h2>
+                        <p>Create a calendar from Advanced Search and it will appear here for quick access.</p>
+                    </div>
+                    <a class="bh-myhub-button" href="<?php echo esc_url( $planner_page_url ); ?>">Create a Calendar</a>
+                </div>
+            </section>
+            <?php endif; ?>
 
             <section class="bh-myhub-section bh-myhub-your-groups-section">
                 <div class="bh-myhub-section-heading">

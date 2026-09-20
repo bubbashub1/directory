@@ -305,12 +305,13 @@ function bubbahub_stage2_handle_interests() {
         $raw_interests = is_array( $_POST['user_interest'] ) ? $_POST['user_interest'] : array( $_POST['user_interest'] );
         foreach ( $raw_interests as $interest ) {
             $interest = sanitize_text_field( wp_unslash( $interest ) );
-            if ( '' !== $interest ) $user_interests[] = mb_substr( $interest, 0, 100 );
+            if ( '' !== $interest ) $user_interests[] = function_exists( 'mb_substr' ) ? mb_substr( $interest, 0, 100 ) : substr( $interest, 0, 100 );
         }
     }
     $user_interests = array_values( array_unique( array_slice( $user_interests, 0, 30 ) ) );
     bubbahub_stage2_update_meta( 'bubbahub_user_interest', $user_interests );
-    update_user_meta( get_current_user_id(), 'user_interest', $user_interests );
+    update_user_meta( get_current_user_id(), 'user_interest', implode( ', ', $user_interests ) );
+    update_user_meta( get_current_user_id(), 'User_interest', implode( ', ', $user_interests ) );
 
     /* Keep existing tag-based matching working by mapping typed interests to exact taxonomy terms. */
     $term_ids = array();
@@ -333,7 +334,7 @@ function bubbahub_stage2_handle_interests() {
         $raw_locations = is_array( $_POST['preferred_locations'] ) ? $_POST['preferred_locations'] : array( $_POST['preferred_locations'] );
         foreach ( $raw_locations as $location ) {
             $location = sanitize_text_field( wp_unslash( $location ) );
-            if ( '' !== $location ) $preferred_locations[] = mb_substr( $location, 0, 100 );
+            if ( '' !== $location ) $preferred_locations[] = function_exists( 'mb_substr' ) ? mb_substr( $location, 0, 100 ) : substr( $location, 0, 100 );
         }
     }
     $preferred_locations = array_values( array_unique( array_slice( $preferred_locations, 0, 20 ) ) );
@@ -358,24 +359,6 @@ function bubbahub_stage2_handle_interests() {
     update_user_meta( get_current_user_id(), 'preferred_age_range', $age_range );
     update_user_meta( get_current_user_id(), 'preferred_session_length', $session_length );
     update_user_meta( get_current_user_id(), 'preferred_price_bracket', $price_bracket );
-
-    /* Keep the existing planner location fields in sync with the first matching preferred location. */
-    $location_taxonomy = bubbahub_stage2_location_taxonomy();
-    $first_location_id = 0;
-    if ( $location_taxonomy && $preferred_locations ) {
-        foreach ( bubbahub_stage2_location_terms() as $term ) {
-            foreach ( $preferred_locations as $preferred_location ) {
-                if ( 0 === strcasecmp( trim( $term->name ), trim( $preferred_location ) ) || sanitize_title( $term->name ) === sanitize_title( $preferred_location ) ) {
-                    $first_location_id = (int) $term->term_id;
-                    break 2;
-                }
-            }
-        }
-    }
-    bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
-    bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $first_location_id );
-    bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', $preferred_locations ? '1' : '0' );
-    bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', '' );
 
     return 'Interests and preferences saved.';
 }
@@ -478,6 +461,13 @@ function bubbahub_stage2_render_interests() {
     $terms = bubbahub_stage2_taxonomy_terms();
 
     $user_interests = (array) bubbahub_stage2_user_meta('bubbahub_user_interest', array());
+    if ( ! $user_interests ) {
+        $legacy_interest_text = get_user_meta( get_current_user_id(), 'User_interest', true );
+        if ( '' === $legacy_interest_text ) $legacy_interest_text = get_user_meta( get_current_user_id(), 'user_interest', true );
+        if ( is_string( $legacy_interest_text ) && '' !== trim( $legacy_interest_text ) ) {
+            $user_interests = array_values( array_filter( array_map( 'trim', preg_split( '/[,\n]+/', $legacy_interest_text ) ) ) );
+        }
+    }
     if ( ! $user_interests ) {
         $legacy_ids = array_map( 'absint', (array) bubbahub_stage2_user_meta('bubbahub_interest_term_ids', array()) );
         if ( $legacy_ids && $terms ) {

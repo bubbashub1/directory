@@ -538,6 +538,7 @@ function bubbahub_stage2_handle_family_needs() {
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
     $allowed = array(
         'accessibility_needs' => array( 'step-free','accessible-toilet','quiet-space','hearing-support','visual-support','sensory-friendly','other' ),
+        'sen_friendly' => array( 'sen-friendly' ),
         'activity_setting' => array( 'indoor','outdoor' ),
         'term_holiday' => array( 'term-time','school-holidays' ),
         'preferred_days' => array( 'monday','tuesday','wednesday','thursday','friday','saturday','sunday' ),
@@ -1072,6 +1073,7 @@ function bubbahub_stage2_render_interests() {
 function bubbahub_stage2_render_family_needs() {
     $data = array(
         'accessibility_needs' => array('step-free'=>'Step-free access','accessible-toilet'=>'Accessible toilet','quiet-space'=>'Quiet / low-stimulation space','hearing-support'=>'Hearing support','visual-support'=>'Visual support','sensory-friendly'=>'Sensory-friendly','other'=>'Other support'),
+        'sen_friendly' => array('sen-friendly'=>'SEN friendly'),
         'activity_setting' => array('indoor'=>'Indoor','outdoor'=>'Outdoor'),
         'term_holiday' => array('term-time'=>'Term-time','school-holidays'=>'School holidays'),
         'preferred_days' => array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday'),

@@ -16,7 +16,7 @@ function bubbahub_notification_defaults() {
         'saved_groups'      => 1,
         'planner_reminders' => 1,
         'calendar_reminders' => 1,
-        'messages'          => 1,
+        'messages'          => 1,\n        'support_replies'   => 1,
         'email_digest'      => 1,
         'sms_reminders'     => 0,
         'community'         => 1,
@@ -33,7 +33,7 @@ function bubbahub_notification_defaults() {
 }
 
 function bubbahub_notification_channel_keys() { return array( 'email', 'in_hub', 'push', 'sms' ); }
-function bubbahub_notification_alert_keys() { return array( 'class_booking','booking_reminders','saved_groups','planner_reminders','calendar_reminders','messages','email_digest','community','new_groups','group_updates','new_suggestions','new_classes','whats_on' ); }
+function bubbahub_notification_alert_keys() { return array( 'class_booking','booking_reminders','saved_groups','planner_reminders','calendar_reminders','messages','support_replies','email_digest','community','new_groups','group_updates','new_suggestions','new_classes','whats_on' ); }
 function bubbahub_notification_alert_channels( $user_id = 0 ) {
     $user_id = $user_id ? absint( $user_id ) : get_current_user_id();
     $saved = $user_id ? get_user_meta( $user_id, 'bubbahub_notification_alert_channels', true ) : array();
@@ -50,7 +50,7 @@ function bubbahub_notification_save_alert_channels( $user_id, $posted ) {
     foreach ( bubbahub_notification_alert_keys() as $alert ) {
         $selected = isset( $posted[ $alert ] ) && is_array( $posted[ $alert ] ) ? $posted[ $alert ] : array();
         $clean[ $alert ] = array();
-        foreach ( bubbahub_notification_channel_keys() as $ch ) $clean[ $alert ][ $ch ] = ( in_array( $ch, $selected, true ) && in_array( $ch, array( 'email', 'in_hub' ), true ) ) ? 1 : 0;
+        foreach ( bubbahub_notification_channel_keys() as $ch ) $clean[ $alert ][ $ch ] = ( in_array( $ch, $selected, true ) && in_array( $ch, array( 'email', 'in_hub', 'push' ), true ) ) ? 1 : 0;
     }
     update_user_meta( absint( $user_id ), 'bubbahub_notification_alert_channels', $clean );
     return $clean;
@@ -197,7 +197,7 @@ function bubbahub_notification_alert_key_for_type( $type ) {
         'saved_group' => 'saved_groups', 'group_update' => 'group_updates',
         'calendar' => 'calendar_reminders', 'calendar_reminder' => 'calendar_reminders', 'calendar_event' => 'calendar_reminders',
         'planner' => 'planner_reminders', 'planner_reminder' => 'planner_reminders',
-        'message' => 'messages', 'support' => 'messages', 'community' => 'community',
+        'message' => 'messages', 'support' => 'support_replies', 'community' => 'community',
         'new_group' => 'new_groups', 'new_suggestion' => 'new_suggestions', 'new_class' => 'new_classes', 'whats_on' => 'whats_on',
         'email_digest' => 'email_digest'
     );
@@ -239,7 +239,7 @@ function bubbahub_notify_user( $user_id, $type, $title, $message, $url = '', $op
         'subject' => $title,
     ) );
 
-    if ( $options['portal'] && bubbahub_notification_channel_enabled( $user_id, $type, 'in_hub' ) ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );
+    if ( $options['portal'] && bubbahub_notification_channel_enabled( $user_id, $type, 'in_hub' ) ) bubbahub_notification_log( $user_id, $type, $title, $message, $url );\n\n    if ( bubbahub_notification_channel_enabled( $user_id, $type, 'push' ) && function_exists( 'bubbahub_push_send' ) ) {\n        bubbahub_push_send( $user_id, $title, $message, $url, array( 'type' => sanitize_key( $type ) ) );\n    }
 
     $sent = false;
     if ( $options['email'] && bubbahub_notification_channel_enabled( $user_id, $type, 'email' ) && bubbahub_notification_email_enabled( $user_id, $type ) && is_email( $user->user_email ) ) {

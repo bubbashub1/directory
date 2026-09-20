@@ -297,22 +297,93 @@ function bubbahub_stage2_handle_notifications() {
     }
     return 'Notification preferences saved.';
 }
+function bubbahub_stage2_consent_version() {
+    return '1.0';
+}
+
 function bubbahub_stage2_handle_consent() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'consent' !== $_POST['bh_stage2_action'] ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
-    $required = array( 'profile_shared_ack', 'class_leader_contact', 'payment_agreement', 'liability_ack' );
+    $required = array(
+        'profile_shared_ack',
+        'class_leader_contact',
+        'payment_agreement',
+        'liability_ack',
+        'booking_terms_ack',
+        'data_processing_ack',
+        'accuracy_declaration',
+    );
     foreach ( $required as $key ) {
-        if ( empty( $_POST[ $key ] ) ) return 'Please confirm all required safety and booking acknowledgements before saving.';
+        if ( empty( $_POST[ $key ] ) ) return 'Please confirm all required consent and booking declarations before saving.';
         bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, '1' );
     }
+
+    $fields = array(
+        'relationship'        => 'sanitize_text_field',
+        'emergency_name'      => 'sanitize_text_field',
+        'emergency_phone'     => 'sanitize_text_field',
+        'emergency_relation'  => 'sanitize_text_field',
+        'participant_name'    => 'sanitize_text_field',
+        'participant_dob'     => 'sanitize_text_field',
+        'allergies'           => 'sanitize_text_field',
+        'medical_notes'       => 'sanitize_textarea_field',
+        'accessibility_notes' => 'sanitize_textarea_field',
+        'additional_notes'    => 'sanitize_textarea_field',
+    );
+    foreach ( $fields as $key => $sanitizer ) {
+        $value = isset( $_POST[ $key ] ) ? call_user_func( $sanitizer, wp_unslash( $_POST[ $key ] ) ) : '';
+        bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, $value );
+    }
+
     foreach ( array( 'media_social', 'media_promotional', 'media_head_office' ) as $key ) {
         bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, ! empty( $_POST[ $key ] ) ? '1' : '0' );
     }
-    bubbahub_stage2_update_meta( 'bubbahub_consent_allergies', isset( $_POST['allergies'] ) ? sanitize_text_field( wp_unslash( $_POST['allergies'] ) ) : '' );
-    bubbahub_stage2_update_meta( 'bubbahub_consent_medical_notes', isset( $_POST['medical_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['medical_notes'] ) ) : '' );
+
+    bubbahub_stage2_update_meta( 'bubbahub_consent_version', bubbahub_stage2_consent_version() );
     bubbahub_stage2_update_meta( 'bubbahub_consent_saved_at', current_time( 'mysql' ) );
+    bubbahub_stage2_update_meta( 'bubbahub_consent_user_id', get_current_user_id() );
+
     return 'Consent and safety details saved.';
+}
+
+function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
+    $uid = absint( $uid ?: get_current_user_id() );
+    if ( ! $uid ) return array();
+
+    $keys = array(
+        'relationship','emergency_name','emergency_phone','emergency_relation',
+        'participant_name','participant_dob','allergies','medical_notes',
+        'accessibility_notes','additional_notes','profile_shared_ack',
+        'class_leader_contact','payment_agreement','liability_ack',
+        'booking_terms_ack','data_processing_ack','accuracy_declaration',
+        'media_social','media_promotional','media_head_office','version','saved_at',
+    );
+    $snapshot = array();
+    foreach ( $keys as $key ) {
+        $meta_key = 'bubbahub_consent_' . $key;
+        $snapshot[ $key ] = get_user_meta( $uid, $meta_key, true );
+    }
+    $snapshot['version'] = $snapshot['version'] ?: bubbahub_stage2_consent_version();
+    $snapshot['user_id'] = $uid;
+    $snapshot['captured_at'] = current_time( 'mysql' );
+    return $snapshot;
+}
+
+/* Copy the customer's current consent onto every booking as an immutable booking snapshot. */
+add_action( 'save_post_bh_booking', 'bubbahub_stage2_attach_consent_to_booking', 30, 3 );
+function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+    $uid = absint( get_post_meta( $post_id, '_bh_user_id', true ) );
+    if ( ! $uid ) return;
+
+    $snapshot = bubbahub_stage2_get_consent_snapshot( $uid );
+    if ( ! $snapshot ) return;
+
+    update_post_meta( $post_id, '_bh_consent_snapshot', $snapshot );
+    update_post_meta( $post_id, '_bh_consent_version', sanitize_text_field( $snapshot['version'] ) );
+    update_post_meta( $post_id, '_bh_consent_captured_at', sanitize_text_field( $snapshot['captured_at'] ) );
+    update_post_meta( $post_id, '_bh_consent_status', ! empty( $snapshot['accuracy_declaration'] ) ? 'accepted' : 'missing' );
 }
 
 /* -------------------------------------------------------------------------
@@ -559,22 +630,62 @@ function bubbahub_stage2_render_notifications() {
     </div>
     <style>
     .bh-notification-intro{margin:-4px 0 20px;color:#687a73;font-size:13px;line-height:1.55}.bh-notification-group{margin:0 0 24px;border:1px solid #e4ece8;border-radius:16px;overflow:hidden;background:#fff}.bh-notification-group h4{margin:0;padding:14px 16px;background:#f5f9f6;color:#31584b;font-size:14px}.bh-notification-preference{display:grid;grid-template-columns:42px minmax(0,1fr) 0 42px;gap:12px;align-items:center;padding:14px 16px;border-top:1px solid #edf1ef;cursor:pointer;position:relative}.bh-notification-preference-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#f3f7f4;font-size:18px}.bh-notification-preference-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.bh-notification-preference-copy strong{color:#24483d;font-size:14px}.bh-notification-preference-copy small{color:#718079;font-size:11px;line-height:1.45}.bh-notification-preference input{position:absolute;opacity:0;pointer-events:none}.bh-notification-preference-toggle{width:42px;height:24px;border-radius:999px;background:#cbd7d1;position:relative;transition:.2s}.bh-notification-preference-toggle:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:.2s}.bh-notification-preference input:checked + .bh-notification-preference-toggle{background:#2f6c52}.bh-notification-preference input:checked + .bh-notification-preference-toggle:after{transform:translateX(18px)}.bh-notification-sms-disabled{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 0 18px;border:1px dashed #d6dfda;border-radius:14px;background:#fafcfb;color:#738079}.bh-notification-sms-disabled>span:first-child{font-size:20px}.bh-notification-sms-disabled div{flex:1}.bh-notification-sms-disabled strong{display:block;color:#53665f;font-size:13px}.bh-notification-sms-disabled small{display:block;margin-top:3px;font-size:11px;line-height:1.4}.bh-notification-disabled-pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;border-radius:999px;background:#edf0ee;color:#718079}@media(max-width:600px){.bh-notification-preference{grid-template-columns:36px minmax(0,1fr) 42px;padding:13px 12px;gap:9px}.bh-notification-preference-icon{width:34px;height:34px}.bh-notification-preference-copy strong{font-size:13px}.bh-notification-preference-copy small{font-size:10.5px}.bh-notification-group h4{padding:12px}.bh-notification-sms-disabled{align-items:flex-start}.bh-notification-disabled-pill{margin-left:auto}}
-    </style>
+    
+    .bh-consent-card{overflow:hidden}.bh-consent-section{margin-top:18px;padding:18px;border:1px solid #e2ebe7;border-radius:18px;background:#fbfdfc}.bh-consent-section .bh-profile-card-heading{margin-bottom:12px}.bh-consent-section h4{margin:0;color:#28483f;font-size:15px}.bh-consent-section .bh-profile-grid{margin-top:0}.bh-consent-notice{margin-top:18px;padding:14px 16px;border-radius:14px;background:#eef7f2;border:1px solid #d5e9df;color:#48665d;font-size:12px;line-height:1.55}.bh-consent-notice strong{color:#294a40}@media(max-width:600px){.bh-consent-section{padding:14px;border-radius:15px}.bh-consent-section .bh-profile-grid.two{grid-template-columns:1fr}.bh-consent-section .bh-stage2-check{align-items:flex-start}.bh-consent-section .bh-stage2-check span{line-height:1.45}}
+</style>
     <?php return ob_get_clean();
 }
 function bubbahub_stage2_render_consent() {
     $saved = bubbahub_stage2_user_meta('bubbahub_consent_saved_at');
     ob_start(); ?>
-    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Class consent & safety</h3><span><?php echo $saved ? 'Last saved '.esc_html(wp_date('j M Y',strtotime($saved))) : 'Not completed yet'; ?></span></div>
-    <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="consent">
-    <label class="bh-stage2-check"><input type="checkbox" name="profile_shared_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_profile_shared_ack'),'1'); ?> required><span><strong>Profile information is accurate and may be shared securely with a class provider for attendance and safety.</strong></span></label>
-    <label class="bh-stage2-check"><input type="checkbox" name="class_leader_contact" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_class_leader_contact'),'1'); ?> required><span><strong>Class leaders may contact me by phone, email or SMS about sessions and emergencies.</strong></span></label>
-    <label class="bh-stage2-check"><input type="checkbox" name="payment_agreement" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_payment_agreement'),'1'); ?> required><span><strong>I agree to the payment, refund and cancellation terms for bookings.</strong></span></label>
-    <div class="bh-profile-grid two"><label><span>Allergies / dietary information</span><input name="allergies" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_allergies')); ?>"></label><label><span>Medical / safety notes</span><textarea name="medical_notes" rows="3"><?php echo esc_textarea(bubbahub_stage2_user_meta('bubbahub_consent_medical_notes')); ?></textarea></label></div>
-    <div class="bh-profile-card-heading" style="margin-top:20px"><h3>Photo & media permissions</h3><span>Optional</span></div>
-    <?php foreach(array('media_social'=>'Social media','media_promotional'=>'Promotional materials','media_head_office'=>'Bubba Hub / head office use') as $key=>$label): ?><label class="bh-stage2-check"><input type="checkbox" name="<?php echo esc_attr($key); ?>" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_'.$key),'1'); ?>><span><strong><?php echo esc_html($label); ?></strong></span></label><?php endforeach; ?>
-    <label class="bh-stage2-check"><input type="checkbox" name="liability_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_liability_ack'),'1'); ?> required><span><strong>I acknowledge the class provider's safety and liability requirements.</strong></span></label>
-    <div class="bh-profile-actions"><button type="submit">Save consent & safety</button></div></form></div><?php return ob_get_clean();
+    <div class="bh-profile-card bh-consent-card">
+      <div class="bh-profile-card-heading"><h3>Booking Consent & Safety</h3><span><?php echo $saved ? 'Version '.esc_html(bubbahub_stage2_user_meta('bubbahub_consent_version','1.0')).' · Last saved '.esc_html(wp_date('j M Y',strtotime($saved))) : 'Required before booking'; ?></span></div>
+      <p class="bh-muted">This consent form is your standing booking consent. When you make a booking, Bubba Hub saves a copy of the consent that applied at the time of booking with the booking record. You can update your standing consent here for future bookings.</p>
+      <form method="post" class="bh-stage2-form">
+        <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="consent">
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>1. Parent / guardian details</h4><span>Booking contact</span></div>
+          <div class="bh-profile-grid two">
+            <label><span>Relationship to child / participant</span><input name="relationship" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_relationship')); ?>" placeholder="Parent, guardian, carer..."></label>
+            <label><span>Participant / child name</span><input name="participant_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_name')); ?>"></label>
+            <label><span>Participant date of birth</span><input type="date" name="participant_dob" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_dob')); ?>"></label>
+          </div>
+        </div>
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>2. Emergency contact</h4><span>Safety</span></div>
+          <div class="bh-profile-grid two">
+            <label><span>Name</span><input name="emergency_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_emergency_name')); ?>"></label>
+            <label><span>Relationship</span><input name="emergency_relation" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_emergency_relation')); ?>"></label>
+            <label><span>Phone number</span><input type="tel" name="emergency_phone" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_emergency_phone')); ?>"></label>
+          </div>
+        </div>
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>3. Health, medical & accessibility information</h4><span>Safety information</span></div>
+          <div class="bh-profile-grid two">
+            <label><span>Allergies / dietary information</span><input name="allergies" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_allergies')); ?>"></label>
+            <label><span>Medical / safety notes</span><textarea name="medical_notes" rows="4"><?php echo esc_textarea(bubbahub_stage2_user_meta('bubbahub_consent_medical_notes')); ?></textarea></label>
+            <label><span>Accessibility / additional support</span><textarea name="accessibility_notes" rows="4"><?php echo esc_textarea(bubbahub_stage2_user_meta('bubbahub_consent_accessibility_notes')); ?></textarea></label>
+            <label><span>Other information the class provider should know</span><textarea name="additional_notes" rows="4"><?php echo esc_textarea(bubbahub_stage2_user_meta('bubbahub_consent_additional_notes')); ?></textarea></label>
+          </div>
+        </div>
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>4. Booking, contact & information sharing</h4><span>Required</span></div>
+          <label class="bh-stage2-check"><input type="checkbox" name="profile_shared_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_profile_shared_ack'),'1'); ?> required><span><strong>I confirm the information on my account is accurate and may be shared with the relevant class provider where needed for attendance, administration and safety.</strong></span></label>
+          <label class="bh-stage2-check"><input type="checkbox" name="class_leader_contact" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_class_leader_contact'),'1'); ?> required><span><strong>I consent to the class leader / provider contacting me about my booking, changes, attendance and urgent matters.</strong></span></label>
+          <label class="bh-stage2-check"><input type="checkbox" name="payment_agreement" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_payment_agreement'),'1'); ?> required><span><strong>I agree to the booking price, payment, refund and cancellation terms shown at the time of booking.</strong></span></label>
+          <label class="bh-stage2-check"><input type="checkbox" name="booking_terms_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_booking_terms_ack'),'1'); ?> required><span><strong>I understand that a booking is subject to the class provider's published rules, capacity, timetable and any session-specific requirements.</strong></span></label>
+          <label class="bh-stage2-check"><input type="checkbox" name="data_processing_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_data_processing_ack'),'1'); ?> required><span><strong>I understand that booking information will be processed and retained as needed to administer the booking, payment, safety and related communications.</strong></span></label>
+        </div>
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>5. Safety & responsibility</h4><span>Required</span></div>
+          <label class="bh-stage2-check"><input type="checkbox" name="liability_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_liability_ack'),'1'); ?> required><span><strong>I acknowledge that I am responsible for providing accurate safety information and following the class provider's instructions and safety requirements.</strong></span></label>
+          <label class="bh-stage2-check"><input type="checkbox" name="accuracy_declaration" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_accuracy_declaration'),'1'); ?> required><span><strong>I confirm that I am authorised to give this consent for the participant named above and that the information supplied is accurate to the best of my knowledge.</strong></span></label>
+        </div>
+        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>6. Photo & media permissions</h4><span>Optional</span></div>
+          <?php foreach(array('media_social'=>'Social media','media_promotional'=>'Promotional materials','media_head_office'=>'Bubba Hub / head office use') as $key=>$label): ?>
+            <label class="bh-stage2-check"><input type="checkbox" name="<?php echo esc_attr($key); ?>" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_'.$key),'1'); ?>><span><strong>I consent to the participant being included in <?php echo esc_html(strtolower($label)); ?> where applicable.</strong></span></label>
+          <?php endforeach; ?>
+        </div>
+        <div class="bh-consent-notice"><strong>Important:</strong> This form is a standing consent for Bubba Hub bookings. A snapshot is attached to each booking so the consent in force at the time of booking can be retained for the booking record.</div>
+        <div class="bh-profile-actions"><button type="submit">Save my booking consent</button></div>
+      </form>
+    </div>
+    <?php return ob_get_clean();
 }
 
 function bubbahub_stage2_pref_array( $key, $fallback = array() ) {

@@ -247,7 +247,6 @@ function bubbahub_stage2_handle_profile() {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
-
         $upload = wp_handle_upload(
             $_FILES['profile_image'],
             array(
@@ -497,8 +496,7 @@ function bubbahub_stage2_handle_interests() {
     }
     $user_interests = array_values( array_unique( array_slice( $user_interests, 0, 30 ) ) );
     bubbahub_stage2_update_meta( 'bubbahub_user_interest', $user_interests );
-    update_user_meta( get_current_user_id(), 'user_interest', implode( ', ', $user_interests ) );
-    update_user_meta( get_current_user_id(), 'User_interest', implode( ', ', $user_interests ) );
+    update_user_meta( get_current_user_id(), 'user_interest', implode( ', ', $user_interests ) );    update_user_meta( get_current_user_id(), 'User_interest', implode( ', ', $user_interests ) );
 
     /* Keep existing tag-based matching working by mapping typed interests to exact taxonomy terms. */
     $term_ids = array();
@@ -747,8 +745,7 @@ function bubbahub_stage2_render_profile( $user ) {
             </div>
             <div class="bh-profile-actions"><button type="submit">Save profile</button></div>
         </form>
-    </div>
-    <?php return ob_get_clean();
+    </div>    <?php return ob_get_clean();
 }
 
 function bubbahub_stage2_render_notifications() {
@@ -998,7 +995,6 @@ function bubbahub_stage2_render_preferences() {
                     </div>
                 </div>
             </div>
-
             <div id="bh-pref-filters" class="bh-preference-grid bh-preference-anchor">
                 <div class="bh-preference-section">
                     <div class="bh-preference-heading"><h4>Preferred Age Range</h4><p>Choose the age range you want to see in your group suggestions.</p></div>
@@ -1247,8 +1243,7 @@ function bubbahub_stage2_render_family_needs() {
       .bh-search-radius-field select{width:100%;min-height:42px;padding:8px 10px;border:1px solid #dbe7e1;border-radius:10px;background:#fbfdfc;color:#1e3330}
       @media(max-width:650px){.bh-settings-option-grid{grid-template-columns:1fr}}
     </style>
-    <?php return ob_get_clean();
-}
+    <?php return ob_get_clean();}
 function bubbahub_stage2_render_calendar_settings() {
     $reminder = bubbahub_stage2_user_meta('bubbahub_calendar_reminder_minutes','60');
     $calendar = bubbahub_stage2_user_meta('bubbahub_default_calendar','bubba');
@@ -1421,9 +1416,9 @@ function bubbahub_stage2_render_pro() {
 function bubbahub_stage2_render_payments() {
     $url = bubbahub_stage2_payment_methods_url();
     ob_start(); ?>
-    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Payment methods</h3><span>Secure payment provider</span></div>
+    <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My Connected Payment Options</h3><span>Secure payment provider</span></div>
     <div class="bh-pro-status"><strong>💳 Your payment details stay with the payment provider.</strong><p>Bubba Hub does not display or store full card numbers here. Use the connected GetPaid / Stripe customer area to add, remove or update a payment method.</p></div>
-    <div class="bh-profile-actions"><a class="bh-stage2-button" href="<?php echo esc_url($url); ?>">Open payment methods</a></div></div>
+    <div class="bh-profile-actions"><a class="bh-stage2-button" href="<?php echo esc_url($url); ?>">Open My Connected Payment Options</a></div></div>
     <?php return ob_get_clean();
 }
 
@@ -1486,9 +1481,9 @@ function bubbahub_account_settings_stage2_shortcode() {
             <a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'privacy'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-account-settings-icon" aria-hidden="true">🔐</span><span class="bh-account-settings-content"><h3>Privacy & Security</h3><p>Open account security and submit data or deletion requests.</p></span><span class="bh-account-settings-arrow" aria-hidden="true">→</span></a>
             <a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notifications'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-account-settings-icon" aria-hidden="true">🔔</span><span class="bh-account-settings-content"><h3>Notification preferences</h3><p>Manage every optional notification type, including new groups, updates, suggestions, bookings and planner alerts.</p></span><span class="bh-account-settings-arrow" aria-hidden="true">→</span></a>
             <a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'consent'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-account-settings-icon" aria-hidden="true">🛡️</span><span class="bh-account-settings-content"><h3>Class Consent & Safety</h3><p>Manage safety information, contact consent and media permissions.</p></span><span class="bh-account-settings-arrow" aria-hidden="true">→</span></a>
-            <a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'payments'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-account-settings-icon" aria-hidden="true">💳</span><span class="bh-account-settings-content"><h3>Payment methods</h3><p>Open the connected GetPaid / Stripe payment area securely.</p></span><span class="bh-account-settings-arrow" aria-hidden="true">→</span></a>
+            <a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'payments'))); ?>" style="display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;min-width:0!important;min-height:78px!important;height:auto!important;margin:0!important;padding:16px 18px!important;box-sizing:border-box!important;overflow:hidden!important;position:static!important;float:none!important;"><span class="bh-account-settings-icon" aria-hidden="true">💳</span><span class="bh-account-settings-content"><h3>My Connected Payment Options</h3><p>Open your connected payment provider securely to manage your payment options.</p></span><span class="bh-account-settings-arrow" aria-hidden="true">→</span></a>
         </div>
-        <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Connected account</h3><span>Ultimate Member / WordPress</span></div><div class="bh-connected-row"><div><strong><?php echo esc_html($user->display_name); ?></strong><small><?php echo esc_html($user->user_email); ?></small></div><a href="<?php echo esc_url($um_url); ?>">Open Ultimate Member →</a></div></div>
+        <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>My Membership</h3><span>Membership &amp; account</span></div><div class="bh-connected-row"><div><strong><?php echo esc_html($user->display_name); ?></strong><small><?php echo esc_html($user->user_email); ?></small></div><a href="<?php echo esc_url($um_url); ?>">Open My Membership →</a></div></div>
         <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Child profiles</h3><a href="<?php echo esc_url(add_query_arg('bh_add_child','1')); ?>">＋ Manage children</a></div><?php if($children): ?><div class="bh-account-children-list"><?php foreach($children as $child): $name=function_exists('bubbahub_profile_field')?bubbahub_profile_field($child->ID,'child_name',$child->post_title):$child->post_title; $status=function_exists('bubbahub_profile_field')?bubbahub_profile_field($child->ID,'child_status','born'):'born'; ?><div><span class="bh-mini-avatar"><?php echo esc_html(strtoupper(substr((string)$name,0,1))); ?></span><div><strong><?php echo esc_html($name); ?></strong><small><?php echo 'expecting'===$status?'Expecting':'Child profile'; ?></small></div><a href="<?php echo esc_url(add_query_arg(array('bh_add_child'=>1,'child_id'=>$child->ID))); ?>">Edit</a></div><?php endforeach; ?></div><?php else: ?><p class="bh-muted">No child profiles have been added yet.</p><?php endif; ?></div>
         <div class="bh-profile-card"><div class="bh-profile-card-heading"><h3>Payment account</h3><span>GetPaid connection</span></div><div class="bh-connected-row"><div><strong><?php echo $is_pro ? 'Pro / payment account available' : 'Payment history and invoices'; ?></strong><small>Use the connected payment area for invoices, subscriptions and secure payment details.</small></div><a href="<?php echo esc_url($payment_url); ?>">Open payments →</a></div></div>
     </div>

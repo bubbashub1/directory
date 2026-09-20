@@ -124,6 +124,7 @@ function bubbahub_myhub_groups_family_preferences(){
         'preferred_times'=>$normalise($read(array('preferred_times'))),
         'price'=>$normalise($read(array('preferred_price_bracket'))),
         'sen_friendly'=>$normalise($read(array('sen_friendly'))),
+        'free_activities_only'=>get_user_meta(get_current_user_id(),'bubbahub_free_activities_only',true)==='1',
     );
 }
 function bubbahub_myhub_groups_listing_value($id,$name,$default=array()){
@@ -258,6 +259,9 @@ function bubbahub_myhub_groups_suggested_ids($exclude=array(),$selected=array())
     while($q->have_posts()){
         $q->the_post();
         $id=get_the_ID();
+        $family_prefs=bubbahub_myhub_groups_family_preferences();
+        /* Free activities only is a hard eligibility check when enabled. */
+        if(!empty($family_prefs['free_activities_only']) && !bubbahub_myhub_groups_truthy(bubbahub_myhub_groups_listing_value($id,'isFree',false)))continue;
         /* When child ages are available, Age_Range is a hard eligibility check.
          * Interests and preferred location then rank the age-appropriate groups. */
         if($ages){

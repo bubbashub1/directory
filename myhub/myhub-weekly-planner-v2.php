@@ -410,6 +410,7 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
     if ( $saved_calendar_id ) {
         foreach ( $saved_calendars as $saved_calendar ) {
             if ( ! empty( $saved_calendar['id'] ) && hash_equals( (string) $saved_calendar['id'], $saved_calendar_id ) ) {
+                foreach ( array('bh_search','bh_location','bh_region','bh_town','bh_category','bh_day','bh_term_time','bh_age','bh_price','bh_radius','bh_lat','bh_lng','bh_acf') as $saved_key ) unset( $_GET[$saved_key] );
                 if ( ! empty( $saved_calendar['params'] ) && is_array( $saved_calendar['params'] ) ) {
                     foreach ( $saved_calendar['params'] as $key => $value ) $_GET[ $key ] = $value;
                 }

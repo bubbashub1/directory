@@ -53,7 +53,7 @@ function bubbahub_advanced_search_builtin_enabled( $key ) {
         'age_range'=>1,'region'=>1,'town'=>1,'category'=>1,'day'=>1,
         'term_time'=>1,'location'=>1,'price'=>1,
     );
-    $option = get_field( 'advanced_search_' . $key, 'option' );
+    $option = function_exists( 'get_field' ) ? get_field( 'advanced_search_' . $key, 'option' ) : null;
     return array_key_exists( $key, $defaults ) ? ( false === $option ? $defaults[$key] : (bool) $option ) : true;
 }
 

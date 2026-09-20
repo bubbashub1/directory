@@ -501,7 +501,19 @@ function bubbahub_stage2_consent_is_valid( $uid = 0 ) {
     foreach ( $required as $key ) {
         if ( empty( $snapshot[ $key ] ) ) return false;
     }
-    return ! empty( $snapshot['version'] ) && ! empty( $snapshot['saved_at'] );
+
+    /* Section 1 must identify the relationship and participant. */
+    $relationships = array_filter( (array) $snapshot['relationship'] );
+    if ( ! $relationships ) return false;
+    $child_ids = array_filter( array_map( 'absint', (array) $snapshot['child_profile_ids'] ) );
+    if ( ! $child_ids && '' === trim( (string) $snapshot['participant_name'] ) ) return false;
+
+    /* Section 6 requires an explicit Yes/No choice for every media category. */
+    foreach ( array( 'media_social', 'media_promotional', 'media_head_office' ) as $media_key ) {
+        if ( ! isset( $snapshot[ $media_key ] ) || ! in_array( (string) $snapshot[ $media_key ], array( '0', '1' ), true ) ) return false;
+    }
+
+    return ! empty( $snapshot['version'] ) && ! empty( $snapshot['saved_at'] ) && version_compare( (string) $snapshot['version'], '1.1', '>=' );
 }
 
 /* Copy the customer's current consent onto every booking as an immutable booking snapshot. */

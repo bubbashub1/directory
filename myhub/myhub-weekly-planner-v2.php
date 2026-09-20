@@ -1597,15 +1597,6 @@ add_action( 'wp_head', function() {
     border-color:#d9e7e2!important;
   }
 }
-<script>
-document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('[data-planner-view-select]').forEach(function(select){
-    select.addEventListener('change',function(){
-      if(this.value) window.location.href=this.value;
-    });
-  });
-});
-</script>
 @media(max-width:480px){.bh-planner-subscribe-button,.bh-planner-print-button{flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;font-size:0!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important}.bh-planner-subscribe-button::before{content:'📅';font-size:20px!important;line-height:1!important}.bh-planner-print-button::before{content:'🖨';font-size:20px!important;line-height:1!important}.bh-planner-actions{justify-content:center!important}}
 </style>
 

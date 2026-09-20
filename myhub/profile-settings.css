@@ -139,3 +139,61 @@
   .bh-nap-row input[type=time]{font-size:10px;padding:6px 4px}
   .bh-profile-specialist-check{gap:9px}
 }
+
+/* Account Settings layout normalisation
+ * Prevents theme/plugin flex rules from pushing cards, fields and actions out of alignment.
+ */
+.bh-profile-shell{width:100%;box-sizing:border-box}
+.bh-profile-shell .bh-account-grid{width:100%;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.bh-profile-shell .bh-account-card{width:100%;min-width:0;height:100%;box-sizing:border-box}
+.bh-profile-shell .bh-account-card>div{min-width:0;flex:1 1 auto}
+.bh-profile-shell .bh-account-card>span:last-child{flex:0 0 auto}
+.bh-profile-shell .bh-profile-card{width:100%;box-sizing:border-box}
+.bh-profile-shell .bh-profile-grid{width:100%;align-items:start}
+.bh-profile-shell .bh-profile-grid>label{width:100%;min-width:0}
+.bh-profile-shell .bh-profile-grid input,
+.bh-profile-shell .bh-profile-grid select,
+.bh-profile-shell .bh-profile-grid textarea{display:block;width:100%;max-width:100%;min-height:42px;box-sizing:border-box;margin:0}
+.bh-profile-shell .bh-connected-row{width:100%;box-sizing:border-box}
+.bh-profile-shell .bh-connected-row>div{flex:1 1 auto;min-width:0}
+.bh-profile-shell .bh-connected-row>a{flex:0 0 auto}
+.bh-profile-shell .bh-family-profile-heading{width:100%}
+.bh-profile-shell .bh-family-profile-heading>div:first-child{min-width:0;flex:1 1 auto}
+.bh-profile-shell .bh-family-profile-add-buttons{flex:0 0 auto}
+.bh-profile-shell .bh-account-children-list{width:100%}
+.bh-profile-shell .bh-account-children-list>div{width:100%;box-sizing:border-box;min-width:0}
+.bh-profile-shell .bh-account-children-list>div>div{flex:1 1 auto;min-width:0}
+.bh-profile-shell .bh-profile-actions{width:100%;box-sizing:border-box}
+
+@media(max-width:800px){
+ .bh-profile-shell .bh-account-grid{grid-template-columns:1fr}
+ .bh-profile-shell .bh-account-card{min-height:0;height:auto}
+ .bh-profile-shell .bh-profile-grid.two{grid-template-columns:1fr}
+ .bh-profile-shell .bh-profile-header{width:100%}
+ .bh-profile-shell .bh-connected-row{align-items:flex-start}
+}
+
+@media(max-width:620px){
+ .bh-profile-shell{max-width:100%;margin:0;padding-left:10px;padding-right:10px}
+ .bh-profile-shell .bh-profile-header,
+ .bh-profile-shell .bh-profile-card{width:100%}
+ .bh-profile-shell .bh-account-card{padding:15px;min-height:0}
+ .bh-profile-shell .bh-account-card>span:first-child{flex:0 0 auto}
+ .bh-profile-shell .bh-account-card>span:last-child{margin-left:auto}
+ .bh-profile-shell .bh-connected-row{display:flex;flex-direction:column;gap:10px}
+ .bh-profile-shell .bh-connected-row>a{width:100%;display:block;text-align:center;padding:10px 12px;border:1px solid #e6ebe9;border-radius:10px;box-sizing:border-box}
+ .bh-profile-shell .bh-family-profile-heading{display:flex;flex-direction:column;align-items:stretch;gap:14px}
+ .bh-profile-shell .bh-family-profile-add-buttons{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .bh-profile-shell .bh-family-profile-add-buttons a{width:100%;min-width:0}
+ .bh-profile-shell .bh-profile-card-heading{width:100%}
+ .bh-profile-shell .bh-profile-card-heading>div{min-width:0}
+ .bh-profile-shell .bh-profile-actions{display:flex;flex-direction:column;align-items:stretch}
+ .bh-profile-shell .bh-profile-actions button,
+ .bh-profile-shell .bh-profile-actions a{width:100%;max-width:none}
+}
+
+@media(max-width:420px){
+ .bh-profile-shell .bh-family-profile-add-buttons{grid-template-columns:1fr}
+ .bh-profile-shell .bh-profile-card{padding:14px 12px}
+ .bh-profile-shell .bh-account-card{padding:14px 12px}
+}

@@ -299,40 +299,85 @@ function bubbahub_stage2_handle_interests() {
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
     $taxonomy = bubbahub_stage2_taxonomy();
+
+    $user_interests = array();
+    if ( isset( $_POST['user_interest'] ) ) {
+        $raw_interests = is_array( $_POST['user_interest'] ) ? $_POST['user_interest'] : array( $_POST['user_interest'] );
+        foreach ( $raw_interests as $interest ) {
+            $interest = sanitize_text_field( wp_unslash( $interest ) );
+            if ( '' !== $interest ) $user_interests[] = mb_substr( $interest, 0, 100 );
+        }
+    }
+    $user_interests = array_values( array_unique( array_slice( $user_interests, 0, 30 ) ) );
+    bubbahub_stage2_update_meta( 'bubbahub_user_interest', $user_interests );
+    update_user_meta( get_current_user_id(), 'user_interest', $user_interests );
+
+    /* Keep existing tag-based matching working by mapping typed interests to exact taxonomy terms. */
     $term_ids = array();
-    if ( $taxonomy && ! empty( $_POST['interest_terms'] ) && is_array( $_POST['interest_terms'] ) ) {
-        foreach ( $_POST['interest_terms'] as $term_id ) {
-            $term_id = absint( $term_id );
-            if ( $term_id && term_exists( $term_id, $taxonomy ) ) $term_ids[] = $term_id;
+    if ( $taxonomy && $user_interests ) {
+        $terms = bubbahub_stage2_taxonomy_terms();
+        foreach ( $terms as $term ) {
+            foreach ( $user_interests as $interest ) {
+                if ( 0 === strcasecmp( trim( $term->name ), trim( $interest ) ) || sanitize_title( $term->name ) === sanitize_title( $interest ) ) {
+                    $term_ids[] = (int) $term->term_id;
+                    break;
+                }
+            }
         }
     }
-    $term_ids = array_values( array_unique( $term_ids ) );
     bubbahub_stage2_update_meta( 'bubbahub_interest_taxonomy', $taxonomy );
-    bubbahub_stage2_update_meta( 'bubbahub_interest_term_ids', $term_ids );
+    bubbahub_stage2_update_meta( 'bubbahub_interest_term_ids', array_values( array_unique( $term_ids ) ) );
 
-    // The planner preferences have their own form. Do not overwrite them
-    // when the separate "Save interests & groups" form is submitted.
-    if ( isset( $_POST['planner_location'] ) || isset( $_POST['planner_keyword'] ) ) {
-        $location_taxonomy = bubbahub_stage2_location_taxonomy();
-        $location_term_id = isset( $_POST['planner_location'] ) ? absint( $_POST['planner_location'] ) : 0;
-        if ( $location_term_id && ( ! $location_taxonomy || ! term_exists( $location_term_id, $location_taxonomy ) ) ) $location_term_id = 0;
-        bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
-        bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $location_term_id );
-        $keyword = isset( $_POST['planner_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['planner_keyword'] ) ) : '';
-        bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', $keyword );
-        bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', '1' );
-    }
-
-    $custom_groups = array();
-    if ( ! empty( $_POST['custom_groups'] ) && is_array( $_POST['custom_groups'] ) ) {
-        foreach ( $_POST['custom_groups'] as $group ) {
-            $group = sanitize_text_field( wp_unslash( $group ) );
-            if ( $group ) $custom_groups[] = $group;
+    $preferred_locations = array();
+    if ( isset( $_POST['preferred_locations'] ) ) {
+        $raw_locations = is_array( $_POST['preferred_locations'] ) ? $_POST['preferred_locations'] : array( $_POST['preferred_locations'] );
+        foreach ( $raw_locations as $location ) {
+            $location = sanitize_text_field( wp_unslash( $location ) );
+            if ( '' !== $location ) $preferred_locations[] = mb_substr( $location, 0, 100 );
         }
     }
-    $custom_groups = array_values( array_unique( array_slice( $custom_groups, 0, bubbahub_stage2_is_pro() ? 100 : 5 ) ) );
-    bubbahub_stage2_update_meta( 'bubbahub_custom_group_lists', $custom_groups );
-    return 'Interests and group preferences saved.';
+    $preferred_locations = array_values( array_unique( array_slice( $preferred_locations, 0, 20 ) ) );
+    bubbahub_stage2_update_meta( 'bubbahub_preferred_locations', $preferred_locations );
+    update_user_meta( get_current_user_id(), 'preferred_locations', $preferred_locations );
+
+    $age_ranges = array( 'pregnancy','0-6 months','6-12 months','1-2 years','2-3 years','3-5 years','5-8 years','8+ years' );
+    $session_lengths = array( 'under-30','30-45','45-60','60-90','90-plus' );
+    $price_brackets = array( 'free','under-5','5-10','10-15','15-plus' );
+
+    $age_range = isset( $_POST['preferred_age_range'] ) ? sanitize_text_field( wp_unslash( $_POST['preferred_age_range'] ) ) : '';
+    $session_length = isset( $_POST['preferred_session_length'] ) ? sanitize_key( wp_unslash( $_POST['preferred_session_length'] ) ) : '';
+    $price_bracket = isset( $_POST['preferred_price_bracket'] ) ? sanitize_key( wp_unslash( $_POST['preferred_price_bracket'] ) ) : '';
+
+    if ( ! in_array( $age_range, $age_ranges, true ) ) $age_range = '';
+    if ( ! in_array( $session_length, $session_lengths, true ) ) $session_length = '';
+    if ( ! in_array( $price_bracket, $price_brackets, true ) ) $price_bracket = '';
+
+    bubbahub_stage2_update_meta( 'bubbahub_preferred_age_range', $age_range );
+    bubbahub_stage2_update_meta( 'bubbahub_preferred_session_length', $session_length );
+    bubbahub_stage2_update_meta( 'bubbahub_preferred_price_bracket', $price_bracket );
+    update_user_meta( get_current_user_id(), 'preferred_age_range', $age_range );
+    update_user_meta( get_current_user_id(), 'preferred_session_length', $session_length );
+    update_user_meta( get_current_user_id(), 'preferred_price_bracket', $price_bracket );
+
+    /* Keep the existing planner location fields in sync with the first matching preferred location. */
+    $location_taxonomy = bubbahub_stage2_location_taxonomy();
+    $first_location_id = 0;
+    if ( $location_taxonomy && $preferred_locations ) {
+        foreach ( bubbahub_stage2_location_terms() as $term ) {
+            foreach ( $preferred_locations as $preferred_location ) {
+                if ( 0 === strcasecmp( trim( $term->name ), trim( $preferred_location ) ) || sanitize_title( $term->name ) === sanitize_title( $preferred_location ) ) {
+                    $first_location_id = (int) $term->term_id;
+                    break 2;
+                }
+            }
+        }
+    }
+    bubbahub_stage2_update_meta( 'bubbahub_planner_location_taxonomy', $location_taxonomy );
+    bubbahub_stage2_update_meta( 'bubbahub_planner_location_term_id', $first_location_id );
+    bubbahub_stage2_update_meta( 'bubbahub_planner_preferences_saved', $preferred_locations ? '1' : '0' );
+    bubbahub_stage2_update_meta( 'bubbahub_planner_keyword', '' );
+
+    return 'Interests and preferences saved.';
 }
 
 /* -------------------------------------------------------------------------
@@ -429,42 +474,174 @@ function bubbahub_stage2_render_consent() {
 }
 
 function bubbahub_stage2_render_interests() {
-    $terms = bubbahub_stage2_taxonomy_terms();
-    $selected = (array) bubbahub_stage2_user_meta('bubbahub_interest_term_ids',array());
-    $custom = (array) bubbahub_stage2_user_meta('bubbahub_custom_group_lists',array());
-    $is_pro = bubbahub_stage2_is_pro();
     $taxonomy = bubbahub_stage2_taxonomy();
-    $location_taxonomy = bubbahub_stage2_location_taxonomy();
+    $terms = bubbahub_stage2_taxonomy_terms();
+
+    $user_interests = (array) bubbahub_stage2_user_meta('bubbahub_user_interest', array());
+    if ( ! $user_interests ) {
+        $legacy_ids = array_map( 'absint', (array) bubbahub_stage2_user_meta('bubbahub_interest_term_ids', array()) );
+        if ( $legacy_ids && $terms ) {
+            foreach ( $terms as $term ) {
+                if ( in_array( (int) $term->term_id, $legacy_ids, true ) ) $user_interests[] = $term->name;
+            }
+        }
+    }
+
+    $preferred_locations = (array) bubbahub_stage2_user_meta('bubbahub_preferred_locations', array());
+    if ( ! $preferred_locations ) {
+        $legacy_location_id = absint( bubbahub_stage2_user_meta('bubbahub_planner_location_term_id', 0) );
+        $legacy_location_taxonomy = bubbahub_stage2_location_taxonomy();
+        if ( $legacy_location_id && $legacy_location_taxonomy ) {
+            $legacy_location_name = get_term_field( 'name', $legacy_location_id, $legacy_location_taxonomy );
+            if ( ! is_wp_error( $legacy_location_name ) && $legacy_location_name ) $preferred_locations[] = $legacy_location_name;
+        }
+    }
+
     $location_terms = bubbahub_stage2_location_terms();
-    $location_id = absint( bubbahub_stage2_user_meta('bubbahub_planner_location_term_id',0) );
-    $keyword = (string) bubbahub_stage2_user_meta('bubbahub_planner_keyword','');
-    $saved = '1' === (string) bubbahub_stage2_user_meta('bubbahub_planner_preferences_saved','0');
+    $age_range = (string) bubbahub_stage2_user_meta('bubbahub_preferred_age_range', '');
+    $session_length = (string) bubbahub_stage2_user_meta('bubbahub_preferred_session_length', '');
+    $price_bracket = (string) bubbahub_stage2_user_meta('bubbahub_preferred_price_bracket', '');
+
+    $age_options = array(
+        '' => 'Any age',
+        'pregnancy' => 'Pregnancy',
+        '0-6 months' => '0–6 months',
+        '6-12 months' => '6–12 months',
+        '1-2 years' => '1–2 years',
+        '2-3 years' => '2–3 years',
+        '3-5 years' => '3–5 years',
+        '5-8 years' => '5–8 years',
+        '8+ years' => '8+ years',
+    );
+    $session_options = array(
+        '' => 'Any session length',
+        'under-30' => 'Under 30 minutes',
+        '30-45' => '30–45 minutes',
+        '45-60' => '45–60 minutes',
+        '60-90' => '60–90 minutes',
+        '90-plus' => '90+ minutes',
+    );
+    $price_options = array(
+        '' => 'Any price',
+        'free' => 'Free',
+        'under-5' => 'Under £5',
+        '5-10' => '£5–£10',
+        '10-15' => '£10–£15',
+        '15-plus' => '£15+',
+    );
+
     ob_start(); ?>
-    <div class="bh-profile-card">
-      <div class="bh-profile-card-heading"><h3>Weekly Planner Preferences</h3><span><?php echo $saved ? 'Saved' : 'Not saved'; ?></span></div>
-      <?php if ( $saved ) : ?>
-        <div class="bh-pro-status"><strong>Your planner preferences are locked in.</strong><p><?php echo $location_id ? 'Location: ' . esc_html( get_term_field( 'name', $location_id, $location_taxonomy ) ) : 'Location: Any'; ?><?php echo $keyword ? ' · Keyword: ' . esc_html($keyword) : ' · Keyword: Any'; ?></p></div>
-        <div class="bh-profile-actions"><button type="button" class="bh-planner-pref-edit" onclick="this.closest('.bh-profile-card').querySelector('.bh-planner-pref-form').hidden=false;this.closest('.bh-profile-card').querySelector('.bh-planner-pref-summary').hidden=true;this.hidden=true;">Edit preferences</button></div>
-        <div class="bh-planner-pref-summary" hidden></div>
-      <?php endif; ?>
-      <form method="post" class="bh-stage2-form bh-planner-pref-form" <?php echo $saved ? 'hidden' : ''; ?>>
-        <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="interests">
-        <div class="bh-profile-grid two">
-          <label><span>Location</span><select name="planner_location"><option value="0">Any location</option><?php foreach($location_terms as $term): ?><option value="<?php echo esc_attr($term->term_id); ?>" <?php selected($location_id,(int)$term->term_id); ?>><?php echo esc_html($term->name); ?></option><?php endforeach; ?></select></label>
-          <label><span>Keyword search</span><input type="search" name="planner_keyword" value="<?php echo esc_attr($keyword); ?>" placeholder="e.g. music, messy play, baby"></label>
+    <div class="bh-preference-card">
+        <div class="bh-profile-card-heading">
+            <div><h3>My Interests</h3><span>Tell us what you and your family enjoy</span></div>
         </div>
-        <p class="bh-muted">Choose a saved location and/or enter a keyword. Your Weekly Planner will use these preferences to find matching groups.</p>
-        <div class="bh-profile-actions"><button type="submit"><?php echo $saved ? 'Save changes' : 'Save preferences'; ?></button></div>
-      </form>
+        <form method="post" class="bh-stage2-form bh-preferences-form" data-bh-preferences-form>
+            <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?>
+            <input type="hidden" name="bh_stage2_action" value="interests">
+
+            <div class="bh-preference-section">
+                <div class="bh-preference-heading"><h4>My Interests <small>(User_interest)</small></h4><p>Start typing to get suggestions from tags already used by Bubba Hub groups, or enter your own interest.</p></div>
+                <div class="bh-chip-editor" data-bh-chip-editor data-field="user_interest">
+                    <div class="bh-chip-list" data-bh-chip-list>
+                        <?php foreach ( $user_interests as $interest ) : ?>
+                            <span class="bh-preference-chip"><span><?php echo esc_html($interest); ?></span><button type="button" data-bh-remove aria-label="Remove <?php echo esc_attr($interest); ?>">×</button><input type="hidden" name="user_interest[]" value="<?php echo esc_attr($interest); ?>"></span>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="bh-chip-input-row">
+                        <input type="text" data-bh-chip-input list="bh-interest-suggestions" placeholder="e.g. messy play, baby music, swimming" autocomplete="off">
+                        <button type="button" class="bh-chip-add" data-bh-add>Add</button>
+                    </div>
+                    <datalist id="bh-interest-suggestions"><?php foreach ( $terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
+                </div>
+            </div>
+
+            <div class="bh-preference-section">
+                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Add as many towns, areas or regions as you like. Each preference is listed separately.</p></div>
+                <div class="bh-chip-editor" data-bh-chip-editor data-field="preferred_locations">
+                    <div class="bh-chip-list" data-bh-chip-list>
+                        <?php foreach ( $preferred_locations as $location ) : ?>
+                            <span class="bh-preference-chip"><span><?php echo esc_html($location); ?></span><button type="button" data-bh-remove aria-label="Remove <?php echo esc_attr($location); ?>">×</button><input type="hidden" name="preferred_locations[]" value="<?php echo esc_attr($location); ?>"></span>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="bh-chip-input-row">
+                        <input type="text" data-bh-chip-input list="bh-location-suggestions" placeholder="e.g. Torbay, Exeter, Paignton" autocomplete="off">
+                        <button type="button" class="bh-chip-add" data-bh-add>Add location</button>
+                    </div>
+                    <datalist id="bh-location-suggestions"><?php foreach ( $location_terms as $term ) : ?><option value="<?php echo esc_attr($term->name); ?>"></option><?php endforeach; ?></datalist>
+                </div>
+            </div>
+
+            <div class="bh-preference-grid">
+                <div class="bh-preference-section">
+                    <div class="bh-preference-heading"><h4>Preferred Age Range</h4><p>Choose the age range you want to see in your group suggestions.</p></div>
+                    <label class="bh-preference-field"><span>Age range</span><select name="preferred_age_range"><?php foreach($age_options as $value=>$label): ?><option value="<?php echo esc_attr($value); ?>" <?php selected($age_range,$value); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
+                </div>
+                <div class="bh-preference-section">
+                    <div class="bh-preference-heading"><h4>Preferred Session Length</h4><p>Choose the session length that suits your family.</p></div>
+                    <label class="bh-preference-field"><span>Session length</span><select name="preferred_session_length"><?php foreach($session_options as $value=>$label): ?><option value="<?php echo esc_attr($value); ?>" <?php selected($session_length,$value); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
+                </div>
+                <div class="bh-preference-section">
+                    <div class="bh-preference-heading"><h4>Preferred Price Bracket</h4><p>Choose your preferred price range per session.</p></div>
+                    <label class="bh-preference-field"><span>Price bracket</span><select name="preferred_price_bracket"><?php foreach($price_options as $value=>$label): ?><option value="<?php echo esc_attr($value); ?>" <?php selected($price_bracket,$value); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
+                </div>
+            </div>
+
+            <div class="bh-profile-actions"><button type="submit">Save interests & preferences</button></div>
+        </form>
     </div>
-    <div class="bh-profile-card">
-      <div class="bh-profile-card-heading"><h3>My interests & groups</h3><span><?php echo $taxonomy ? 'Using existing website tags' : 'No group interest taxonomy detected'; ?></span></div>
-      <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="interests">
-      <?php if($terms): ?><div class="bh-interest-tags"><?php foreach($terms as $term): ?><label><input type="checkbox" name="interest_terms[]" value="<?php echo esc_attr($term->term_id); ?>" <?php checked(in_array((int)$term->term_id,array_map('intval',$selected),true)); ?>><span><?php echo esc_html($term->name); ?></span></label><?php endforeach; ?></div><?php else: ?><p class="bh-muted">No interest/tag taxonomy is currently available.</p><?php endif; ?>
-      <div class="bh-profile-card-heading" style="margin-top:20px"><h3>Custom group lists</h3><span><?php echo $is_pro ? 'Unlimited Pro' : count($custom).' / 5 on Free'; ?></span></div>
-      <div class="bh-custom-groups"><?php foreach($custom as $group): ?><label><input type="hidden" name="custom_groups[]" value="<?php echo esc_attr($group); ?>"><span><?php echo esc_html($group); ?></span></label><?php endforeach; ?></div>
-      <div class="bh-profile-actions"><button type="submit">Save interests & groups</button></div></form>
-    </div>
+
+    <script>
+    (function(){
+        function initChipEditor(editor){
+            if(editor.dataset.ready) return;
+            editor.dataset.ready='1';
+            var input=editor.querySelector('[data-bh-chip-input]');
+            var add=editor.querySelector('[data-bh-add]');
+            var list=editor.querySelector('[data-bh-chip-list]');
+            if(!input||!add||!list) return;
+
+            function normalise(value){ return value.trim().replace(/\\s+/g,' '); }
+            function values(){
+                return Array.prototype.map.call(list.querySelectorAll('input[type="hidden"]'),function(el){ return el.value.trim().toLowerCase(); });
+            }
+            function addValue(){
+                var value=normalise(input.value);
+                if(!value||values().indexOf(value.toLowerCase())!==-1) return;
+                var chip=document.createElement('span');
+                chip.className='bh-preference-chip';
+                var text=document.createElement('span');
+                text.textContent=value;
+                var remove=document.createElement('button');
+                remove.type='button';
+                remove.setAttribute('data-bh-remove','');
+                remove.setAttribute('aria-label','Remove '+value);
+                remove.textContent='×';
+                remove.addEventListener('click',function(){ chip.remove(); });
+                var hidden=document.createElement('input');
+                hidden.type='hidden';
+                hidden.name=editor.dataset.field+'[]';
+                hidden.value=value;
+                chip.appendChild(text);
+                chip.appendChild(remove);
+                chip.appendChild(hidden);
+                list.appendChild(chip);
+                input.value='';
+                input.focus();
+            }
+            add.addEventListener('click',addValue);
+            input.addEventListener('keydown',function(event){
+                if(event.key==='Enter'){
+                    event.preventDefault();
+                    addValue();
+                }
+            });
+            list.querySelectorAll('[data-bh-remove]').forEach(function(button){
+                button.addEventListener('click',function(){ button.closest('.bh-preference-chip').remove(); });
+            });
+        }
+        document.querySelectorAll('[data-bh-chip-editor]').forEach(initChipEditor);
+    }());
+    </script>
     <?php return ob_get_clean();
 }
 

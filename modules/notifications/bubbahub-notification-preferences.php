@@ -71,6 +71,7 @@ function bubbahub_notification_preferences( $user_id = 0 ) {
         'planner_reminders' => isset( $saved['planner_reminders'] ) ? (int) (bool) $saved['planner_reminders'] : $defaults['planner_reminders'],
         'calendar_reminders' => isset( $saved['calendar_reminders'] ) ? (int) (bool) $saved['calendar_reminders'] : $defaults['calendar_reminders'],
         'messages'          => isset( $saved['messages'] ) ? (int) (bool) $saved['messages'] : $defaults['messages'],
+        'support_replies'   => isset( $saved['support_replies'] ) ? (int) (bool) $saved['support_replies'] : $defaults['support_replies'],
         'email_digest'      => isset( $saved['email_digest'] ) ? (int) (bool) $saved['email_digest'] : $defaults['email_digest'],
         'sms_reminders'     => 0,
         'community'         => isset( $saved['community'] ) ? (int) (bool) $saved['community'] : $defaults['community'],
@@ -217,7 +218,8 @@ function bubbahub_notification_email_enabled( $user_id, $type ) {
     if ( in_array( $type, array( 'saved_group', 'group_update' ), true ) ) return ! empty( $prefs['saved_groups'] );
     if ( in_array( $type, array( 'calendar', 'calendar_reminder', 'calendar_event' ), true ) ) return ! empty( $prefs['calendar_reminders'] );
     if ( in_array( $type, array( 'planner', 'planner_reminder' ), true ) ) return ! empty( $prefs['planner_reminders'] );
-    if ( in_array( $type, array( 'message', 'support' ), true ) ) return ! empty( $prefs['messages'] );
+    if ( 'message' === $type ) return ! empty( $prefs['messages'] );
+    if ( 'support' === $type ) return ! empty( $prefs['support_replies'] );
     if ( 'community' === $type ) return ! empty( $prefs['community'] );
     if ( 'new_group' === $type ) return ! empty( $prefs['new_groups'] );
     if ( 'group_update' === $type ) return ! empty( $prefs['group_updates'] );

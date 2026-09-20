@@ -241,4 +241,4 @@ function bubbahub_push_settings_page() {
     <?php
 }
 function bubbahub_push_admin_menu() { add_options_page( 'Bubba Hub Push', 'Bubba Hub Push', 'manage_options', 'bubbahub-push', 'bubbahub_push_settings_page' ); }
-add_action( 'admin_menu', 'bubbahub_push_admin_menu' );
+add_action( 'admin_menu', 'bubbahub_push_admin_menu' );\nadd_action( 'wp_enqueue_scripts', function(){ if ( function_exists( 'wp_add_inline_style' ) && wp_style_is( 'bubbahub-happiness-theme', 'enqueued' ) ) wp_add_inline_style( 'bubbahub-happiness-theme', "\\n.bh-notification-push-button{border:0;border-radius:999px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);white-space:nowrap}.bh-notification-push-button:hover{transform:translateY(-1px)}.bh-notification-push-button:disabled{opacity:.65;cursor:wait}.bh-notification-push-button.is-enabled{background:#e8f8ee}.bh-alert-channel input[value=\"push\"]:not(:disabled)+span{font-weight:700}\\n" ); }, 40 );

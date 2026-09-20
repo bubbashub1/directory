@@ -846,26 +846,37 @@ function bubbahub_stage2_render_interests() {
                 </div>
             </div>
 
-            <div class="bh-preference-section">
-                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select one or more towns, areas or regions. You can choose multiple locations from the dropdown.</p></div>
-                <div class="bh-location-multiselect" data-bh-location-multiselect>
-                    <button type="button" class="bh-location-select" aria-expanded="false" aria-haspopup="listbox">
-                        <span data-bh-location-label><?php echo $preferred_locations ? esc_html(count($preferred_locations) . ' location' . ( count($preferred_locations ) === 1 ? '' : 's' ) . ' selected') : 'Select locations'; ?></span>
-                        <span aria-hidden="true">▾</span>
-                    </button>
-                    <div class="bh-location-options" role="listbox" aria-label="Preferred locations" aria-multiselectable="true" hidden>
-                        <?php foreach ( $location_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_locations, true ); ?>
-                            <label class="bh-location-option">
-                                <input type="checkbox" name="preferred_locations[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>>
-                                <span><?php echo esc_html($name); ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                        <?php if ( ! $location_terms ) : ?>
-                            <span class="bh-location-empty">No location options are currently available.</span>
-                        <?php endif; ?>
+            <div class="bh-preference-section bh-location-preference-section">
+                <div class="bh-preference-heading"><h4>Preferred Locations</h4><p>Select one or more locations from the same <strong>Location</strong> taxonomy used by Bubba Hub groups.</p></div>
+                <div class="bh-location-columns">
+                    <div class="bh-location-column">
+                        <div class="bh-location-column-title">Select locations</div>
+                        <div class="bh-location-multiselect" data-bh-location-multiselect>
+                            <button type="button" class="bh-location-select" aria-expanded="false" aria-haspopup="listbox">
+                                <span data-bh-location-label>Select locations</span>
+                                <span aria-hidden="true">▾</span>
+                            </button>
+                            <div class="bh-location-options" role="listbox" aria-label="Preferred locations" aria-multiselectable="true" hidden>
+                                <?php foreach ( $location_terms as $term ) : $name = $term->name; $checked = in_array( $name, $preferred_locations, true ); ?>
+                                    <label class="bh-location-option">
+                                        <input type="checkbox" name="preferred_locations[]" value="<?php echo esc_attr($name); ?>" <?php checked($checked); ?>>
+                                        <span><?php echo esc_html($name); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                                <?php if ( ! $location_terms ) : ?>
+                                    <span class="bh-location-empty">No group Location taxonomy options are currently available.</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bh-location-column bh-selected-locations-column">
+                        <div class="bh-location-column-title">Selected locations <span data-bh-selected-location-count>0</span></div>
+                        <div class="bh-selected-locations" data-bh-selected-locations>
+                            <span class="bh-location-none" data-bh-no-selected>None selected</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </div>/div>
 
             <div class="bh-preference-grid">
                 <div class="bh-preference-section">
@@ -939,6 +950,10 @@ function bubbahub_stage2_render_interests() {
     }());
     </script>
     <style>
+        .bh-location-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+        .bh-location-column{min-width:0;padding:14px;border:1px solid #e4ece8;border-radius:14px;background:#fbfdfc}
+        .bh-location-column-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;color:#31584b;font-size:12px;font-weight:800}
+        .bh-location-column-title span{min-width:22px;padding:2px 7px;border-radius:999px;background:#eaf3ef;text-align:center}
         .bh-location-multiselect{position:relative;width:100%;max-width:100%}
         .bh-location-select{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:11px 13px;border:1px solid #e6ebe9;border-radius:13px;background:#fff;color:#1e3330;font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
         .bh-location-select:focus{outline:2px solid rgba(95,145,131,.25);outline-offset:2px}
@@ -947,7 +962,11 @@ function bubbahub_stage2_render_interests() {
         .bh-location-option:hover{background:#f4f8f6}
         .bh-location-option input{width:17px!important;height:17px!important;margin:0;flex:0 0 17px;accent-color:#5f9183}
         .bh-location-empty{display:block;padding:10px;color:#718079;font-size:12px}
-        @media(max-width:620px){.bh-location-options{max-height:240px}.bh-location-option{padding:10px}}
+        .bh-selected-locations{display:flex;flex-wrap:wrap;gap:7px;min-height:44px;align-items:flex-start}
+        .bh-selected-location-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border-radius:999px;background:#eaf3ef;color:#31584b;font-size:11px;font-weight:700}
+        .bh-selected-location-chip button{border:0;background:transparent;color:#31584b;font-size:15px;line-height:1;padding:0;cursor:pointer}
+        .bh-location-none{color:#718079;font-size:12px;padding:8px 0}
+        @media(max-width:620px){.bh-location-columns{grid-template-columns:1fr}.bh-location-options{max-height:240px}.bh-location-option{padding:10px}}
     </style>
     <script>
     (function(){
@@ -960,9 +979,30 @@ function bubbahub_stage2_render_interests() {
             var boxes=wrapper.querySelectorAll('input[name="preferred_locations[]"]');
             if(!trigger||!menu) return;
             function sync(){
-                var count=0;
-                boxes.forEach(function(box){if(box.checked) count++;});
-                label.textContent=count ? count+' location'+(count===1?'':'s')+' selected' : 'Select locations';
+                var selected=[];
+                boxes.forEach(function(box){if(box.checked) selected.push(box.value);});
+                label.textContent=selected.length ? selected.length+' location'+(selected.length===1?'':'s')+' selected' : 'Select locations';
+                var selectedWrap=wrapper.closest('.bh-location-columns').querySelector('[data-bh-selected-locations]');
+                var countEl=wrapper.closest('.bh-location-columns').querySelector('[data-bh-selected-location-count]');
+                var empty=wrapper.closest('.bh-location-columns').querySelector('[data-bh-no-selected]');
+                if(countEl) countEl.textContent=selected.length;
+                if(selectedWrap){
+                    selectedWrap.innerHTML='';
+                    if(!selected.length){
+                        var none=document.createElement('span'); none.className='bh-location-none'; none.textContent='None selected'; selectedWrap.appendChild(none);
+                    } else {
+                        selected.forEach(function(value){
+                            var chip=document.createElement('span'); chip.className='bh-selected-location-chip';
+                            var text=document.createElement('span'); text.textContent=value;
+                            var remove=document.createElement('button'); remove.type='button'; remove.textContent='×'; remove.setAttribute('aria-label','Remove '+value);
+                            remove.addEventListener('click',function(){
+                                boxes.forEach(function(box){if(box.value===value) box.checked=false;});
+                                sync();
+                            });
+                            chip.appendChild(text); chip.appendChild(remove); selectedWrap.appendChild(chip);
+                        });
+                    }
+                }
             }
             function close(){menu.hidden=true;trigger.setAttribute('aria-expanded','false');}
             trigger.addEventListener('click',function(){

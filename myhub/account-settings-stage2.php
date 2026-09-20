@@ -590,7 +590,7 @@ function bubbahub_stage2_handle_family_needs() {
     return 'Family needs and discovery preferences saved.';
 }
 function bubbahub_stage2_handle_preferences() {
-    if ( ! is_user_logged_in() || 'preferences' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
+    if ( ! is_user_logged_in() || ! in_array( (string) ( $_POST['bh_stage2_action'] ?? '' ), array( 'preferences', 'interests', 'family_needs' ), true ) ) return '';
     $_POST['bh_stage2_action'] = 'interests';
     $interests_result = bubbahub_stage2_handle_interests();
     $_POST['bh_stage2_action'] = 'family_needs';

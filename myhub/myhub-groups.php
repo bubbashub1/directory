@@ -123,6 +123,7 @@ function bubbahub_myhub_groups_family_preferences(){
         'preferred_days'=>$normalise($read(array('preferred_days'))),
         'preferred_times'=>$normalise($read(array('preferred_times'))),
         'price'=>$normalise($read(array('preferred_price_bracket'))),
+        'sen_friendly'=>$normalise($read(array('sen_friendly'))),
     );
 }
 function bubbahub_myhub_groups_listing_value($id,$name,$default=array()){
@@ -163,6 +164,8 @@ function bubbahub_myhub_groups_time_bucket($time){
 }
 function bubbahub_myhub_groups_listing_matches_preferences($id,$prefs){
     $score=0;
+
+    if(!empty($prefs['sen_friendly']) && in_array('sen-friendly',$prefs['sen_friendly'],true) && bubbahub_myhub_groups_truthy(bubbahub_myhub_groups_listing_value($id,'sen_friendly',false)))$score+=3;
 
     $need_access=(array)$prefs['accessibility'];
     if($need_access){

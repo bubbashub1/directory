@@ -325,13 +325,18 @@ function bubbahub_stage2_handle_notifications() {
     return 'Notification preferences saved.';
 }
 function bubbahub_stage2_consent_version() {
-    return '1.0';
+    return '1.1';
 }
 
 function bubbahub_stage2_handle_consent() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'consent' !== $_POST['bh_stage2_action'] ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
 
+    /*
+     * Sections 1, 4, 5 and 6 are required.
+     * Section 1 requires a relationship plus either one saved child profile or
+     * a participant name for someone being booked on another person's behalf.
+     */
     $required = array(
         'profile_shared_ack',
         'class_leader_contact',
@@ -342,21 +347,52 @@ function bubbahub_stage2_handle_consent() {
         'accuracy_declaration',
     );
     foreach ( $required as $key ) {
-        if ( empty( $_POST[ $key ] ) ) return 'Please confirm all required consent and booking declarations before saving.';
+        if ( empty( $_POST[ $key ] ) ) return 'Please complete all required consent sections before saving.';
         bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, '1' );
     }
 
-    $child_profile_id = isset( $_POST['child_profile_id'] ) ? absint( $_POST['child_profile_id'] ) : 0;
-    if ( $child_profile_id ) {
+    $allowed_relationships = array(
+        'mum' => 'Mum',
+        'dad' => 'Dad',
+        'parent' => 'Parent',
+        'step-parent' => 'Step-parent',
+        'carer' => 'Carer',
+        'foster-carer' => 'Foster carer',
+        'grandparent' => 'Grandparent',
+        'guardian' => 'Guardian',
+        'family-member' => 'Family member',
+        'other' => 'Other',
+    );
+
+    $relationship_values = isset( $_POST['relationship'] ) ? (array) $_POST['relationship'] : array();
+    $relationships = array();
+    foreach ( $relationship_values as $relationship ) {
+        $relationship = sanitize_key( wp_unslash( $relationship ) );
+        if ( isset( $allowed_relationships[ $relationship ] ) ) $relationships[] = $relationship;
+    }
+    $relationships = array_values( array_unique( $relationships ) );
+    if ( ! $relationships ) return 'Please select at least one relationship to the child or participant.';
+    bubbahub_stage2_update_meta( 'bubbahub_consent_relationship', $relationships );
+
+    $child_profile_ids = isset( $_POST['child_profile_ids'] ) ? (array) $_POST['child_profile_ids'] : array();
+    $child_profile_ids = array_values( array_unique( array_filter( array_map( 'absint', $child_profile_ids ) ) ) );
+    foreach ( $child_profile_ids as $child_profile_id ) {
         $child_post = get_post( $child_profile_id );
         if ( ! $child_post || 'bh_child' !== $child_post->post_type || absint( $child_post->post_author ) !== get_current_user_id() ) {
-            return 'Please select one of your saved child profiles.';
+            return 'Please select only child profiles belonging to your account.';
         }
     }
-    bubbahub_stage2_update_meta( 'bubbahub_consent_child_profile_id', $child_profile_id );
+
+    $participant_name = isset( $_POST['participant_name'] ) ? sanitize_text_field( wp_unslash( $_POST['participant_name'] ) ) : '';
+    if ( ! $child_profile_ids && '' === trim( $participant_name ) ) {
+        return 'Please select at least one child profile or enter the participant / child name.';
+    }
+
+    bubbahub_stage2_update_meta( 'bubbahub_consent_child_profile_ids', $child_profile_ids );
+    /* Keep the legacy single ID populated for existing booking integrations. */
+    bubbahub_stage2_update_meta( 'bubbahub_consent_child_profile_id', $child_profile_ids ? $child_profile_ids[0] : 0 );
 
     $fields = array(
-        'relationship'        => 'sanitize_text_field',
         'emergency_name'      => 'sanitize_text_field',
         'emergency_phone'     => 'sanitize_text_field',
         'emergency_relation'  => 'sanitize_text_field',
@@ -372,8 +408,16 @@ function bubbahub_stage2_handle_consent() {
         bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, $value );
     }
 
-    foreach ( array( 'media_social', 'media_promotional', 'media_head_office' ) as $key ) {
-        bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, ! empty( $_POST[ $key ] ) ? '1' : '0' );
+    /*
+     * Media permissions are required choices, but consent itself remains opt-in:
+     * the user must explicitly choose Yes or No for every media category.
+     */
+    $media_keys = array( 'media_social', 'media_promotional', 'media_head_office' );
+    foreach ( $media_keys as $key ) {
+        if ( ! isset( $_POST[ $key ] ) || ! in_array( (string) $_POST[ $key ], array( '0', '1' ), true ) ) {
+            return 'Please choose Yes or No for each photo and media permission.';
+        }
+        bubbahub_stage2_update_meta( 'bubbahub_consent_' . $key, '1' === (string) $_POST[ $key ] ? '1' : '0' );
     }
 
     bubbahub_stage2_update_meta( 'bubbahub_consent_version', bubbahub_stage2_consent_version() );
@@ -389,11 +433,12 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
 
     $keys = array(
         'relationship','emergency_name','emergency_phone','emergency_relation',
-        'participant_name','allergies','medical_notes',
+        'participant_name','participant_dob','allergies','medical_notes',
         'accessibility_notes','additional_notes','profile_shared_ack',
         'class_leader_contact','payment_agreement','liability_ack',
         'booking_terms_ack','data_processing_ack','accuracy_declaration',
-        'media_social','media_promotional','media_head_office','child_profile_id','child_year_of_birth','version','saved_at',
+        'media_social','media_promotional','media_head_office','child_profile_ids',
+        'child_profile_id','child_year_of_birth','version','saved_at',
     );
     $snapshot = array();
     foreach ( $keys as $key ) {
@@ -401,31 +446,42 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
         $snapshot[ $key ] = get_user_meta( $uid, $meta_key, true );
     }
 
-    $child_id = absint( get_user_meta( $uid, 'bubbahub_consent_child_profile_id', true ) );
-    $child_year = '';
-    $child_name = '';
-    if ( $child_id && 'bh_child' === get_post_type( $child_id ) && absint( get_post_field( 'post_author', $child_id ) ) === $uid ) {
-        $child_name = function_exists( 'bubbahub_profile_field' ) ? bubbahub_profile_field( $child_id, 'child_name', get_the_title( $child_id ) ) : get_the_title( $child_id );
+    $child_ids = array_values( array_unique( array_filter( array_map( 'absint', (array) get_user_meta( $uid, 'bubbahub_consent_child_profile_ids', true ) ) ) ) );
+    if ( ! $child_ids ) {
+        $legacy_child_id = absint( get_user_meta( $uid, 'bubbahub_consent_child_profile_id', true ) );
+        if ( $legacy_child_id ) $child_ids = array( $legacy_child_id );
+    }
+
+    $child_years = array();
+    $valid_child_ids = array();
+    foreach ( $child_ids as $child_id ) {
+        if ( 'bh_child' !== get_post_type( $child_id ) || absint( get_post_field( 'post_author', $child_id ) ) !== $uid ) continue;
+        $valid_child_ids[] = $child_id;
         $child_dob = function_exists( 'bubbahub_profile_field' ) ? bubbahub_profile_field( $child_id, 'child_date_of_birth', '' ) : get_post_meta( $child_id, 'child_date_of_birth', true );
         if ( $child_dob ) {
-            $child_year = wp_date( 'Y', strtotime( $child_dob ) );
+            $year = wp_date( 'Y', strtotime( $child_dob ) );
+            if ( $year ) $child_years[] = sanitize_text_field( $year );
         }
     }
-    $snapshot['child_profile_id'] = $child_id;
+
+    $snapshot['child_profile_ids'] = $valid_child_ids;
+    $snapshot['child_profile_id'] = $valid_child_ids ? $valid_child_ids[0] : 0;
     /* Provider-facing child profile data is deliberately limited to year of birth. */
     $share_child_yob = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_share_child_yob_leaders', true );
     $share_contact = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_share_contact_leaders', true );
     $leader_messages = '1' === (string) get_user_meta( $uid, 'bubbahub_privacy_leader_messages', true );
 
     $snapshot['child_profile'] = array(
-        'year_of_birth' => $share_child_yob ? sanitize_text_field( $child_year ) : '',
+        'year_of_birth' => $share_child_yob ? array_values( array_unique( $child_years ) ) : array(),
     );
-    $snapshot['child_year_of_birth'] = $share_child_yob ? sanitize_text_field( $child_year ) : '';
+    $snapshot['child_years_of_birth'] = $share_child_yob ? array_values( array_unique( $child_years ) ) : array();
+    $snapshot['child_year_of_birth'] = $share_child_yob && ! empty( $child_years ) ? sanitize_text_field( $child_years[0] ) : '';
     $snapshot['provider_privacy'] = array(
         'share_contact' => $share_contact,
         'share_child_year_of_birth' => $share_child_yob,
         'allow_leader_messages' => $leader_messages,
     );
+    /* Never retain the full participant DOB in the provider-facing snapshot. */
     unset( $snapshot['participant_dob'] );
     $snapshot['version'] = $snapshot['version'] ?: bubbahub_stage2_consent_version();
     $snapshot['user_id'] = $uid;
@@ -465,20 +521,22 @@ function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
     if ( ! $snapshot ) return;
 
     update_post_meta( $post_id, '_bh_consent_snapshot', $snapshot );
+    update_post_meta( $post_id, '_bh_child_profile_ids_internal', array_map( 'absint', (array) $snapshot['child_profile_ids'] ) );
     update_post_meta( $post_id, '_bh_child_profile_id_internal', absint( $snapshot['child_profile_id'] ) );
+    update_post_meta( $post_id, '_bh_child_years_of_birth', array_map( 'sanitize_text_field', (array) $snapshot['child_years_of_birth'] ) );
     update_post_meta( $post_id, '_bh_child_year_of_birth', sanitize_text_field( $snapshot['child_year_of_birth'] ) );
     /* Provider-facing child profile data is limited to year of birth and respects the user's sharing preference. */
     update_post_meta( $post_id, '_bh_child_profile_for_provider', array(
-        'year_of_birth' => sanitize_text_field( $snapshot['child_year_of_birth'] ),
+        'year_of_birth' => array_map( 'sanitize_text_field', (array) $snapshot['child_years_of_birth'] ),
     ) );
     update_post_meta( $post_id, '_bh_provider_privacy', isset( $snapshot['provider_privacy'] ) ? $snapshot['provider_privacy'] : array() );
     update_post_meta( $post_id, '_bh_consent_version', sanitize_text_field( $snapshot['version'] ) );
     update_post_meta( $post_id, '_bh_consent_captured_at', sanitize_text_field( $snapshot['captured_at'] ) );
-    update_post_meta( $post_id, '_bh_consent_status', ! empty( $snapshot['accuracy_declaration'] ) ? 'accepted' : 'missing' );
+    update_post_meta( $post_id, '_bh_consent_status', bubbahub_stage2_consent_is_valid( $uid ) ? 'accepted' : 'missing' );
 }
 
 /* -------------------------------------------------------------------------
- * Save interests and existing website taxonomy term IDs
+ * Save interests/ and existing website taxonomy term IDs
  * ---------------------------------------------------------------------- */
 function bubbahub_stage2_handle_interests() {
     if ( ! is_user_logged_in() || empty( $_POST['bh_stage2_action'] ) || 'interests' !== $_POST['bh_stage2_action'] ) return '';
@@ -791,7 +849,7 @@ function bubbahub_stage2_render_notifications() {
     <style>
     .bh-notification-intro{margin:-4px 0 20px;color:#687a73;font-size:13px;line-height:1.55}.bh-notification-group{margin:0 0 24px;border:1px solid #e4ece8;border-radius:16px;overflow:hidden;background:#fff}.bh-notification-group h4{margin:0;padding:14px 16px;background:#f5f9f6;color:#31584b;font-size:14px}.bh-notification-preference{display:grid;grid-template-columns:42px minmax(0,1fr) 0 42px;gap:12px;align-items:center;padding:14px 16px;border-top:1px solid #edf1ef;cursor:pointer;position:relative}.bh-notification-preference-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#f3f7f4;font-size:18px}.bh-notification-preference-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.bh-notification-preference-copy strong{color:#24483d;font-size:14px}.bh-notification-preference-copy small{color:#718079;font-size:11px;line-height:1.45}.bh-notification-preference input{position:absolute;opacity:0;pointer-events:none}.bh-notification-preference-toggle{width:42px;height:24px;border-radius:999px;background:#cbd7d1;position:relative;transition:.2s}.bh-notification-preference-toggle:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:.2s}.bh-notification-preference input:checked + .bh-notification-preference-toggle{background:#2f6c52}.bh-notification-preference input:checked + .bh-notification-preference-toggle:after{transform:translateX(18px)}.bh-notification-sms-disabled{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 0 18px;border:1px dashed #d6dfda;border-radius:14px;background:#fafcfb;color:#738079}.bh-notification-sms-disabled>span:first-child{font-size:20px}.bh-notification-sms-disabled div{flex:1}.bh-notification-sms-disabled strong{display:block;color:#53665f;font-size:13px}.bh-notification-sms-disabled small{display:block;margin-top:3px;font-size:11px;line-height:1.4}.bh-notification-disabled-pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;border-radius:999px;background:#edf0ee;color:#718079}@media(max-width:600px){.bh-notification-preference{grid-template-columns:36px minmax(0,1fr) 42px;padding:13px 12px;gap:9px}.bh-notification-preference-icon{width:34px;height:34px}.bh-notification-preference-copy strong{font-size:13px}.bh-notification-preference-copy small{font-size:10.5px}.bh-notification-group h4{padding:12px}.bh-notification-sms-disabled{align-items:flex-start}.bh-notification-disabled-pill{margin-left:auto}}
     
-    .bh-consent-card{overflow:hidden}.bh-consent-section{margin-top:18px;padding:18px;border:1px solid #e2ebe7;border-radius:18px;background:#fbfdfc}.bh-consent-section .bh-profile-card-heading{margin-bottom:12px}.bh-consent-section h4{margin:0;color:#28483f;font-size:15px}.bh-consent-section .bh-profile-grid{margin-top:0}.bh-consent-notice{margin-top:18px;padding:14px 16px;border-radius:14px;background:#eef7f2;border:1px solid #d5e9df;color:#48665d;font-size:12px;line-height:1.55}.bh-consent-notice strong{color:#294a40}@media(max-width:600px){.bh-consent-section{padding:14px;border-radius:15px}.bh-consent-section .bh-profile-grid.two{grid-template-columns:1fr}.bh-consent-section .bh-stage2-check{align-items:flex-start}.bh-consent-section .bh-stage2-check span{line-height:1.45}}
+    .bh-consent-card{overflow:hidden}.bh-consent-help{margin:-3px 0 14px;color:#718079;font-size:12px;line-height:1.5}.bh-consent-help strong{color:#31584b}.bh-consent-required{border-color:#d5e6de}.bh-consent-required .bh-profile-card-heading>span{color:#31584b;font-weight:800}.bh-consent-multi-options{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 2px}.bh-consent-multi-options label{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #dbe7e1;border-radius:999px;background:#fff;cursor:pointer;color:#31584b;font-size:12px}.bh-consent-multi-options input{margin:0}.bh-consent-field-wide{grid-column:1/-1}.bh-media-choice{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid #e7efeb}.bh-media-choice:first-of-type{border-top:0}.bh-media-choice>div:first-child{display:flex;flex-direction:column;gap:3px}.bh-media-choice small{color:#718079;font-size:11px}.bh-media-options{display:flex;gap:8px;flex:0 0 auto}.bh-media-options label{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid #dbe7e1;border-radius:999px;background:#fff;cursor:pointer;color:#31584b;font-size:11px}.bh-media-options input{margin:0}@media(max-width:600px){.bh-consent-field-wide{grid-column:auto}.bh-media-choice{align-items:flex-start;flex-direction:column;gap:9px}.bh-media-options{width:100%}.bh-media-options label{flex:1;justify-content:center}.bh-consent-multi-options{gap:6px}.bh-consent-multi-options label{font-size:11px;padding:7px 9px}.bh-consent-section{padding:14px;border-radius:15px}.bh-consent-section .bh-profile-grid.two{grid-template-columns:1fr}.bh-consent-section .bh-stage2-check{align-items:flex-start}.bh-consent-section .bh-stage2-check span{line-height:1.45}}.bh-consent-section{margin-top:18px;padding:18px;border:1px solid #e2ebe7;border-radius:18px;background:#fbfdfc}.bh-consent-section .bh-profile-card-heading{margin-bottom:12px}.bh-consent-section h4{margin:0;color:#28483f;font-size:15px}.bh-consent-section .bh-profile-grid{margin-top:0}.bh-consent-notice{margin-top:18px;padding:14px 16px;border-radius:14px;background:#eef7f2;border:1px solid #d5e9df;color:#48665d;font-size:12px;line-height:1.55}.bh-consent-notice strong{color:#294a40}@media(max-width:600px){.bh-consent-section{padding:14px;border-radius:15px}.bh-consent-section .bh-profile-grid.two{grid-template-columns:1fr}.bh-consent-section .bh-stage2-check{align-items:flex-start}.bh-consent-section .bh-stage2-check span{line-height:1.45}}
 </style>
     <?php return ob_get_clean();
 }
@@ -803,19 +861,48 @@ function bubbahub_stage2_render_consent() {
       <p class="bh-muted">This consent form is your standing booking consent. When you make a booking, Bubba Hub saves a copy of the consent that applied at the time of booking with the booking record. You can update your standing consent here for future bookings.</p>
       <form method="post" class="bh-stage2-form">
         <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="consent">
-        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>1. Parent / guardian details</h4><span>Booking contact</span></div>
+        <div class="bh-consent-section bh-consent-required"><div class="bh-profile-card-heading"><h4>1. Parent / guardian details</h4><span>Required</span></div>
+          <p class="bh-consent-help">Choose your relationship to the participant. This is pre-filled from your profile, but you can change it when booking on someone else's behalf. You can select more than one relationship.</p>
           <div class="bh-profile-grid two">
-            <label><span>Relationship to child / participant</span><input name="relationship" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_relationship')); ?>" placeholder="Parent, guardian, carer..."></label>
-            <label><span>Child profile for this consent</span><select name="child_profile_id">
-              <option value="">Select a child profile</option>
-              <?php foreach ( bubbahub_stage2_children() as $child ) :
-                  $child_name = function_exists('bubbahub_profile_field') ? bubbahub_profile_field($child->ID, 'child_name', $child->post_title) : $child->post_title;
-                  $selected_child = absint( bubbahub_stage2_user_meta('bubbahub_consent_child_profile_id') );
+            <label class="bh-consent-field-wide"><span>Relationship to child / participant <em>Required</em></span>
+              <?php
+              $relationship_options = array(
+                  'mum' => 'Mum', 'dad' => 'Dad', 'parent' => 'Parent', 'step-parent' => 'Step-parent',
+                  'carer' => 'Carer', 'foster-carer' => 'Foster carer', 'grandparent' => 'Grandparent',
+                  'guardian' => 'Guardian', 'family-member' => 'Family member', 'other' => 'Other',
+              );
+              $saved_relationships = (array) bubbahub_stage2_user_meta('bubbahub_consent_relationship', array());
+              if ( ! $saved_relationships ) {
+                  $profile_relationship = sanitize_key( bubbahub_stage2_user_meta('bubbahub_relationship_to_children') );
+                  if ( $profile_relationship && isset( $relationship_options[ $profile_relationship ] ) ) $saved_relationships = array( $profile_relationship );
+              }
               ?>
-                <option value="<?php echo absint($child->ID); ?>" <?php selected($selected_child, $child->ID); ?>><?php echo esc_html($child_name); ?></option>
-              <?php endforeach; ?>
-            </select><small class="bh-muted">The class provider will receive the child's year of birth only, not the full date of birth.</small></label>
-            <label><span>Participant / child name</span><input name="participant_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_name')); ?>"></label>
+              <div class="bh-consent-multi-options">
+                <?php foreach ( $relationship_options as $value => $label ) : ?>
+                  <label><input type="checkbox" name="relationship[]" value="<?php echo esc_attr($value); ?>" <?php checked(in_array($value, $saved_relationships, true)); ?>><span><?php echo esc_html($label); ?></span></label>
+                <?php endforeach; ?>
+              </div>
+            </label>
+            <label class="bh-consent-field-wide"><span>Child profile(s) for this consent <em>Required*</em></span>
+              <?php
+              $saved_child_ids = array_values( array_unique( array_filter( array_map( 'absint', (array) bubbahub_stage2_user_meta('bubbahub_consent_child_profile_ids', array()) ) ) ) );
+              if ( ! $saved_child_ids ) {
+                  $legacy_child_id = absint( bubbahub_stage2_user_meta('bubbahub_consent_child_profile_id', 0) );
+                  if ( $legacy_child_id ) $saved_child_ids = array( $legacy_child_id );
+              }
+              $children_for_consent = bubbahub_stage2_children();
+              ?>
+              <div class="bh-consent-multi-options">
+                <?php foreach ( $children_for_consent as $child ) :
+                    $child_name = function_exists('bubbahub_profile_field') ? bubbahub_profile_field($child->ID, 'child_name', $child->post_title) : $child->post_title;
+                ?>
+                  <label><input type="checkbox" name="child_profile_ids[]" value="<?php echo absint($child->ID); ?>" <?php checked(in_array((int)$child->ID, $saved_child_ids, true)); ?>><span><?php echo esc_html($child_name); ?></span></label>
+                <?php endforeach; ?>
+                <?php if ( ! $children_for_consent ) : ?><p class="bh-muted">No saved child profiles yet. Use the participant name below.</p><?php endif; ?>
+              </div>
+              <small class="bh-muted">Select one or more saved children. Only each child's year of birth can be shared with a class leader, subject to your Privacy &amp; Security settings.</small>
+            </label>
+            <label class="bh-consent-field-wide"><span>Participant / child name <em>Required if not using a saved child profile</em></span><input name="participant_name" value="<?php echo esc_attr(bubbahub_stage2_user_meta('bubbahub_consent_participant_name')); ?>" placeholder="Complete this if different from the children in your profiles"></label>
           </div>
         </div>
         <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>2. Emergency contact</h4><span>Safety</span></div>
@@ -833,20 +920,33 @@ function bubbahub_stage2_render_consent() {
             <label><span>Other information the class provider should know</span><textarea name="additional_notes" rows="4"><?php echo esc_textarea(bubbahub_stage2_user_meta('bubbahub_consent_additional_notes')); ?></textarea></label>
           </div>
         </div>
-        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>4. Booking, contact & information sharing</h4><span>Required</span></div>
+        <div class="bh-consent-section bh-consent-required"><div class="bh-profile-card-heading"><h4>4. Booking, contact & information sharing</h4><span>Required</span></div>
           <label class="bh-stage2-check"><input type="checkbox" name="profile_shared_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_profile_shared_ack'),'1'); ?> required><span><strong>I confirm the information on my account is accurate and may be shared with the relevant class provider where needed for attendance, administration and safety.</strong></span></label>
           <label class="bh-stage2-check"><input type="checkbox" name="class_leader_contact" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_class_leader_contact'),'1'); ?> required><span><strong>I consent to the class leader / provider contacting me about my booking, changes, attendance and urgent matters.</strong></span></label>
           <label class="bh-stage2-check"><input type="checkbox" name="payment_agreement" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_payment_agreement'),'1'); ?> required><span><strong>I agree to the booking price, payment, refund and cancellation terms shown at the time of booking.</strong></span></label>
           <label class="bh-stage2-check"><input type="checkbox" name="booking_terms_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_booking_terms_ack'),'1'); ?> required><span><strong>I understand that a booking is subject to the class provider's published rules, capacity, timetable and any session-specific requirements.</strong></span></label>
           <label class="bh-stage2-check"><input type="checkbox" name="data_processing_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_data_processing_ack'),'1'); ?> required><span><strong>I understand that booking information will be processed and retained as needed to administer the booking, payment, safety and related communications.</strong></span></label>
         </div>
-        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>5. Safety & responsibility</h4><span>Required</span></div>
+        <div class="bh-consent-section bh-consent-required"><div class="bh-profile-card-heading"><h4>5. Safety & responsibility</h4><span>Required</span></div>
           <label class="bh-stage2-check"><input type="checkbox" name="liability_ack" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_liability_ack'),'1'); ?> required><span><strong>I acknowledge that I am responsible for providing accurate safety information and following the class provider's instructions and safety requirements.</strong></span></label>
           <label class="bh-stage2-check"><input type="checkbox" name="accuracy_declaration" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_accuracy_declaration'),'1'); ?> required><span><strong>I confirm that I am authorised to give this consent for the participant named above and that the information supplied is accurate to the best of my knowledge.</strong></span></label>
         </div>
-        <div class="bh-consent-section"><div class="bh-profile-card-heading"><h4>6. Photo & media permissions</h4><span>Optional</span></div>
-          <?php foreach(array('media_social'=>'Social media','media_promotional'=>'Promotional materials','media_head_office'=>'Bubba Hub / head office use') as $key=>$label): ?>
-            <label class="bh-stage2-check"><input type="checkbox" name="<?php echo esc_attr($key); ?>" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_consent_'.$key),'1'); ?>><span><strong>I consent to the participant being included in <?php echo esc_html(strtolower($label)); ?> where applicable.</strong></span></label>
+        <div class="bh-consent-section bh-consent-required"><div class="bh-profile-card-heading"><h4>6. Photo & media permissions</h4><span>Required</span></div>
+          <p class="bh-consent-help">Please make a choice for each permission. Choosing <strong>No</strong> is a valid choice and does not affect your ability to book.</p>
+          <?php foreach(array(
+              'media_social'=>'Social media',
+              'media_promotional'=>'Promotional materials',
+              'media_head_office'=>'Bubba Hub / head office use'
+          ) as $key=>$label):
+              $saved_media = bubbahub_stage2_user_meta('bubbahub_consent_'.$key, '');
+          ?>
+            <div class="bh-media-choice">
+              <div><strong><?php echo esc_html($label); ?></strong><small>Would you like the participant to be included where applicable?</small></div>
+              <div class="bh-media-options" role="radiogroup" aria-label="<?php echo esc_attr($label); ?>">
+                <label><input type="radio" name="<?php echo esc_attr($key); ?>" value="1" <?php checked($saved_media,'1'); ?> required><span>Yes</span></label>
+                <label><input type="radio" name="<?php echo esc_attr($key); ?>" value="0" <?php checked($saved_media,'0'); ?> required><span>No</span></label>
+              </div>
+            </div>
           <?php endforeach; ?>
         </div>
         <div class="bh-consent-notice"><strong>Important:</strong> This form is a standing consent for Bubba Hub bookings. A snapshot is attached to each booking so the consent in force at the time of booking can be retained for the booking record.</div>

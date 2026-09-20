@@ -372,6 +372,12 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
 
 /* Copy the customer's current consent onto every booking as an immutable booking snapshot. */
 add_action( 'save_post_bh_booking', 'bubbahub_stage2_attach_consent_to_booking', 30, 3 );
+add_action( 'added_post_meta', 'bubbahub_stage2_attach_consent_after_user_meta', 30, 4 );
+add_action( 'updated_post_meta', 'bubbahub_stage2_attach_consent_after_user_meta', 30, 4 );
+function bubbahub_stage2_attach_consent_after_user_meta( $meta_id, $post_id, $meta_key, $meta_value ) {
+    if ( '_bh_user_id' !== $meta_key || 'bh_booking' !== get_post_type( $post_id ) ) return;
+    bubbahub_stage2_attach_consent_to_booking( $post_id, get_post( $post_id ), true );
+}
 function bubbahub_stage2_attach_consent_to_booking( $post_id, $post, $update ) {
     if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
     $uid = absint( get_post_meta( $post_id, '_bh_user_id', true ) );

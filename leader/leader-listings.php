@@ -36,6 +36,7 @@ function bubbahub_leader_listing_form( $post_id = 0 ) {
             'group_6aa6749620635',
             'group_6aa6773f3badc',
             'group_6aa674da415e8',
+            'group_bubbahub_group_accessibility_activity',
         ),
         'uploader'             => 'wp',
         'return'               => $return_url,

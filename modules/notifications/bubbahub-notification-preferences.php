@@ -7,29 +7,29 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! defined( 'BUBBAHUB_NOTIFICATIONS_VERSION' ) ) define( 'BUBBAHUB_NOTIFICATIONS_VERSION', '1.0.0' );
+if ( ! defined( 'BUBBAHUB_NOTIFICATIONS_VERSION' ) ) define( 'BUBBAHUB_NOTIFICATIONS_VERSION', '1.0.1' );
 
 function bubbahub_notification_defaults() {
     return array(
         'class_booking'       => 1,
-        'booking_reminders' => 1,
-        'saved_groups'      => 1,
-        'planner_reminders' => 1,
-        'calendar_reminders' => 1,
-        'messages'          => 1,
-        'support_replies'   => 1,
-        'email_digest'      => 1,
-        'sms_reminders'     => 0,
-        'community'         => 1,
-        'new_groups'        => 1,
-        'group_updates'    => 1,
-        'new_suggestions'  => 1,
-        'new_classes'      => 1,
-        'whats_on'         => 1,
-        'channel_email'    => 1,
-        'channel_in_hub'   => 1,
-        'channel_push'     => 0,
-        'channel_sms'      => 0,
+        'booking_reminders'   => 1,
+        'saved_groups'        => 1,
+        'planner_reminders'   => 1,
+        'calendar_reminders'  => 1,
+        'messages'            => 1,
+        'support_replies'     => 1,
+        'email_digest'        => 1,
+        'sms_reminders'       => 0,
+        'community'           => 1,
+        'new_groups'          => 1,
+        'group_updates'       => 1,
+        'new_suggestions'     => 1,
+        'new_classes'         => 1,
+        'whats_on'            => 1,
+        'channel_email'       => 1,
+        'channel_in_hub'      => 1,
+        'channel_push'        => 0,
+        'channel_sms'         => 0,
     );
 }
 

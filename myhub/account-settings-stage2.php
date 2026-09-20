@@ -150,6 +150,74 @@ function bubbahub_stage2_handle_profile() {
         bubbahub_stage2_update_meta( 'bubbahub_' . $field, $value );
     }
 
+    $allowed_relationships = array(
+        'mum' => 'Mum',
+        'dad' => 'Dad',
+        'parent' => 'Parent',
+        'step-parent' => 'Step-parent',
+        'carer' => 'Carer',
+        'foster-carer' => 'Foster carer',
+        'grandparent' => 'Grandparent',
+        'guardian' => 'Guardian',
+        'family-member' => 'Family member',
+        'other' => 'Other',
+    );
+    $relationship = isset( $_POST['relationship_to_children'] ) ? sanitize_key( wp_unslash( $_POST['relationship_to_children'] ) ) : '';
+    if ( isset( $allowed_relationships[ $relationship ] ) ) {
+        bubbahub_stage2_update_meta( 'bubbahub_relationship_to_children', $relationship );
+    } else {
+        bubbahub_stage2_update_meta( 'bubbahub_relationship_to_children', '' );
+    }
+
+    if ( ! empty( $_FILES['profile_image']['name'] ) ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        $upload = wp_handle_upload(
+            $_FILES['profile_image'],
+            array(
+                'test_form' => false,
+                'mimes' => array(
+                    'jpg|jpeg|jpe' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                ),
+            )
+        );
+
+        if ( ! empty( $upload['error'] ) ) {
+            return 'Your profile details were saved, but the profile image could not be uploaded: ' . $upload['error'];
+        }
+
+        if ( ! empty( $upload['file'] ) && ! empty( $upload['url'] ) && ! empty( $upload['type'] ) ) {
+            $attachment_id = wp_insert_attachment(
+                array(
+                    'post_mime_type' => sanitize_mime_type( $upload['type'] ),
+                    'post_title' => sanitize_text_field( pathinfo( $upload['file'], PATHINFO_FILENAME ) ),
+                    'post_content' => '',
+                    'post_status' => 'inherit',
+                    'post_author' => $uid,
+                ),
+                $upload['file']
+            );
+
+            if ( ! is_wp_error( $attachment_id ) ) {
+                $metadata = wp_generate_attachment_metadata( $attachment_id, $upload['file'] );
+                if ( $metadata ) wp_update_attachment_metadata( $attachment_id, $metadata );
+
+                $old_attachment_id = absint( get_user_meta( $uid, 'bubbahub_profile_image_id', true ) );
+                update_user_meta( $uid, 'bubbahub_profile_image_id', $attachment_id );
+
+                if ( $old_attachment_id && $old_attachment_id !== $attachment_id && (int) get_post_field( 'post_author', $old_attachment_id ) === $uid ) {
+                    wp_delete_attachment( $old_attachment_id, true );
+                }
+            } else {
+                return 'Your profile details were saved, but the profile image could not be saved.';
+            }
+        }
+    }
+
     return 'Profile details updated successfully.';
 }
 
@@ -246,12 +314,40 @@ function bubbahub_stage2_render_profile( $user ) {
     ob_start(); ?>
     <div class="bh-profile-card">
         <div class="bh-profile-card-heading"><h3>Edit my profile</h3><span>Saved to your WordPress account</span></div>
-        <form method="post" class="bh-stage2-form">
-            <?php wp_nonce_field( 'bh_stage2_settings', 'bh_stage2_nonce' ); ?><input type="hidden" name="bh_stage2_action" value="profile">
+        <form method="post" class="bh-stage2-form" enctype="multipart/form-data">
+            <?php
+            wp_nonce_field( 'bh_stage2_settings', 'bh_stage2_nonce' );
+            $profile_image_id = absint( get_user_meta( get_current_user_id(), 'bubbahub_profile_image_id', true ) );
+            $relationship = $get('relationship_to_children');
+            $relationship_options = array(
+                'mum' => 'Mum',
+                'dad' => 'Dad',
+                'parent' => 'Parent',
+                'step-parent' => 'Step-parent',
+                'carer' => 'Carer',
+                'foster-carer' => 'Foster carer',
+                'grandparent' => 'Grandparent',
+                'guardian' => 'Guardian',
+                'family-member' => 'Family member',
+                'other' => 'Other',
+            );
+            ?>
+            <input type="hidden" name="bh_stage2_action" value="profile">
             <div class="bh-profile-grid two">
                 <label><span>Full name / display name</span><input name="display_name" value="<?php echo esc_attr( $user->display_name ); ?>" required></label>
                 <label><span>Email address</span><input type="email" name="email" value="<?php echo esc_attr( $user->user_email ); ?>" required></label>
                 <label><span>Contact number</span><input name="phone" value="<?php echo esc_attr( $get('phone') ); ?>"></label>
+                <label><span>Relationship to child(ren)</span><select name="relationship_to_children"><option value="">Select relationship</option><?php foreach ( $relationship_options as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $relationship, $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></label>
+                <label class="bh-profile-image-field">
+                    <span>Profile image</span>
+                    <?php if ( $profile_image_id && wp_attachment_is_image( $profile_image_id ) ) : ?>
+                        <span class="bh-profile-image-preview"><?php echo wp_get_attachment_image( $profile_image_id, 'thumbnail', false, array( 'alt' => 'Current profile image' ) ); ?></span>
+                        <small>Choose a new image to replace your current one.</small>
+                    <?php else : ?>
+                        <small>Upload a JPG, PNG or WebP image.</small>
+                    <?php endif; ?>
+                    <input name="profile_image" type="file" accept="image/jpeg,image/png,image/webp">
+                </label>
                 <label><span>Search radius</span><select name="search_radius"><?php foreach(array('5 miles','10 miles','15 miles','20 miles','25 miles') as $r): ?><option value="<?php echo esc_attr($r); ?>" <?php selected($get('search_radius','10 miles'),$r); ?>><?php echo esc_html($r); ?></option><?php endforeach; ?></select></label>
                 <label><span>Address line 1</span><input name="address1" value="<?php echo esc_attr($get('address1')); ?>"></label>
                 <label><span>Address line 2</span><input name="address2" value="<?php echo esc_attr($get('address2')); ?>"></label>

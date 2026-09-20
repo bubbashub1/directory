@@ -45,7 +45,7 @@ function bubbahub_stage2_post_redirect() {
         $dashboard_url = add_query_arg(
             'bh_account_settings',
             '1',
-            remove_query_arg( 'bh_settings_section', wp_get_referer() ?: home_url( '/' ) )
+            remove_query_arg( 'bh_settings_section', wp_get_referer() ?: home_url( '/my-hub/' ) )
         );
         wp_safe_redirect( $dashboard_url );
         exit;

@@ -1210,6 +1210,11 @@ document.addEventListener('DOMContentLoaded',function(){
     }
 
     if(saveButton&&savePanel){
+      if(planner.getAttribute('data-edit-calendar')){
+        savePanel.hidden=false;
+        saveButton.hidden=true;
+        if(saveName)saveName.focus();
+      }
       saveButton.addEventListener('click',function(){ savePanel.hidden=false; saveButton.hidden=true; if(saveName){saveName.focus();} });
       if(saveCancel) saveCancel.addEventListener('click',function(){savePanel.hidden=true;saveButton.hidden=false;});
       if(saveConfirm) saveConfirm.addEventListener('click',function(){

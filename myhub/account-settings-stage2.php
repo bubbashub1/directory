@@ -642,14 +642,23 @@ function bubbahub_stage2_handle_notification_test() {
 function bubbahub_stage2_handle_privacy() {
     if ( ! is_user_logged_in() || 'privacy' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
     if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
-    $request = isset( $_POST['privacy_request'] ) ? sanitize_key( wp_unslash( $_POST['privacy_request'] ) ) : '';
-    if ( ! in_array( $request, array( 'export','deletion' ), true ) ) return 'Please choose a privacy request.';
+
     $uid = get_current_user_id();
-    update_user_meta( $uid, 'bubbahub_privacy_request', $request );
-    update_user_meta( $uid, 'bubbahub_privacy_request_at', current_time( 'mysql' ) );
-    $user = wp_get_current_user();
-    wp_mail( get_option( 'admin_email' ), 'Bubba Hub privacy request', sprintf( "A privacy request has been submitted.\n\nUser ID: %d\nName: %s\nEmail: %s\nRequest: %s\nTime: %s", $uid, $user->display_name, $user->user_email, $request, current_time( 'mysql' ) ) );
-    return 'Privacy request saved.';
+    update_user_meta( $uid, 'bubbahub_privacy_share_contact_leaders', ! empty( $_POST['privacy_share_contact_leaders'] ) ? '1' : '0' );
+    update_user_meta( $uid, 'bubbahub_privacy_share_child_yob_leaders', ! empty( $_POST['privacy_share_child_yob_leaders'] ) ? '1' : '0' );
+    update_user_meta( $uid, 'bubbahub_privacy_personalised_recommendations', ! empty( $_POST['privacy_personalised_recommendations'] ) ? '1' : '0' );
+    update_user_meta( $uid, 'bubbahub_privacy_anonymous_analytics', ! empty( $_POST['privacy_anonymous_analytics'] ) ? '1' : '0' );
+    update_user_meta( $uid, 'bubbahub_privacy_leader_messages', ! empty( $_POST['privacy_leader_messages'] ) ? '1' : '0' );
+
+    $request = isset( $_POST['privacy_request'] ) ? sanitize_key( wp_unslash( $_POST['privacy_request'] ) ) : '';
+    if ( $request && in_array( $request, array( 'export','deletion' ), true ) ) {
+        update_user_meta( $uid, 'bubbahub_privacy_request', $request );
+        update_user_meta( $uid, 'bubbahub_privacy_request_at', current_time( 'mysql' ) );
+        $user = wp_get_current_user();
+        wp_mail( get_option( 'admin_email' ), 'Bubba Hub privacy request', sprintf( "A privacy request has been submitted.\n\nUser ID: %d\nName: %s\nEmail: %s\nRequest: %s\nTime: %s", $uid, $user->display_name, $user->user_email, $request, current_time( 'mysql' ) ) );
+        return 'Privacy and data-sharing settings saved. Your privacy request has also been submitted.';
+    }
+    return 'Privacy and data-sharing settings saved.';
 }
 
 /* -------------------------------------------------------------------------
@@ -1308,8 +1317,68 @@ function bubbahub_stage2_render_calendar_settings() {
     <?php return ob_get_clean();
 }
 function bubbahub_stage2_render_privacy() {
-    $existing=bubbahub_stage2_user_meta('bubbahub_privacy_request','');
-    ob_start(); ?><div class="bh-profile-card"><div class="bh-profile-card-heading"><div><h3>Privacy & security</h3><span>Manage account access and privacy requests</span></div></div><div class="bh-pro-status"><strong>Account security</strong><p>Your password and core WordPress / Ultimate Member controls remain managed by the connected account system.</p></div><div class="bh-profile-actions"><a class="bh-stage2-button" href="<?php echo esc_url(bubbahub_stage2_account_url()); ?>">Open account & security</a><a class="bh-stage2-button" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>">Log out</a></div><form method="post" class="bh-stage2-form" style="margin-top:18px"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="privacy"><fieldset class="bh-settings-fieldset"><legend>Privacy requests</legend><p class="bh-muted">Request a copy of your Bubba Hub data or request account deletion. Deletion is handled as a request so bookings, payments and required records can be checked first.</p><label class="bh-stage2-check"><input type="radio" name="privacy_request" value="export" <?php checked($existing,'export'); ?>><span><strong>Request my data</strong></span></label><label class="bh-stage2-check"><input type="radio" name="privacy_request" value="deletion" <?php checked($existing,'deletion'); ?>><span><strong>Request account deletion</strong></span></label></fieldset><div class="bh-profile-actions"><button type="submit">Submit privacy request</button></div></form></div><?php return ob_get_clean();
+    $existing = bubbahub_stage2_user_meta('bubbahub_privacy_request','');
+    $share_contact = bubbahub_stage2_user_meta('bubbahub_privacy_share_contact_leaders','1');
+    $share_child_yob = bubbahub_stage2_user_meta('bubbahub_privacy_share_child_yob_leaders','1');
+    $personalised = bubbahub_stage2_user_meta('bubbahub_privacy_personalised_recommendations','1');
+    $analytics = bubbahub_stage2_user_meta('bubbahub_privacy_anonymous_analytics','1');
+    $leader_messages = bubbahub_stage2_user_meta('bubbahub_privacy_leader_messages','1');
+    $toggle = function($name,$value,$label,$description){
+        ob_start(); ?>
+        <label class="bh-privacy-toggle"><input type="checkbox" name="<?php echo esc_attr($name); ?>" value="1" <?php checked($value,'1'); ?>><span class="bh-privacy-toggle-track" aria-hidden="true"></span><span class="bh-privacy-toggle-copy"><strong><?php echo esc_html($label); ?></strong><small><?php echo esc_html($description); ?></small></span></label>
+        <?php return ob_get_clean();
+    };
+    ob_start(); ?>
+    <div class="bh-profile-card bh-privacy-settings">
+      <div class="bh-profile-card-heading"><div><h3>Privacy & security</h3><span>Choose how your information is used and shared</span></div></div>
+      <div class="bh-privacy-notice"><strong>🔒 Your choices</strong><p>These settings control optional Bubba Hub data sharing. Information that is legally required, needed to process a booking, or required for payment or account security may still need to be processed.</p></div>
+      <form method="post" class="bh-stage2-form">
+        <?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="privacy">
+        <div class="bh-privacy-section">
+          <div class="bh-privacy-section-heading"><span>👩‍🏫</span><div><h4>Sharing with class leaders</h4><p>Control optional information sharing with group and class leaders.</p></div></div>
+          <?php
+          echo $toggle('privacy_share_contact_leaders',$share_contact,'Share my contact details with class leaders','Allow relevant leaders to receive the contact details needed to communicate about your booking or enquiry.');
+          echo $toggle('privacy_share_child_yob_leaders',$share_child_yob,'Share my child’s year of birth','Allow the class leader to see the child’s year of birth where it helps them manage the booking.');
+          echo $toggle('privacy_leader_messages',$leader_messages,'Allow messages from class leaders','Allow class leaders to contact you through Bubba Hub about bookings, classes or enquiries.');
+          ?>
+        </div>
+        <div class="bh-privacy-section">
+          <div class="bh-privacy-section-heading"><span>✨</span><div><h4>Personalisation</h4><p>Choose whether Bubba Hub can use your preferences to tailor what you see.</p></div></div>
+          <?php
+          echo $toggle('privacy_personalised_recommendations',$personalised,'Personalised group recommendations','Use your interests, locations and family preferences to suggest relevant activities.');
+          echo $toggle('privacy_anonymous_analytics',$analytics,'Anonymous usage analytics','Allow aggregated, non-personal analytics to help improve Bubba Hub features and performance.');
+          ?>
+        </div>
+        <div class="bh-privacy-section">
+          <div class="bh-privacy-section-heading"><span>🛡️</span><div><h4>Account security</h4><p>Password and core account security remain managed by the connected account system.</p></div></div>
+          <div class="bh-profile-actions"><a class="bh-stage2-button" href="<?php echo esc_url(bubbahub_stage2_account_url()); ?>">Open account & security</a><a class="bh-stage2-button" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>">Log out</a></div>
+        </div>
+        <div class="bh-privacy-section">
+          <div class="bh-privacy-section-heading"><span>📦</span><div><h4>Your data</h4><p>Request a copy of your data or ask Bubba Hub to delete your account. Requests are reviewed where bookings, payments or legal records need to be retained.</p></div></div>
+          <div class="bh-privacy-request-grid">
+            <label class="bh-stage2-check"><input type="radio" name="privacy_request" value="export" <?php checked($existing,'export'); ?>><span><strong>Request my data</strong><small>Ask for a copy of personal information held by Bubba Hub.</small></span></label>
+            <label class="bh-stage2-check"><input type="radio" name="privacy_request" value="deletion" <?php checked($existing,'deletion'); ?>><span><strong>Request account deletion</strong><small>Request deletion of your account and personal data, subject to required retention.</small></span></label>
+          </div>
+        </div>
+        <div class="bh-privacy-section">
+          <div class="bh-privacy-section-heading"><span>ℹ️</span><div><h4>What class leaders receive</h4><p>Bookings should use the minimum information needed to run the activity.</p></div></div>
+          <div class="bh-privacy-data-list">
+            <div><strong>Normally shared</strong><span>Booking details and information required to manage the booking.</span></div>
+            <div><strong>Optional</strong><span>Your contact details and your child’s year of birth, according to the settings above.</span></div>
+            <div><strong>Not provider-facing</strong><span>Full child profile details, full date of birth and private My Hub preferences.</span></div>
+          </div>
+        </div>
+        <div class="bh-profile-actions"><button type="submit">Save privacy settings</button></div>
+      </form>
+    </div>
+    <style>
+      .bh-privacy-settings .bh-privacy-notice{margin:0 0 16px;padding:13px 15px;border:1px solid #dbe7e1;border-radius:14px;background:#f7fbf9}.bh-privacy-notice strong{display:block;color:#31584b;font-size:13px}.bh-privacy-notice p{margin:4px 0 0;color:#718079;font-size:11px;line-height:1.5}
+      .bh-privacy-section{padding:16px;margin-top:14px;border:1px solid #e4ece8;border-radius:16px;background:#fbfdfc}.bh-privacy-section-heading{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}.bh-privacy-section-heading>span{display:flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;height:38px;border-radius:11px;background:#eaf3ef;font-size:18px}.bh-privacy-section-heading h4{margin:0 0 3px;color:#31584b;font-size:14px;font-weight:800}.bh-privacy-section-heading p{margin:0;color:#718079;font-size:11px;line-height:1.45}
+      .bh-privacy-toggle{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid #e7efeb;cursor:pointer}.bh-privacy-toggle:first-of-type{border-top:0}.bh-privacy-toggle input{position:absolute;opacity:0;pointer-events:none}.bh-privacy-toggle-track{position:relative;flex:0 0 44px;width:44px;height:25px;border-radius:999px;background:#cbd7d1;transition:.2s}.bh-privacy-toggle-track:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);transition:.2s}.bh-privacy-toggle input:checked + .bh-privacy-toggle-track{background:#5f9183}.bh-privacy-toggle input:checked + .bh-privacy-toggle-track:after{transform:translateX(19px)}.bh-privacy-toggle-copy{display:flex;flex-direction:column;gap:2px}.bh-privacy-toggle-copy strong{color:#31584b;font-size:12px}.bh-privacy-toggle-copy small{color:#718079;font-size:11px;line-height:1.4}
+      .bh-privacy-request-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bh-privacy-request-grid .bh-stage2-check{margin:0}.bh-privacy-data-list{display:grid;gap:8px}.bh-privacy-data-list div{padding:10px 11px;border-radius:10px;background:#fff;border:1px solid #e4ece8}.bh-privacy-data-list strong{display:block;color:#31584b;font-size:11px}.bh-privacy-data-list span{display:block;color:#718079;font-size:11px;line-height:1.45;margin-top:2px}
+      @media(max-width:650px){.bh-privacy-section{padding:14px}.bh-privacy-request-grid{grid-template-columns:1fr}}
+    </style>
+    <?php return ob_get_clean();
 }
 function bubbahub_stage2_render_notification_test() {
     $user=wp_get_current_user();

@@ -1542,6 +1542,7 @@ function bubbahub_stage2_render_payments() {
 function bubbahub_account_settings_stage2_shortcode() {
     if ( ! is_user_logged_in() ) return '<p>Please log in to manage your account settings.</p>';
     wp_enqueue_style( 'bubbahub-profile-settings' );
+    wp_enqueue_style( 'bubbahub-account-settings' );
 
     $message = '';
     if ( null !== $GLOBALS['bubbahub_stage2_post_result'] ) {

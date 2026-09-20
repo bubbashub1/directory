@@ -29,8 +29,7 @@ function bubbahub_stage2_post_redirect() {
         'consent'       => 'bubbahub_stage2_handle_consent',
         'interests'     => 'bubbahub_stage2_handle_interests',
         'family_needs'  => 'bubbahub_stage2_handle_family_needs',
-        'search'       => 'bubbahub_stage2_handle_search_preferences',
-        'calendar'     => 'bubbahub_stage2_handle_calendar_settings',
+                'calendar'     => 'bubbahub_stage2_handle_calendar_settings',
         'notification_test' => 'bubbahub_stage2_handle_notification_test',
         'privacy'      => 'bubbahub_stage2_handle_privacy',
     );
@@ -45,7 +44,6 @@ function bubbahub_stage2_post_redirect() {
         'Consent and safety details saved.',
         'Interests and group preferences saved.',
         'Family needs and discovery preferences saved.',
-        'Search preferences saved.',
         'Calendar settings saved.',
         'Test notification sent.',
         'Privacy request saved.',
@@ -195,7 +193,6 @@ function bubbahub_stage2_handle_profile() {
         'billing_town' => 'sanitize_text_field',
         'billing_county' => 'sanitize_text_field',
         'billing_postcode' => 'sanitize_text_field',
-        'search_radius' => 'sanitize_text_field',
     );
     foreach ( $fields as $field => $sanitizer ) {
         $value = isset( $_POST[ $field ] ) ? call_user_func( $sanitizer, wp_unslash( $_POST[ $field ] ) ) : '';
@@ -550,15 +547,12 @@ function bubbahub_stage2_handle_family_needs() {
         bubbahub_stage2_update_meta( 'bubbahub_' . $key, $values );
     }
     bubbahub_stage2_update_meta( 'bubbahub_free_activities_only', ! empty( $_POST['free_activities_only'] ) ? '1' : '0' );
-    return 'Family needs and discovery preferences saved.';
-}
-function bubbahub_stage2_handle_search_preferences() {
-    if ( ! is_user_logged_in() || 'search' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
-    if ( empty( $_POST['bh_stage2_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_stage2_nonce'] ) ), 'bh_stage2_settings' ) ) return 'Security check failed. Please try again.';
+
     $radius = isset( $_POST['search_radius'] ) ? sanitize_text_field( wp_unslash( $_POST['search_radius'] ) ) : '10 miles';
     if ( ! in_array( $radius, array( '5 miles','10 miles','15 miles','20 miles','25 miles' ), true ) ) $radius = '10 miles';
     bubbahub_stage2_update_meta( 'bubbahub_search_radius', $radius );
-    return 'Search preferences saved.';
+
+    return 'Family needs and discovery preferences saved.';
 }
 function bubbahub_stage2_handle_calendar_settings() {
     if ( ! is_user_logged_in() || 'calendar' !== ( $_POST['bh_stage2_action'] ?? '' ) ) return '';
@@ -1079,10 +1073,12 @@ function bubbahub_stage2_render_family_needs() {
         'preferred_days' => array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday'),
         'preferred_times' => array('morning'=>'Morning','afternoon'=>'Afternoon','early-evening'=>'Early evening'),
     );
+    $radius = bubbahub_stage2_user_meta('bubbahub_search_radius','10 miles');
     ob_start(); ?>
     <div class="bh-profile-card">
-      <div class="bh-profile-card-heading"><div><h3>Family needs & discovery</h3><span>Fine-tune the activities Bubba Hub shows you</span></div></div>
+      <div class="bh-profile-card-heading"><div><h3>My Family & Search Preferences</h3><span>Tell Bubba Hub what your family needs and what you'd like to discover</span></div></div>
       <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="family_needs">
+      <div class="bh-family-search-section"><div class="bh-family-search-heading"><h4>Family needs</h4><p>Choose the facilities, settings and times that work best for your family.</p></div>
       <div class="bh-settings-option-grid">
       <?php foreach($data as $name=>$opts): $selected=bubbahub_stage2_pref_array('bubbahub_'.$name); ?>
         <fieldset class="bh-settings-fieldset"><legend><?php echo esc_html(ucwords(str_replace('_',' ',$name))); ?></legend><div class="bh-settings-check-grid">
@@ -1091,16 +1087,32 @@ function bubbahub_stage2_render_family_needs() {
       <?php endforeach; ?>
       </div>
       <label class="bh-inline-setting"><input type="checkbox" name="free_activities_only" value="1" <?php checked(bubbahub_stage2_user_meta('bubbahub_free_activities_only'),'1'); ?>><span><strong>Free activities only</strong><small>Limit discovery to free activities when this is enabled.</small></span></label>
-      <div class="bh-profile-actions"><button type="submit">Save family preferences</button></div>
+      </div>
+      <div class="bh-family-search-section"><div class="bh-family-search-heading"><h4>Search area</h4><p>Choose how far Bubba Hub should look when discovering local groups and activities.</p></div>
+      <label class="bh-preference-field bh-search-radius-field"><span>Default search radius</span><select name="search_radius"><?php foreach(array('5 miles','10 miles','15 miles','20 miles','25 miles') as $r): ?><option value="<?php echo esc_attr($r); ?>" <?php selected($radius,$r); ?>><?php echo esc_html($r); ?></option><?php endforeach; ?></select></label>
+      </div>
+      <div class="bh-profile-actions"><button type="submit">Save family & search preferences</button></div>
       </form>
     </div>
-    <style>.bh-settings-option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.bh-settings-fieldset{border:1px solid #e4ece8;border-radius:14px;padding:14px;margin:0;min-width:0}.bh-settings-fieldset legend{padding:0 6px;color:#31584b;font-weight:800;font-size:13px}.bh-settings-check-grid{display:flex;flex-wrap:wrap;gap:8px}.bh-settings-check-grid label{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:#f5f9f6;font-size:12px;color:#40574f}.bh-settings-check-grid input{accent-color:#2f6c52}.bh-inline-setting{display:flex;align-items:center;gap:10px;margin-top:14px;padding:13px;border:1px solid #e4ece8;border-radius:14px}.bh-inline-setting small{display:block;color:#718079;margin-top:2px}@media(max-width:650px){.bh-settings-option-grid{grid-template-columns:1fr}}</style>
+    <style>
+      .bh-family-search-section{margin-top:18px;padding-top:18px;border-top:1px solid #e4ece8}
+      .bh-family-search-heading{margin-bottom:12px}
+      .bh-family-search-heading h4{margin:0 0 4px;color:#31584b;font-size:15px;font-weight:800}
+      .bh-family-search-heading p{margin:0;color:#718079;font-size:12px;line-height:1.45}
+      .bh-settings-option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .bh-settings-fieldset{border:1px solid #e4ece8;border-radius:14px;padding:14px;margin:0;min-width:0}
+      .bh-settings-fieldset legend{padding:0 6px;color:#31584b;font-weight:800;font-size:13px}
+      .bh-settings-check-grid{display:flex;flex-wrap:wrap;gap:8px}
+      .bh-settings-check-grid label{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:#f5f9f6;font-size:12px;color:#40574f}
+      .bh-settings-check-grid input{accent-color:#2f6c52}
+      .bh-inline-setting{display:flex;align-items:center;gap:10px;margin-top:14px;padding:13px;border:1px solid #e4ece8;border-radius:14px}
+      .bh-inline-setting small{display:block;color:#718079;margin-top:2px}
+      .bh-search-radius-field{display:block;max-width:360px}
+      .bh-search-radius-field span{display:block;margin-bottom:7px;font-weight:800;color:#40574f;font-size:12px}
+      .bh-search-radius-field select{width:100%;min-height:42px;padding:8px 10px;border:1px solid #dbe7e1;border-radius:10px;background:#fbfdfc;color:#1e3330}
+      @media(max-width:650px){.bh-settings-option-grid{grid-template-columns:1fr}}
+    </style>
     <?php return ob_get_clean();
-}
-function bubbahub_stage2_render_search_preferences() {
-    $radius=bubbahub_stage2_user_meta('bubbahub_search_radius','10 miles');
-    ob_start(); ?><div class="bh-profile-card"><div class="bh-profile-card-heading"><div><h3>Search preferences</h3><span>Set the default area used when discovering groups</span></div></div>
-    <form method="post" class="bh-stage2-form"><?php wp_nonce_field('bh_stage2_settings','bh_stage2_nonce'); ?><input type="hidden" name="bh_stage2_action" value="search"><label class="bh-preference-field"><span>Default search radius</span><select name="search_radius"><?php foreach(array('5 miles','10 miles','15 miles','20 miles','25 miles') as $r): ?><option value="<?php echo esc_attr($r); ?>" <?php selected($radius,$r); ?>><?php echo esc_html($r); ?></option><?php endforeach; ?></select></label><div class="bh-profile-actions"><button type="submit">Save search preferences</button></div></form></div><?php return ob_get_clean();
 }
 function bubbahub_stage2_render_calendar_settings() {
     $reminder=bubbahub_stage2_user_meta('bubbahub_calendar_reminder_minutes','60'); $calendar=bubbahub_stage2_user_meta('bubbahub_default_calendar','bubba');
@@ -1165,7 +1177,6 @@ function bubbahub_account_settings_stage2_shortcode() {
     elseif ( 'consent' === $section ) $content = bubbahub_stage2_render_consent();
     elseif ( 'interests' === $section ) $content = bubbahub_stage2_render_interests();
     elseif ( 'family_needs' === $section ) $content = bubbahub_stage2_render_family_needs();
-    elseif ( 'search' === $section ) $content = bubbahub_stage2_render_search_preferences();
     elseif ( 'calendar' === $section ) $content = bubbahub_stage2_render_calendar_settings();
     elseif ( 'privacy' === $section ) $content = bubbahub_stage2_render_privacy();
     elseif ( 'notification_test' === $section ) $content = bubbahub_stage2_render_notification_test();
@@ -1193,8 +1204,7 @@ function bubbahub_account_settings_stage2_shortcode() {
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'interests'))); ?>">
                 <span class="bh-settings-row-icon" aria-hidden="true">✨</span><span class="bh-settings-row-content"><h3>My Interests & Groups</h3><p>Choose interests from tags already used by Bubba Hub groups.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span>
             </a>
-            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'family_needs'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🧩</span><span class="bh-settings-row-content"><h3>Family Needs & Preferences</h3><p>Accessibility, indoor/outdoor, term-time, holidays, days, times and free activities.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>
-            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'search'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🔎</span><span class="bh-settings-row-content"><h3>Search Preferences</h3><p>Set the default radius used when discovering local groups and activities.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>
+            <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'family_needs'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🧩</span><span class="bh-settings-row-content"><h3>My Family & Search Preferences</h3><p>Family needs, preferred activities, times, free activities and search area.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'calendar'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🗓️</span><span class="bh-settings-row-content"><h3>Calendar Settings</h3><p>Choose reminder timing and your preferred calendar workflow.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notification_test'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🧪</span><span class="bh-settings-row-content"><h3>Notification Test</h3><p>Send a test email to check your account notification delivery.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>
             <a class="bh-settings-row" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'privacy'))); ?>"><span class="bh-settings-row-icon" aria-hidden="true">🔐</span><span class="bh-settings-row-content"><h3>Privacy & Security</h3><p>Open account security and submit data or deletion requests.</p></span><span class="bh-settings-row-arrow" aria-hidden="true">→</span></a>

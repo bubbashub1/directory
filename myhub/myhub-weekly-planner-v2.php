@@ -588,14 +588,14 @@ function bubbahub_myhub_weekly_planner_v2_shortcode() {
         <div class="bh-calendar-advanced-search" hidden aria-hidden="true">
           <?php
           $calendar_regions = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>0));
-          $calendar_towns = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>!empty($calendar_filters['region']) ? (int)term_exists($calendar_filters['region'],'region') : 0));
+          $calendar_towns = get_terms(array('taxonomy'=>'region','hide_empty'=>false,'parent'=>0));
           $calendar_cat_tax = function_exists('bubbahub_advanced_search_category_tax') ? bubbahub_advanced_search_category_tax() : '';
           $calendar_categories = $calendar_cat_tax ? get_terms(array('taxonomy'=>$calendar_cat_tax,'hide_empty'=>false)) : array();
           $calendar_acf = function_exists('bubbahub_advanced_search_acf_fields') ? bubbahub_advanced_search_acf_fields() : array();
           $calendar_days = array('monday'=>'Monday','tuesday'=>'Tuesday','wednesday'=>'Wednesday','thursday'=>'Thursday','friday'=>'Friday','saturday'=>'Saturday','sunday'=>'Sunday');
           ?>
-          <div class="bh-calendar-filter-option"><label for="bh-calendar-region">Region</label><select id="bh-calendar-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($calendar_regions)) foreach($calendar_regions as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['region'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
-          <div class="bh-calendar-filter-option"><label for="bh-calendar-town">Town</label><select id="bh-calendar-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($calendar_towns)) foreach($calendar_towns as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['town']??'',$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-region">Region</label><select id="bh-calendar-region" name="bh_region"><option value="">All regions</option><?php if(!is_wp_error($calendar_regions)) foreach($calendar_regions as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" data-term-id="<?php echo esc_attr((int)$t->term_id); ?>" <?php selected($calendar_filters['region'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
+          <div class="bh-calendar-filter-option"><label for="bh-calendar-town">Town</label><select id="bh-calendar-town" name="bh_town"><option value="">All towns</option><?php if(!is_wp_error($calendar_towns)) foreach($calendar_towns as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" data-parent-id="<?php echo esc_attr((int)$t->parent); ?>" <?php selected($calendar_filters['town']??'',$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-category">Category</label><select id="bh-calendar-category" name="bh_category"><option value="">All categories</option><?php foreach((array)$calendar_categories as $t): ?><option value="<?php echo esc_attr($t->slug); ?>" <?php selected($calendar_filters['category'],$t->slug); ?>><?php echo esc_html($t->name); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-day">Day</label><select id="bh-calendar-day" name="bh_day"><option value="">Any day</option><?php foreach($calendar_days as $v=>$label): ?><option value="<?php echo esc_attr($v); ?>" <?php selected($calendar_filters['day'],$v); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></div>
           <div class="bh-calendar-filter-option"><label for="bh-calendar-term">Term Time</label><select id="bh-calendar-term" name="bh_term_time"><option value="">Any term</option><option value="yes" <?php selected($calendar_filters['term_time'],'yes'); ?>>Term time only</option><option value="no" <?php selected($calendar_filters['term_time'],'no'); ?>>Not term time only</option></select></div>
@@ -1118,6 +1118,31 @@ document.addEventListener('DOMContentLoaded',function(){
     var saveName=planner.querySelector('#bh-calendar-save-name');
     var saveConfirm=planner.querySelector('[data-confirm-save]');
     var saveCancel=planner.querySelector('[data-cancel-save]');
+
+    var regionSelect=planner.querySelector('#bh-calendar-region');
+    var townSelect=planner.querySelector('#bh-calendar-town');
+    var locationInput=planner.querySelector('#bh-calendar-location');
+    var syncTownOptions=function(){
+      if(!regionSelect||!townSelect)return;
+      var selectedRegion=regionSelect.options[regionSelect.selectedIndex];
+      var regionTermId=selectedRegion?selectedRegion.getAttribute('data-term-id'):'';
+      Array.prototype.forEach.call(townSelect.options,function(option,index){
+        if(index===0){option.hidden=false;return;}
+        var parentId=option.getAttribute('data-parent-id')||'';
+        option.hidden=!!regionTermId && parentId!==regionTermId;
+      });
+      if(townSelect.value && townSelect.selectedOptions[0] && townSelect.selectedOptions[0].hidden)townSelect.value='';
+    };
+    if(regionSelect)regionSelect.addEventListener('change',syncTownOptions);
+    syncTownOptions();
+    if(locationInput){
+      locationInput.addEventListener('input',function(){
+        var lat=searchForm.querySelector('[name="bh_lat"]');
+        var lng=searchForm.querySelector('[name="bh_lng"]');
+        if(lat)lat.value='';
+        if(lng)lng.value='';
+      });
+    }
 
     if(advancedToggle&&advancedPanel){
       advancedToggle.addEventListener('click',function(e){

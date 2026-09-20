@@ -109,14 +109,32 @@ function bubbahub_profile_handle_child_post() {
     $result = bubbahub_profile_handle_child_action();
     if ( empty( $result ) ) return;
 
-    /* Successful Add/Edit saves always return to My Hub, never to the editor/referrer. */
+    /* Return to the Account Settings dashboard when child management was opened from there. */
+    $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
+    $returning_to_account_settings = false;
+    if ( $return_to ) {
+        $parsed = wp_parse_url( $return_to );
+        if ( ! empty( $parsed['query'] ) ) {
+            parse_str( $parsed['query'], $return_query );
+            $returning_to_account_settings = ! empty( $return_query['bh_account_settings'] );
+        }
+    }
+
     if ( ! empty( $result['success'] ) ) {
-        wp_safe_redirect( home_url( '/my-hub/#' ) );
+        if ( $returning_to_account_settings ) {
+            $return_to = add_query_arg(
+                'bh_account_settings',
+                '1',
+                remove_query_arg( 'bh_settings_section', $return_to )
+            );
+        } else {
+            $return_to = home_url( '/my-hub/#' );
+        }
+        wp_safe_redirect( $return_to );
         exit;
     }
 
     /* Keep validation/save errors on the form so the user can correct them. */
-    $return_to = isset( $_POST['bh_profile_return_to'] ) ? esc_url_raw( wp_unslash( $_POST['bh_profile_return_to'] ) ) : wp_get_referer();
     if ( ! $return_to ) $return_to = home_url( '/my-hub/' );
     if ( ! empty( $result['error'] ) ) {
         $return_to = add_query_arg( 'child_error', rawurlencode( $result['error'] ), $return_to );

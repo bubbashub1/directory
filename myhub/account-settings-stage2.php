@@ -385,8 +385,8 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
         }
     }
     $snapshot['child_profile_id'] = $child_id;
+    /* Provider-facing child profile data is deliberately limited to year of birth. */
     $snapshot['child_profile'] = array(
-        'name' => sanitize_text_field( $child_name ),
         'year_of_birth' => sanitize_text_field( $child_year ),
     );
     $snapshot['child_year_of_birth'] = sanitize_text_field( $child_year );
@@ -395,6 +395,21 @@ function bubbahub_stage2_get_consent_snapshot( $uid = 0 ) {
     $snapshot['user_id'] = $uid;
     $snapshot['captured_at'] = current_time( 'mysql' );
     return $snapshot;
+}
+
+function bubbahub_stage2_consent_is_valid( $uid = 0 ) {
+    $uid = absint( $uid ?: get_current_user_id() );
+    if ( ! $uid ) return false;
+    $snapshot = bubbahub_stage2_get_consent_snapshot( $uid );
+    if ( ! $snapshot ) return false;
+    $required = array(
+        'profile_shared_ack','class_leader_contact','payment_agreement',
+        'liability_ack','booking_terms_ack','data_processing_ack','accuracy_declaration',
+    );
+    foreach ( $required as $key ) {
+        if ( empty( $snapshot[ $key ] ) ) return false;
+    }
+    return ! empty( $snapshot['version'] ) && ! empty( $snapshot['saved_at'] );
 }
 
 /* Copy the customer's current consent onto every booking as an immutable booking snapshot. */

@@ -1206,6 +1206,7 @@ document.addEventListener('DOMContentLoaded',function(){
                 if(value!=='')url.searchParams.append(key,value);
               });
             }
+            url.searchParams.delete('bh_saved_calendar');
             url.searchParams.set('bh_view','planner');
             window.history.replaceState({},'',url.toString());
           })

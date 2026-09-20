@@ -217,10 +217,28 @@ function bubbahub_push_settings_page() {
         $new = array();
         foreach ( $keys as $key ) $new[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
         $new['enabled'] = ! empty( $_POST['enabled'] ) ? 1 : 0;
-        update_option( 'bubbahub_push_settings', $new, false );
-        if ( ! empty( $_POST['service_account_json'] ) ) update_option( 'bubbahub_fcm_service_account_json', trim( wp_unslash( $_POST['service_account_json'] ) ), false );
-        $c = bubbahub_push_config();
-        echo '<div class="notice notice-success"><p>Bubba Hub push settings saved.</p></div>';
+
+        $service_account = isset( $_POST['service_account_json'] ) ? trim( wp_unslash( $_POST['service_account_json'] ) ) : '';
+        $service_account_error = '';
+        if ( $service_account !== '' ) {
+            $decoded = json_decode( $service_account, true );
+            if ( ! is_array( $decoded ) || empty( $decoded['client_email'] ) || empty( $decoded['private_key'] ) ) {
+                $service_account_error = 'The Firebase service-account JSON could not be validated. Check that you pasted the complete JSON file.';
+            }
+        }
+
+        if ( $service_account_error ) {
+            $new['enabled'] = 0;
+            echo '<div class="notice notice-error"><p>' . esc_html( $service_account_error ) . '</p><p>Your Firebase public settings were not lost, but push has been left disabled until the service-account JSON is corrected.</p></div>';
+        } else {
+            update_option( 'bubbahub_push_settings', $new, false );
+            if ( $service_account !== '' ) {
+                update_option( 'bubbahub_fcm_service_account_json', $service_account, false );
+            }
+            delete_transient( 'bubbahub_fcm_access_token' );
+            $c = bubbahub_push_config();
+            echo '<div class="notice notice-success"><p>Bubba Hub push settings saved.</p></div>';
+        }
     }
     ?>
     <div class="wrap">

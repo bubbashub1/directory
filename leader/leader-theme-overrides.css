@@ -243,8 +243,3 @@
 }
 
 
-/* Keep leader typography consistent with BubbaHub. */
-.bh-leader-dashboard,
-.bh-leader-management-page,
-.bh-leader-dashboard *,
-.bh-leader-management-page *{font-family:"Nunito",sans-serif;}

@@ -174,6 +174,13 @@ function bubbahub_booking_create( $args = array() ) {
     $args['group_id'] = $session_group_id;
     $args['venue_id'] = $session_venue_id;
 
+    // Serialise capacity checks for the same session so two simultaneous
+    // booking requests cannot both reserve the final places.
+    global $wpdb;
+    $booking_lock = 'bubbahub_booking_' . $session_id;
+    $booking_lock_acquired = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, 5 )', $booking_lock ) );
+    if ( 1 !== $booking_lock_acquired ) return new WP_Error( 'booking_lock_timeout', 'This session is being booked right now. Please try again.' );
+
     $stats = bubbahub_booking_session_stats( $session_id );
     $ticket_types = $stats['ticket_types'];
     $ticket_map = array();
@@ -188,6 +195,7 @@ function bubbahub_booking_create( $args = array() ) {
             if ( ! $quantity || ! isset( $ticket_map[ $slug ] ) ) continue;
             $definition = $ticket_map[ $slug ];
             if ( $definition['capacity'] > 0 && $quantity > $definition['remaining'] ) {
+                $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $booking_lock ) );
                 return new WP_Error( 'ticket_full', sprintf( 'There are not enough %s tickets remaining.', $definition['name'] ) );
             }
             $breakdown[] = array( 'slug' => $slug, 'name' => $definition['name'], 'price' => $definition['price'], 'quantity' => $quantity );
@@ -196,13 +204,23 @@ function bubbahub_booking_create( $args = array() ) {
 
     $calculated = bubbahub_booking_ticket_breakdown_total( $breakdown );
     $places = $calculated['places'] > 0 ? $calculated['places'] : max( 1, (int) $args['places'] );
-    if ( $ticket_types && ! $calculated['places'] ) return new WP_Error( 'ticket_required', 'Please select at least one ticket.' );
-    if ( $stats['capacity'] > 0 && ( $stats['remaining'] === null || $places > $stats['remaining'] ) ) return new WP_Error( 'session_full', 'There are not enough spaces remaining for this session.' );
+    if ( $ticket_types && ! $calculated['places'] ) {
+        $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $booking_lock ) );
+        return new WP_Error( 'ticket_required', 'Please select at least one ticket.' );
+    }
+    if ( $stats['capacity'] > 0 && ( $stats['remaining'] === null || $places > $stats['remaining'] ) ) {
+        $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $booking_lock ) );
+        return new WP_Error( 'session_full', 'There are not enough spaces remaining for this session.' );
+    }
 
     $total_price = $calculated['places'] > 0 ? $calculated['total'] : (float) $args['total_price'];
     $booking_id = wp_insert_post( array( 'post_type'=>'bh_booking','post_status'=>'publish','post_title'=>sprintf( 'Booking - %s - %s', get_the_title( $args['group_id'] ) ?: 'Group', sanitize_text_field( $args['customer_name'] ) ?: sanitize_email( $args['customer_email'] ) ) ), true );
-    if ( is_wp_error( $booking_id ) ) return $booking_id;
+    if ( is_wp_error( $booking_id ) ) {
+        $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $booking_lock ) );
+        return $booking_id;
+    }
     foreach ( array( '_bh_session_id'=> $session_id, '_bh_group_id'=>absint($args['group_id']), '_bh_venue_id'=>absint($args['venue_id']), '_bh_user_id'=>absint($args['user_id']), '_bh_customer_name'=>sanitize_text_field($args['customer_name']), '_bh_customer_email'=>sanitize_email($args['customer_email']), '_bh_places'=>$places, '_bh_ticket_breakdown'=>$breakdown, '_bh_total_price'=>number_format( $total_price, 2, '.', '' ), '_bh_status'=>sanitize_key($args['status']), '_bh_payment_status'=>sanitize_key($args['payment_status']), '_bh_payment_method'=>sanitize_key($args['payment_method']), '_bh_invoice_id'=>absint($args['invoice_id']), '_bh_notes'=>sanitize_textarea_field($args['notes']) ) as $key=>$value ) update_post_meta($booking_id,$key,$value);
+    $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $booking_lock ) );
     do_action( 'bubbahub_booking_created', $booking_id, $args );
     return $booking_id;
 }

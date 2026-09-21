@@ -37,6 +37,13 @@ if ( file_exists( $bh_platform_loader ) ) {
     require_once $bh_platform_loader;
 }
 
+// Keep the built-in Booking Consent page lifecycle owned by the consent service.
+register_activation_hook( __FILE__, function() {
+    if ( class_exists( 'BubbaHub_Booking_Consent' ) ) {
+        BubbaHub_Booking_Consent::activate();
+    }
+} );
+
 require_once plugin_dir_path( __FILE__ ) . 'myhub/myhub.php';
 require_once plugin_dir_path( __FILE__ ) . 'leader/bubbahub-leader-dashboard.php';
 

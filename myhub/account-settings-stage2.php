@@ -41,7 +41,7 @@ function bubbahub_stage2_post_redirect() {
         'consent'       => 'bubbahub_stage2_handle_consent',
         'preferences'   => 'bubbahub_stage2_handle_preferences',
         'family_needs'  => 'bubbahub_stage2_handle_preferences',
-                'calendar'     => 'bubbahub_stage2_handle_calendar_settings',
+        'calendar'     => 'bubbahub_stage2_handle_calendar_settings',
         'notification_test' => 'bubbahub_stage2_handle_notification_test',
         'privacy'      => 'bubbahub_stage2_handle_privacy',
     );

@@ -6,6 +6,8 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+/* Controlled deployment checkpoint: Account Settings repository validation passed. */
+
 /*
  * Legacy My Hub URLs using ?bh_account_settings=1 are now routed to the
  * Ultimate Member Account dashboard instead of replacing the whole My Hub

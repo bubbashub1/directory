@@ -1,5 +1,17 @@
 <?php
 /**
+ * Bubba Hub My Hub — Account Settings & Booking Module
+ *
+ * Consolidated account-settings stages 2–11.
+ * Stage 1 child-profile CRUD remains in its existing module.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+if ( function_exists( 'bubbahub_account_settings_stage2_register' ) ) return;
+
+
+/* ===== Consolidated legacy Stage 2 ===== */
+/**
  * Bubba Hub My Hub - Stage 2 account settings.
  *
  * Adds native WordPress/Ultimate Member/GetPaid-connected account settings
@@ -1968,3 +1980,878 @@ function bubbahub_account_settings_stage2_shortcode() {
     </div>
     <?php return ob_get_clean();
 }
+
+/* ===== Consolidated legacy Stage 3 ===== */
+/**
+ * Bubba Hub My Hub - Stage 3 integrations.
+ *
+ * Connects the account-settings layer to the existing WordPress/Ultimate
+ * Member account and to the Stripe payment integration already present in
+ * this repository. It does not invent a second customer/payment system.
+ *
+ * GetPaid note: the repository's existing GetPaid compatibility file routes
+ * booking payments to Stripe Connect, so this module exposes a Stripe Billing
+ * Portal when Stripe is configured and keeps the existing GetPaid URL filters
+ * available for any site-level GetPaid page supplied by the live installation.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_filter( 'bubbahub_stripe_customer_portal_url', 'bubbahub_stage3_customer_portal_url', 20 );
+add_action( 'admin_post_bubbahub_customer_portal', 'bubbahub_stage3_customer_portal_redirect' );
+add_action( 'profile_update', 'bubbahub_stage3_sync_account_meta', 20, 2 );
+add_action( 'user_register', 'bubbahub_stage3_sync_account_meta', 20, 1 );
+add_filter( 'bubbahub_getpaid_account_url', 'bubbahub_stage3_getpaid_url', 20 );
+add_filter( 'bubbahub_getpaid_payment_methods_url', 'bubbahub_stage3_payment_methods_url', 20 );
+
+function bubbahub_stage3_getpaid_url( $url ) {
+    if ( $url ) return $url;
+    $configured = get_option( 'bubbahub_getpaid_account_url', '' );
+    return $configured ? esc_url_raw( $configured ) : '';
+}
+
+function bubbahub_stage3_payment_methods_url( $url ) {
+    if ( $url ) return $url;
+    $configured = get_option( 'bubbahub_getpaid_payment_methods_url', '' );
+    return $configured ? esc_url_raw( $configured ) : '';
+}
+
+function bubbahub_stage3_customer_portal_url( $url ) {
+    if ( $url || ! is_user_logged_in() ) return $url;
+    $settings = function_exists( 'bubbahub_stripe_settings' ) ? bubbahub_stripe_settings() : array();
+    if ( empty( $settings['enabled'] ) || empty( $settings['secret_key'] ) ) return '';
+    return wp_nonce_url( admin_url( 'admin-post.php?action=bubbahub_customer_portal' ), 'bubbahub_customer_portal' );
+}
+
+function bubbahub_stage3_stripe_customer_id( $user_id ) {
+    $id = trim( (string) get_user_meta( $user_id, 'bubbahub_stripe_customer_id', true ) );
+    return ( $id && 0 === strpos( $id, 'cus_' ) ) ? $id : '';
+}
+
+function bubbahub_stage3_get_or_create_customer( $user_id ) {
+    if ( ! function_exists( 'bubbahub_stripe_api_request' ) ) return new WP_Error( 'stripe_unavailable', 'Stripe integration is not loaded.' );
+    $existing = bubbahub_stage3_stripe_customer_id( $user_id );
+    if ( $existing ) return $existing;
+
+    $user = get_userdata( $user_id );
+    if ( ! $user ) return new WP_Error( 'invalid_user', 'User account could not be found.' );
+
+    $customer = bubbahub_stripe_api_request( 'POST', 'customers', array(
+        'email' => sanitize_email( $user->user_email ),
+        'name' => sanitize_text_field( $user->display_name ),
+        'metadata[bubbahub_user_id]' => $user_id,
+    ) );
+    if ( is_wp_error( $customer ) ) return $customer;
+    if ( empty( $customer['id'] ) ) return new WP_Error( 'stripe_customer_missing', 'Stripe did not return a customer ID.' );
+
+    $id = sanitize_text_field( $customer['id'] );
+    update_user_meta( $user_id, 'bubbahub_stripe_customer_id', $id );
+    return $id;
+}
+
+function bubbahub_stage3_customer_portal_redirect() {
+    if ( ! is_user_logged_in() ) wp_die( 'Please log in to manage your payment details.' );
+    check_admin_referer( 'bubbahub_customer_portal' );
+
+    if ( ! function_exists( 'bubbahub_stripe_settings' ) || ! function_exists( 'bubbahub_stripe_api_request' ) ) {
+        wp_die( 'Stripe payments are not available.' );
+    }
+    $settings = bubbahub_stripe_settings();
+    if ( empty( $settings['enabled'] ) || empty( $settings['secret_key'] ) ) {
+        wp_die( 'Stripe payments are not configured yet.' );
+    }
+
+    $customer_id = bubbahub_stage3_get_or_create_customer( get_current_user_id() );
+    if ( is_wp_error( $customer_id ) ) wp_die( esc_html( $customer_id->get_error_message() ) );
+
+    $portal = bubbahub_stripe_api_request( 'POST', 'billing_portal/sessions', array(
+        'customer' => $customer_id,
+        'return_url' => add_query_arg( 'bh_account_settings', '1', home_url( '/' ) ),
+    ) );
+    if ( is_wp_error( $portal ) || empty( $portal['url'] ) ) {
+        wp_die( esc_html( is_wp_error( $portal ) ? $portal->get_error_message() : 'Stripe did not return a customer portal URL.' ) );
+    }
+    wp_redirect( esc_url_raw( $portal['url'] ) );
+    exit;
+}
+
+/**
+ * Keep the common Ultimate Member phone field in step with the Bubba Hub
+ * account value when that UM field already exists. UM uses the WordPress user
+ * record as its identity, so display name and email are already shared.
+ */
+function bubbahub_stage3_sync_account_meta( $user_id, $old_user_data = null ) {
+    $user_id = absint( $user_id );
+    if ( ! $user_id ) return;
+
+    $phone = get_user_meta( $user_id, 'bubbahub_phone', true );
+    if ( '' !== $phone ) {
+        foreach ( array( 'mobile_number', 'phone_number', 'user_phone' ) as $key ) {
+            if ( metadata_exists( 'user', $user_id, $key ) ) update_user_meta( $user_id, $key, $phone );
+        }
+    }
+}
+
+/**
+ * Optional site-level GetPaid page configuration. This deliberately does not
+ * guess a page slug: if the live site has a GetPaid customer page, set its
+ * URL in these filters/options and Stage 2 will use it. Otherwise the existing
+ * Bubba Hub bookings area remains the safe fallback.
+ */
+add_action( 'admin_init', 'bubbahub_stage3_register_settings' );
+function bubbahub_stage3_register_settings() {
+    register_setting( 'general', 'bubbahub_getpaid_account_url', array( 'type' => 'string', 'sanitize_callback' => 'esc_url_raw', 'default' => '' ) );
+    register_setting( 'general', 'bubbahub_getpaid_payment_methods_url', array( 'type' => 'string', 'sanitize_callback' => 'esc_url_raw', 'default' => '' ) );
+}
+
+add_action( 'admin_menu', 'bubbahub_stage3_settings_page' );
+function bubbahub_stage3_settings_page() {
+    add_options_page( 'Bubba Hub Account Integrations', 'Bubba Hub Integrations', 'manage_options', 'bubbahub-account-integrations', 'bubbahub_stage3_settings_screen' );
+}
+
+function bubbahub_stage3_settings_screen() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+    ?>
+    <div class="wrap">
+        <h1>Bubba Hub Account Integrations</h1>
+        <p>Ultimate Member uses the site's WordPress user account. Payment bookings in this repository currently use the Stripe integration; GetPaid URL fields below are optional compatibility settings for a live GetPaid customer page.</p>
+        <form method="post" action="options.php">
+            <?php settings_fields( 'general' ); ?>
+            <table class="form-table" role="presentation">
+                <tr><th scope="row"><label for="bubbahub_getpaid_account_url">GetPaid account / invoices URL</label></th><td><input class="regular-text" type="url" id="bubbahub_getpaid_account_url" name="bubbahub_getpaid_account_url" value="<?php echo esc_attr( get_option( 'bubbahub_getpaid_account_url', '' ) ); ?>"><p class="description">Optional. Leave blank to use the existing Bubba Hub bookings fallback.</p></td></tr>
+                <tr><th scope="row"><label for="bubbahub_getpaid_payment_methods_url">GetPaid payment methods URL</label></th><td><input class="regular-text" type="url" id="bubbahub_getpaid_payment_methods_url" name="bubbahub_getpaid_payment_methods_url" value="<?php echo esc_attr( get_option( 'bubbahub_getpaid_payment_methods_url', '' ) ); ?>"><p class="description">Optional. If supplied, the Payment Methods tile opens this page.</p></td></tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}
+
+
+/* ===== Consolidated legacy Stage 4 ===== */
+/**
+ * Bubba Hub My Hub - Stage 4 personalisation bridge.
+ *
+ * Connects Account Settings preferences to the existing My Groups engine.
+ * It deliberately uses the existing group CPT/taxonomies and bh_child CPT;
+ * no second recommendation system or duplicate profile data is created.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'init', 'bubbahub_stage4_sync_preferences', 8 );
+add_action( 'wp_ajax_bubbahub_myhub_selected_children', 'bubbahub_stage4_save_selected_children' );
+add_filter( 'bubbahub_myhub_selected_children', 'bubbahub_stage4_get_selected_children', 10, 1 );
+
+/** Return the taxonomy already used by Account Settings, when available. */
+function bubbahub_stage4_interest_taxonomy() {
+    if ( function_exists( 'bubbahub_stage2_taxonomy' ) ) {
+        return bubbahub_stage2_taxonomy();
+    }
+
+    foreach ( array( 'interest', 'interests', 'group_tag', 'group_tags', 'post_tag' ) as $taxonomy ) {
+        if ( taxonomy_exists( $taxonomy ) && is_object_in_taxonomy( 'group', $taxonomy ) ) return $taxonomy;
+    }
+    return '';
+}
+
+/**
+ * Keep the recommendation engine's legacy user_interests value in sync with
+ * the Stage 2 term-ID storage. Values are saved as slugs and names so the
+ * existing matcher can work with either representation.
+ */
+function bubbahub_stage4_sync_preferences() {
+    if ( ! is_user_logged_in() ) return;
+
+    $uid      = get_current_user_id();
+    $term_ids = get_user_meta( $uid, 'bubbahub_interest_term_ids', true );
+    $taxonomy = get_user_meta( $uid, 'bubbahub_interest_taxonomy', true );
+
+    if ( ! is_array( $term_ids ) ) $term_ids = array();
+    if ( ! $taxonomy || ! taxonomy_exists( $taxonomy ) ) $taxonomy = bubbahub_stage4_interest_taxonomy();
+
+    $interests = array();
+    if ( $taxonomy && $term_ids ) {
+        $terms = get_terms( array(
+            'taxonomy'   => $taxonomy,
+            'include'    => array_map( 'absint', $term_ids ),
+            'hide_empty' => false,
+        ) );
+        if ( ! is_wp_error( $terms ) ) {
+            foreach ( $terms as $term ) {
+                $interests[] = $term->slug;
+                $interests[] = $term->name;
+            }
+        }
+    }
+
+    $interests = array_values( array_unique( array_filter( array_map( 'sanitize_text_field', $interests ) ) ) );
+    update_user_meta( $uid, 'user_interests', $interests );
+
+    if ( ! get_user_meta( $uid, 'bubbahub_selected_children', true ) ) {
+        update_user_meta( $uid, 'bubbahub_selected_children', array() );
+    }
+}
+
+/** Save the selected child IDs from My Hub into the logged-in user's account. */
+function bubbahub_stage4_save_selected_children() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in.' ), 401 );
+    check_ajax_referer( 'bubbahub_myhub_groups', 'nonce' );
+
+    $ids = isset( $_POST['ids'] ) ? (array) wp_unslash( $_POST['ids'] ) : array();
+    $ids = array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+
+    $owned = get_posts( array(
+        'post_type'      => 'bh_child',
+        'post_status'    => array( 'publish', 'private' ),
+        'author'         => get_current_user_id(),
+        'post__in'       => $ids,
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ) );
+
+    $owned = array_map( 'absint', $owned );
+    update_user_meta( get_current_user_id(), 'bubbahub_selected_children', $owned );
+    update_user_meta( get_current_user_id(), 'bh_myhub_selected_children', $owned );
+
+    wp_send_json_success( array( 'selected_children' => $owned ) );
+}
+
+/** Public helper/filter for future My Hub components. */
+function bubbahub_stage4_get_selected_children( $selected = array() ) {
+    if ( ! is_user_logged_in() ) return array();
+    $saved = get_user_meta( get_current_user_id(), 'bubbahub_selected_children', true );
+    if ( ! is_array( $saved ) ) $saved = get_user_meta( get_current_user_id(), 'bh_myhub_selected_children', true );
+    return array_values( array_unique( array_filter( array_map( 'absint', (array) $saved ) ) ) );
+}
+
+/**
+ * Convenience helper for Stage 4+ dashboard components. Returns the group
+ * IDs that currently match the user's saved interests and selected children.
+ */
+function bubbahub_stage4_suggested_group_ids( $limit = 12 ) {
+    if ( ! is_user_logged_in() || ! function_exists( 'bubbahub_myhub_groups_suggested_ids' ) ) return array();
+    $selected = apply_filters( 'bubbahub_myhub_selected_children', array() );
+    $ids      = bubbahub_myhub_groups_suggested_ids( array(), $selected );
+    return array_slice( array_values( array_unique( array_map( 'absint', $ids ) ) ), 0, max( 1, absint( $limit ) ) );
+}
+
+
+/* ===== Consolidated legacy Stage 5 ===== */
+/** Bubba Hub My Hub - Stage 5 saved groups and recommendation reasons. */
+if ( ! defined( 'ABSPATH' ) ) exit;
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage5_assets', 30 );
+add_action( 'wp_ajax_bubbahub_stage5_saved_groups', 'bubbahub_stage5_saved_groups_ajax' );
+add_action( 'wp_ajax_bubbahub_stage5_group_reason', 'bubbahub_stage5_group_reason_ajax' );
+function bubbahub_stage5_assets() {
+    if ( ! is_user_logged_in() ) return;
+    wp_enqueue_script( 'jquery' );
+    wp_add_inline_script( 'jquery', 'window.BubbaHubStage5=' . wp_json_encode( array( 'ajaxUrl'=>admin_url('admin-ajax.php'),'nonce'=>wp_create_nonce('bubbahub_stage5') ) ) . ';', 'before' );
+    wp_add_inline_script( 'jquery', '(function($){"use strict";function api(data,cb){data.action="bubbahub_stage5_saved_groups";data.nonce=BubbaHubStage5.nonce;$.post(BubbaHubStage5.ajaxUrl,data,cb,"json");}function sync(type){api({mode:"get",type:type},function(r){if(r&&r.success)localStorage.setItem("bubbahub_"+type,JSON.stringify(r.data.ids||[]));});}function save(id,type,$b){api({mode:"toggle",type:type,group_id:id},function(r){if(!r||!r.success)return;localStorage.setItem("bubbahub_"+type,JSON.stringify(r.data.ids||[]));$b.toggleClass("is-saved",(r.data.ids||[]).map(String).indexOf(String(id))!==-1).attr("aria-pressed",(r.data.ids||[]).map(String).indexOf(String(id))!==-1?"true":"false");});}function reason(id,$target){$.post(BubbaHubStage5.ajaxUrl,{action:"bubbahub_stage5_group_reason",nonce:BubbaHubStage5.nonce,group_id:id},function(r){$target.html(r&&r.success?r.data.html:"<span>Matched to your saved family preferences.</span>");},"json");}function enhance(){$(".bh-myhub-group-card").each(function(){var $c=$(this),id=$c.data("group-id");if(!id||$c.find("[data-bh-save-group]").length)return;var saved=list("favourite").map(String).indexOf(String(id))!==-1;$c.find(".bh-myhub-group-body").prepend("<div class=\\"bh-myhub-card-actions\\"><button type=\\"button\\" data-bh-save-group=\\""+id+"\\" data-bh-save-type=\\"favourite\\" aria-label=\\"Save group\\" aria-pressed=\\""+(saved?"true":"false")+"\\" class=\\"bh-myhub-save-group "+(saved?"is-saved":"")+"\\">"+(saved?"♥ Saved":"♡ Save")+"</button><button type=\\"button\\" data-bh-reason=\\""+id+"\\" class=\\"bh-myhub-why-group\\">Why this group?</button></div>");});}function list(k){try{return JSON.parse(localStorage.getItem("bubbahub_"+k)||"[]");}catch(e){return[];}}$(function(){["favourite","visited","recently_viewed"].forEach(sync);enhance();var obs=new MutationObserver(enhance);obs.observe(document.body,{childList:true,subtree:true});$(document).on("click","[data-bh-save-group]",function(e){e.preventDefault();e.stopPropagation();var $b=$(this),id=$b.data("bh-save-group"),type=$b.data("bh-save-type")||"favourite";save(id,type,$b);$b.text($b.hasClass("is-saved")?"♥ Saved":"♡ Save");});$(document).on("click","[data-bh-reason]",function(e){e.preventDefault();e.stopPropagation();var $b=$(this),id=$b.data("bh-reason"),$box=$b.siblings(".bh-myhub-reason");if(!$box.length){$box=$("<div class=\\"bh-myhub-reason\\"></div>");$b.after($box);}if(!$box.data("loaded")){reason(id,$box);$box.data("loaded",1);}else $box.toggle();});});})(jQuery);', 'after' );
+}
+function bubbahub_stage5_group_ids( $type ) { $ids=get_user_meta(get_current_user_id(),'bubbahub_saved_'.sanitize_key($type),true);if(!is_array($ids))$ids=array();return array_values(array_unique(array_filter(array_map('absint',$ids)))); }
+function bubbahub_stage5_saved_groups_ajax() { if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);check_ajax_referer('bubbahub_stage5','nonce');$type=isset($_POST['type'])?sanitize_key(wp_unslash($_POST['type'])):'favourite';if(!in_array($type,array('favourite','visited','recently_viewed'),true))$type='favourite';$ids=bubbahub_stage5_group_ids($type);if('toggle'===(isset($_POST['mode'])?sanitize_key(wp_unslash($_POST['mode'])):'get')){$id=absint($_POST['group_id']??0);if(!$id||'group'!==get_post_type($id)||'publish'!==get_post_status($id))wp_send_json_error(array('message'=>'Invalid group.'));if(in_array($id,$ids,true))$ids=array_values(array_diff($ids,array($id)));else array_unshift($ids,$id);$ids=array_slice(array_values(array_unique($ids)),0,100);update_user_meta(get_current_user_id(),'bubbahub_saved_'.$type,$ids);}wp_send_json_success(array('ids'=>$ids)); }
+function bubbahub_stage5_group_reason_ajax() { if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);check_ajax_referer('bubbahub_stage5','nonce');$id=absint($_POST['group_id']??0);if(!$id||'group'!==get_post_type($id))wp_send_json_error(array('message'=>'Invalid group.'));$reasons=array();$uid=get_current_user_id();$term_ids=(array)get_user_meta($uid,'bubbahub_interest_term_ids',true);$taxonomy=get_user_meta($uid,'bubbahub_interest_taxonomy',true);if($taxonomy&&taxonomy_exists($taxonomy)&&$term_ids){$mine=get_terms(array('taxonomy'=>$taxonomy,'include'=>array_map('absint',$term_ids),'hide_empty'=>false));$group_terms=get_the_terms($id,$taxonomy);if(!is_wp_error($mine)&&!is_wp_error($group_terms)){foreach($mine as $m)foreach($group_terms as $g)if((int)$m->term_id===(int)$g->term_id)$reasons[]=$m->name;if($reasons)$reasons=array('Matches your interests: '.implode(', ',array_slice(array_unique($reasons),0,3)));}}
+$selected=get_user_meta($uid,'bubbahub_selected_children',true);if(!is_array($selected))$selected=array();$age=function_exists('bubbahub_myhub_groups_age_tokens')?bubbahub_myhub_groups_age_tokens($selected):array();if($age){$value=function_exists('bubbahub_directory_get_field')?bubbahub_directory_get_field($id,'age_range'):get_post_meta($id,'age_range',true);$hay=strtolower(is_array($value)?implode(' ',array_map('strval',$value)):(string)$value);foreach($age as $token)if($hay&&false!==strpos($hay,strtolower($token))){$reasons[]='Suitable for the selected child age range';break;}}
+if(get_user_meta($uid,'preferred_locations',true)&&get_the_terms($id,'location'))$reasons[]='Matches a preferred local area';if(!$reasons)$reasons[]='Suggested because it may suit your family preferences.';$html='<strong>Why this group?</strong><ul>';foreach(array_slice($reasons,0,3) as $reason)$html.='<li>'.esc_html($reason).'</li>';$html.='</ul>';wp_send_json_success(array('html'=>$html)); }
+
+
+/* ===== Consolidated legacy Stage 6 ===== */
+/**
+ * Bubba Hub My Hub - Stage 6.
+ * Adds server-side recently-viewed tracking and UI polish for saved groups.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage6_assets', 40 );
+add_action( 'wp_ajax_bubbahub_stage6_track_group', 'bubbahub_stage6_track_group_ajax' );
+
+function bubbahub_stage6_assets() {
+    if ( ! is_user_logged_in() ) return;
+
+    wp_enqueue_style( 'bubbahub-myhub' );
+    wp_enqueue_script( 'jquery' );
+
+    wp_add_inline_style( 'bubbahub-myhub', '
+        .bh-myhub-card-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 10px}.bh-myhub-save-group,.bh-myhub-why-group{border:1px solid #dfe8e4;background:#f8faf8;color:#3f5b55;border-radius:999px;padding:7px 10px;font:700 10px/1.2 inherit;cursor:pointer}.bh-myhub-save-group:hover,.bh-myhub-why-group:hover{border-color:#8aa69e;background:#eef5f2}.bh-myhub-save-group.is-saved{background:#1e3330;color:#fff;border-color:#1e3330}.bh-myhub-reason{margin:0 0 10px;padding:10px 12px;border:1px solid #e3ebe8;border-radius:13px;background:#fbfcfa;color:#536d67;font-size:10px;line-height:1.55}.bh-myhub-reason strong{display:block;color:#1e3330;font-size:11px;margin-bottom:3px}.bh-myhub-reason ul{margin:4px 0 0 15px;padding:0}.bh-myhub-reason li{margin:2px 0}.bh-myhub-group-card .bh-myhub-group-view{display:inline-flex;align-items:center;gap:5px}.bh-myhub-group-card.is-saved{outline:2px solid rgba(102,135,133,.12)}
+        @media(max-width:600px){.bh-myhub-card-actions{gap:6px}.bh-myhub-save-group,.bh-myhub-why-group{font-size:9px;padding:7px 9px}}
+    ' );
+
+    wp_add_inline_script( 'jquery', 'window.BubbaHubStage6=' . wp_json_encode( array(
+        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+        'nonce'   => wp_create_nonce( 'bubbahub_stage6' ),
+    ) ) . ';', 'before' );
+
+    wp_add_inline_script( 'jquery', '(function($){"use strict";
+        function list(key){try{return JSON.parse(localStorage.getItem("bubbahub_"+key)||"[]");}catch(e){return [];}}
+        function setList(key,items){localStorage.setItem("bubbahub_"+key,JSON.stringify(items));}
+        function track(id){
+            id=String(id||""); if(!id)return;
+            var local=list("recently_viewed").filter(function(x){return String(x)!==id;});
+            local.unshift(id); setList("recently_viewed",local.slice(0,20));
+            $.post(BubbaHubStage6.ajaxUrl,{action:"bubbahub_stage6_track_group",nonce:BubbaHubStage6.nonce,group_id:id},function(r){
+                if(r&&r.success&&r.data&&Array.isArray(r.data.ids))setList("recently_viewed",r.data.ids);
+            },"json");
+        }
+        function currentGroupId(){
+            var id=$("body").attr("data-group-id")||$("body").attr("data-bh-group-id")||$("meta[name=bubbahub-group-id]").attr("content");
+            if(id)return id;
+            var path=window.location.pathname;
+            var m=path.match(/(?:directory\/|group\/)(\d+)(?:\/|$)/); return m?m[1]:"";
+        }
+        function syncButtons(){
+            var saved=list("favourite").map(String);
+            $("[data-bh-save-group]").each(function(){
+                var $b=$(this),id=String($b.data("bh-save-group"));
+                var yes=saved.indexOf(id)!==-1;
+                $b.toggleClass("is-saved",yes).attr("aria-pressed",yes?"true":"false").text(yes?"♥ Saved":"♡ Save");
+                $b.closest(".bh-myhub-group-card").toggleClass("is-saved",yes);
+            });
+        }
+        $(function(){
+            var id=currentGroupId();
+            if(id)track(id);
+            syncButtons();
+            $(document).on("click","[data-bh-save-group]",function(){setTimeout(syncButtons,120);});
+        });
+    })(jQuery);', 'after' );
+}
+
+function bubbahub_stage6_saved_view_ids() {
+    $ids = get_user_meta( get_current_user_id(), 'bubbahub_saved_recently_viewed', true );
+    if ( ! is_array( $ids ) ) $ids = array();
+    return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+}
+
+function bubbahub_stage6_track_group_ajax() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in.' ), 401 );
+    check_ajax_referer( 'bubbahub_stage6', 'nonce' );
+
+    $id = absint( $_POST['group_id'] ?? 0 );
+    if ( ! $id || 'group' !== get_post_type( $id ) || 'publish' !== get_post_status( $id ) ) {
+        wp_send_json_error( array( 'message' => 'Invalid group.' ) );
+    }
+
+    $ids = bubbahub_stage6_saved_view_ids();
+    $ids = array_values( array_diff( $ids, array( $id ) ) );
+    array_unshift( $ids, $id );
+    $ids = array_slice( $ids, 0, 20 );
+    update_user_meta( get_current_user_id(), 'bubbahub_saved_recently_viewed', $ids );
+
+    wp_send_json_success( array( 'ids' => $ids ) );
+}
+
+
+/* ===== Consolidated legacy Stage 7 ===== */
+/**
+ * Bubba Hub My Hub - Stage 7.
+ * Connects My Hub group cards to the existing booking engine without changing booking creation.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage7_assets', 50 );
+add_action( 'wp_ajax_bubbahub_stage7_group_booking', 'bubbahub_stage7_group_booking_ajax' );
+
+function bubbahub_stage7_assets() {
+    if ( ! is_user_logged_in() ) return;
+    wp_enqueue_style( 'bubbahub-myhub' );
+    wp_enqueue_script( 'jquery' );
+    wp_add_inline_style( 'bubbahub-myhub', '
+        .bh-myhub-booking-summary{margin:0 0 10px;padding:10px 12px;border:1px solid #e3ebe8;border-radius:13px;background:#f8faf8;color:#536d67;font-size:10px;line-height:1.5}.bh-myhub-booking-summary strong{display:block;color:#1e3330;font-size:11px;margin-bottom:3px}.bh-myhub-booking-summary .bh-booking-status{display:inline-flex;margin-top:4px;padding:4px 7px;border-radius:999px;background:#e7f2ed;color:#315b4f;font-weight:800;font-size:9px}.bh-myhub-booking-summary a{display:inline-block;margin-top:6px;color:#3f5b55;font-weight:800;text-decoration:none}.bh-myhub-booking-summary a:hover{text-decoration:underline}
+    ' );
+    wp_add_inline_script( 'jquery', 'window.BubbaHubStage7=' . wp_json_encode( array(
+        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+        'nonce'   => wp_create_nonce( 'bubbahub_stage7' ),
+    ) ) . ';', 'before' );
+    wp_add_inline_script( 'jquery', '(function($){"use strict";
+        function enhance(){
+            $(".bh-myhub-group-card[data-group-id]").each(function(){
+                var $card=$(this),id=parseInt($card.attr("data-group-id"),10);
+                if(!id||$card.data("stage7-loaded"))return;
+                $card.data("stage7-loaded",1);
+                $.post(BubbaHubStage7.ajaxUrl,{action:"bubbahub_stage7_group_booking",nonce:BubbaHubStage7.nonce,group_id:id},function(r){
+                    if(!r||!r.success||!r.data)return;
+                    if(!r.data.has_booking&&!r.data.has_sessions)return;
+                    var html="<div class=\"bh-myhub-booking-summary\">";
+                    if(r.data.has_booking){html+="<strong>Upcoming booking</strong><span>"+r.data.booking_label+"</span><span class=\"bh-booking-status\">"+r.data.status_label+"</span>";}
+                    if(r.data.next_session_url){html+="<a href=\""+r.data.next_session_url+"\">"+(r.data.has_booking?"View group & booking options →":"Book a session →")+"</a>";}
+                    html+="</div>";
+                    $card.find(".bh-myhub-group-body").prepend(html);
+                },"json");
+            });
+        }
+        $(function(){enhance();var obs=new MutationObserver(enhance);obs.observe(document.body,{childList:true,subtree:true});});
+    })(jQuery);', 'after' );
+}
+
+function bubbahub_stage7_group_booking_ajax() {
+    if ( ! is_user_logged_in() ) wp_send_json_error( array( 'message' => 'Please log in.' ), 401 );
+    check_ajax_referer( 'bubbahub_stage7', 'nonce' );
+    $group_id = absint( $_POST['group_id'] ?? 0 );
+    if ( ! $group_id || 'group' !== get_post_type( $group_id ) || 'publish' !== get_post_status( $group_id ) ) {
+        wp_send_json_error( array( 'message' => 'Invalid group.' ), 400 );
+    }
+
+    $result = array( 'has_booking' => false, 'has_sessions' => false, 'booking_label' => '', 'status_label' => '', 'next_session_url' => get_permalink( $group_id ) );
+    $now = current_time( 'timestamp' );
+
+    if ( post_type_exists( 'bh_booking' ) ) {
+        $booking_ids = get_posts( array(
+            'post_type' => 'bh_booking', 'post_status' => 'publish', 'posts_per_page' => 20, 'fields' => 'ids', 'no_found_rows' => true,
+            'meta_query' => array(
+                array( 'key' => '_bh_user_id', 'value' => get_current_user_id(), 'compare' => '=' ),
+                array( 'key' => '_bh_group_id', 'value' => $group_id, 'compare' => '=' ),
+                array( 'key' => '_bh_status', 'value' => array( 'confirmed', 'reserved' ), 'compare' => 'IN' ),
+            ),
+        ) );
+        $best = null;
+        foreach ( $booking_ids as $booking_id ) {
+            $session_id = absint( get_post_meta( $booking_id, '_bh_session_id', true ) );
+            if ( ! $session_id || 'bh_session' !== get_post_type( $session_id ) ) continue;
+            $date = sanitize_text_field( get_post_meta( $session_id, '_bh_date', true ) );
+            $start = sanitize_text_field( get_post_meta( $session_id, '_bh_start_time', true ) );
+            $stamp = strtotime( trim( $date . ' ' . $start ) );
+            if ( ! $stamp || $stamp < $now ) continue;
+            if ( null === $best || $stamp < $best['stamp'] ) $best = array( 'stamp' => $stamp, 'date' => $date, 'start' => $start, 'status' => sanitize_key( get_post_meta( $booking_id, '_bh_status', true ) ) );
+        }
+        if ( $best ) {
+            $result['has_booking'] = true;
+            $result['booking_label'] = function_exists( 'bubbahub_myhub_booking_date_label' ) ? bubbahub_myhub_booking_date_label( $best['date'], $best['start'] ) : wp_date( 'D j M, g:i A', $best['stamp'] );
+            $result['status_label'] = 'confirmed' === $best['status'] ? 'Confirmed' : 'Reserved';
+        }
+    }
+
+    if ( function_exists( 'bubbahub_booking_get_available_sessions' ) ) {
+        $sessions = bubbahub_booking_get_available_sessions( $group_id );
+        foreach ( $sessions as $session ) {
+            $stamp = strtotime( trim( (string) ( $session['date'] ?? '' ) . ' ' . (string) ( $session['start_time'] ?? '' ) ) );
+            if ( $stamp && $stamp >= $now ) {
+                $result['has_sessions'] = true;
+                $date = sanitize_text_field( $session['date'] );
+                $result['next_session_url'] = add_query_arg( array( 'group_id' => $group_id, 'date' => $date, 'session_id' => absint( $session['id'] ) ), home_url( '/book/' ) );
+                break;
+            }
+        }
+    }
+
+    wp_send_json_success( $result );
+}
+
+
+/* ===== Consolidated legacy Stage 8 ===== */
+/**
+ * Bubba Hub My Hub - Stage 8.
+ * Adds a dedicated My Bookings view using the existing bh_booking / bh_session data.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage8_assets', 60 );
+
+function bubbahub_stage8_assets() {
+    if ( ! is_user_logged_in() ) return;
+    wp_register_style( 'bubbahub-myhub-stage8', false, array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.6.3' );
+    wp_enqueue_style( 'bubbahub-myhub-stage8' );
+    wp_add_inline_style( 'bubbahub-myhub-stage8', '
+        .bh-stage8-bookings{display:grid;gap:14px;margin:18px 0}.bh-stage8-booking{border:1px solid #e2ebe7;border-radius:18px;background:#fff;padding:18px;box-shadow:0 4px 18px rgba(38,70,63,.06)}.bh-stage8-booking-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.bh-stage8-booking h3{margin:0 0 5px;font-size:17px;color:#203b35}.bh-stage8-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#718a84;margin-bottom:5px}.bh-stage8-status{display:inline-flex;white-space:nowrap;border-radius:999px;padding:5px 9px;background:#e7f2ed;color:#315b4f;font-size:10px;font-weight:800}.bh-stage8-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}.bh-stage8-meta div{background:#f7faf8;border-radius:12px;padding:9px 11px;color:#536d67;font-size:11px}.bh-stage8-meta strong{display:block;color:#213b35;font-size:10px;margin-bottom:2px}.bh-stage8-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.bh-stage8-actions a{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:9px 12px;background:#edf4f1;color:#31564d;text-decoration:none;font-size:11px;font-weight:800}.bh-stage8-empty{padding:24px;border:1px dashed #ccdcd6;border-radius:16px;text-align:center;color:#647a75;background:#fafcfb}.bh-stage8-empty strong{display:block;color:#29443e;margin-bottom:5px}@media(max-width:600px){.bh-stage8-meta{grid-template-columns:1fr}.bh-stage8-booking-head{flex-direction:column}.bh-stage8-status{align-self:flex-start}}
+    ' );
+}
+
+function bubbahub_stage8_get_bookings() {
+    if ( ! is_user_logged_in() ) return array();
+
+    $ids = get_posts( array(
+        'post_type'      => 'bh_booking',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+        'no_found_rows'  => true,
+        'meta_query'     => array(
+            array( 'key' => '_bh_user_id', 'value' => get_current_user_id(), 'compare' => '=' ),
+            array( 'key' => '_bh_status', 'value' => array( 'confirmed', 'reserved' ), 'compare' => 'IN' ),
+        ),
+    ) );
+
+    $items = array();
+    $now = current_time( 'timestamp' );
+
+    foreach ( $ids as $booking_id ) {
+        $session_id = absint( get_post_meta( $booking_id, '_bh_session_id', true ) );
+        if ( ! $session_id || 'bh_session' !== get_post_type( $session_id ) ) continue;
+
+        $date  = sanitize_text_field( get_post_meta( $session_id, '_bh_date', true ) );
+        $start = sanitize_text_field( get_post_meta( $session_id, '_bh_start_time', true ) );
+        $stamp = strtotime( trim( $date . ' ' . $start ) );
+        if ( ! $stamp || $stamp < $now ) continue;
+
+        $group_id = absint( get_post_meta( $session_id, '_bh_group_id', true ) );
+        $venue_id = absint( get_post_meta( $session_id, '_bh_venue_id', true ) );
+        $status   = sanitize_key( get_post_meta( $booking_id, '_bh_status', true ) );
+
+        $items[] = array(
+            'booking_id' => $booking_id,
+            'session_id' => $session_id,
+            'title'      => get_the_title( $session_id ),
+            'group'      => $group_id ? get_the_title( $group_id ) : '',
+            'group_url'  => $group_id ? get_permalink( $group_id ) : '',
+            'venue'      => $venue_id ? get_the_title( $venue_id ) : '',
+            'date'       => $date,
+            'start'      => $start,
+            'stamp'      => $stamp,
+            'status'     => $status,
+        );
+    }
+
+    usort( $items, function( $a, $b ) { return $a['stamp'] <=> $b['stamp']; } );
+    return $items;
+}
+
+function bubbahub_stage8_my_bookings_shortcode() {
+    if ( ! is_user_logged_in() ) {
+        return '<div class="bh-stage8-empty"><strong>Please log in</strong>Log in to view your bookings.</div>';
+    }
+
+    $bookings = bubbahub_stage8_get_bookings();
+    ob_start();
+    ?>
+    <section class="bh-stage8-bookings" aria-label="My bookings">
+        <?php if ( empty( $bookings ) ) : ?>
+            <div class="bh-stage8-empty">
+                <strong>No upcoming bookings</strong>
+                Your confirmed or reserved sessions will appear here.
+            </div>
+        <?php else : ?>
+            <?php foreach ( $bookings as $booking ) : ?>
+                <article class="bh-stage8-booking">
+                    <div class="bh-stage8-booking-head">
+                        <div>
+                            <div class="bh-stage8-eyebrow">My Booking</div>
+                            <h3><?php echo esc_html( $booking['title'] ?: $booking['group'] ?: 'Booked session' ); ?></h3>
+                            <?php if ( $booking['group'] ) : ?><div><?php echo esc_html( $booking['group'] ); ?></div><?php endif; ?>
+                        </div>
+                        <span class="bh-stage8-status"><?php echo esc_html( 'confirmed' === $booking['status'] ? 'Confirmed' : 'Reserved' ); ?></span>
+                    </div>
+                    <div class="bh-stage8-meta">
+                        <div><strong>Date & time</strong><?php echo esc_html( function_exists( 'bubbahub_myhub_booking_date_label' ) ? bubbahub_myhub_booking_date_label( $booking['date'], $booking['start'] ) : wp_date( 'D j M Y, g:i A', $booking['stamp'] ) ); ?></div>
+                        <div><strong>Venue</strong><?php echo esc_html( $booking['venue'] ?: 'Venue to be confirmed' ); ?></div>
+                    </div>
+                    <div class="bh-stage8-actions">
+                        <?php if ( $booking['group_url'] ) : ?><a href="<?php echo esc_url( $booking['group_url'] ); ?>">View group</a><?php endif; ?>
+                        <a href="<?php echo esc_url( home_url( '/book/' ) ); ?>">Booking page</a>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </section>
+    <?php
+    return ob_get_clean();
+}
+
+
+/* ===== Consolidated legacy Stage 9 ===== */
+/**
+ * Bubba Hub My Hub - Stage 9.
+ * Expands My Bookings with ticket quantities, total, payment status and secure payment actions.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_shortcode( 'bubbahub_my_bookings', 'bubbahub_stage9_my_bookings_shortcode' );
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage9_assets', 65 );
+add_action( 'wp_ajax_bubbahub_stage9_pay_booking', 'bubbahub_stage9_pay_booking_ajax' );
+
+function bubbahub_stage9_assets() {
+    if ( ! is_user_logged_in() ) return;
+    wp_register_style( 'bubbahub-myhub-stage9', false, array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.6.5' );
+    wp_enqueue_style( 'bubbahub-myhub-stage9' );
+    wp_add_inline_style( 'bubbahub-myhub-stage9', '.bh-stage9-extra{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.bh-stage9-extra>div{background:#fbfcfb;border:1px solid #e7eeeb;border-radius:11px;padding:8px 10px;font-size:11px;color:#5b706b}.bh-stage9-extra strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#71857f;margin-bottom:2px}.bh-stage9-tickets{margin-top:12px;padding:11px 12px;border-radius:12px;background:#f7faf8;font-size:11px;color:#536d67}.bh-stage9-tickets strong{color:#263f39}.bh-stage9-actions .bh-pay{background:#315b4f;color:#fff}.bh-stage9-message{font-size:11px;margin-top:8px;color:#6a7d78}.bh-stage9-actions .bh-stage9-details{background:#edf4f1;color:#315b4f}@media(max-width:600px){.bh-stage9-extra{grid-template-columns:1fr}}
+    ' );
+    wp_add_inline_script( 'jquery', 'window.BubbaHubStage9=' . wp_json_encode( array( 'ajaxUrl'=>admin_url('admin-ajax.php'),'nonce'=>wp_create_nonce('bubbahub_stage9') ) ) . ';', 'before' );
+    wp_add_inline_script( 'jquery', '(function($){$(document).on("click",".bh-stage9-pay",function(e){e.preventDefault();var $b=$(this),id=parseInt($b.data("booking-id"),10);if(!id)return;$b.prop("disabled",true).text("Opening payment…");$.post(BubbaHubStage9.ajaxUrl,{action:"bubbahub_stage9_pay_booking",nonce:BubbaHubStage9.nonce,booking_id:id},function(r){if(r&&r.success&&r.data&&r.data.url){window.location.href=r.data.url;return;}$b.prop("disabled",false).text("Pay now");var msg=r&&r.data&&r.data.message?r.data.message:"Payment could not be started.";$b.after("<div class=\"bh-stage9-message\">"+$("<div>").text(msg).html()+"</div>");},"json");});})(jQuery);', 'after' );
+}
+
+function bubbahub_stage9_booking_owner( $booking_id ) { return is_user_logged_in() && absint( get_post_meta( $booking_id, '_bh_user_id', true ) ) === get_current_user_id(); }
+function bubbahub_stage9_money( $amount ) { $amount=(float)$amount; $currency='GBP'; if(function_exists('bubbahub_stripe_settings')){ $settings=bubbahub_stripe_settings(); $currency=strtoupper($settings['currency']??'GBP'); } return esc_html($currency.' '.number_format($amount,2)); }
+function bubbahub_stage9_payment_label( $status ) { $labels=array('paid'=>'Paid','pending'=>'Payment pending','failed'=>'Payment failed','not_required'=>'No payment required',''=>'Payment status not set'); return $labels[$status]??ucwords(str_replace('_',' ',$status)); }
+function bubbahub_stage9_get_bookings() {
+    if(!is_user_logged_in())return array();
+    $ids=get_posts(array('post_type'=>'bh_booking','post_status'=>'publish','posts_per_page'=>-1,'fields'=>'ids','orderby'=>'date','order'=>'DESC','no_found_rows'=>true,'meta_query'=>array(array('key'=>'_bh_user_id','value'=>get_current_user_id(),'compare'=>'='),array('key'=>'_bh_status','value'=>array('confirmed','reserved'),'compare'=>'IN'))));
+    $items=array();$now=current_time('timestamp');
+    foreach($ids as $booking_id){$session_id=absint(get_post_meta($booking_id,'_bh_session_id',true));if(!$session_id||'bh_session'!==get_post_type($session_id))continue;$date=sanitize_text_field(get_post_meta($session_id,'_bh_date',true));$start=sanitize_text_field(get_post_meta($session_id,'_bh_start_time',true));$stamp=strtotime(trim($date.' '.$start));if(!$stamp||$stamp<$now)continue;$group_id=absint(get_post_meta($session_id,'_bh_group_id',true));$venue_id=absint(get_post_meta($session_id,'_bh_venue_id',true));$breakdown=get_post_meta($booking_id,'_bh_ticket_breakdown',true);if(!is_array($breakdown))$breakdown=array();$items[]=array('booking_id'=>$booking_id,'session_id'=>$session_id,'title'=>get_the_title($session_id),'group'=>$group_id?get_the_title($group_id):'','group_url'=>$group_id?get_permalink($group_id):'','venue'=>$venue_id?get_the_title($venue_id):'','date'=>$date,'start'=>$start,'stamp'=>$stamp,'status'=>sanitize_key(get_post_meta($booking_id,'_bh_status',true)),'places'=>absint(get_post_meta($booking_id,'_bh_places',true)),'total'=>(float)get_post_meta($booking_id,'_bh_total_price',true),'payment_status'=>sanitize_key(get_post_meta($booking_id,'_bh_payment_status',true)),'payment_method'=>sanitize_key(get_post_meta($booking_id,'_bh_payment_method',true)),'invoice_id'=>absint(get_post_meta($booking_id,'_bh_invoice_id',true)),'checkout_url'=>esc_url_raw(get_post_meta($booking_id,'_bh_stripe_checkout_url',true)),'tickets'=>$breakdown);}
+    usort($items,function($a,$b){return $a['stamp']<=>$b['stamp'];});return $items;
+}
+function bubbahub_stage9_pay_booking_ajax(){if(!is_user_logged_in())wp_send_json_error(array('message'=>'Please log in.'),401);check_ajax_referer('bubbahub_stage9','nonce');$booking_id=absint($_POST['booking_id']??0);if(!$booking_id||'bh_booking'!==get_post_type($booking_id)||!bubbahub_stage9_booking_owner($booking_id))wp_send_json_error(array('message'=>'Booking not found.'),404);$status=sanitize_key(get_post_meta($booking_id,'_bh_payment_status',true));$total=(float)get_post_meta($booking_id,'_bh_total_price',true);if('paid'===$status)wp_send_json_error(array('message'=>'This booking is already paid.'),409);if($total<=0||'not_required'===$status)wp_send_json_error(array('message'=>'Payment is not required for this booking.'),409);$existing=esc_url_raw(get_post_meta($booking_id,'_bh_stripe_checkout_url',true));if($existing){wp_send_json_success(array('url'=>$existing));}if(!function_exists('bubbahub_getpaid_create_checkout'))wp_send_json_error(array('message'=>'Payment integration is not available.'),500);$checkout=bubbahub_getpaid_create_checkout($booking_id);if(is_wp_error($checkout)||empty($checkout['url']))wp_send_json_error(array('message'=>is_wp_error($checkout)?$checkout->get_error_message():'Unable to create payment checkout.'),400);wp_send_json_success(array('url'=>esc_url_raw($checkout['url'])));}
+function bubbahub_stage9_my_bookings_shortcode(){if(!is_user_logged_in())return '<div class="bh-stage8-empty"><strong>Please log in</strong>Log in to view your bookings.</div>';$bookings=bubbahub_stage9_get_bookings();ob_start();?><section class="bh-stage8-bookings bh-stage9-bookings" aria-label="My bookings"><?php if(empty($bookings)):?><div class="bh-stage8-empty"><strong>No upcoming bookings</strong>Your confirmed or reserved sessions will appear here.</div><?php else:foreach($bookings as $booking):$payment=$booking['payment_status'];$can_pay=$booking['total']>0&&!in_array($payment,array('paid','not_required'),true);$details_url=function_exists('bubbahub_stage10_details_url')?bubbahub_stage10_details_url($booking['booking_id']):add_query_arg('booking_id',$booking['booking_id'],home_url('/my-bookings/'));?><article class="bh-stage8-booking"><div class="bh-stage8-booking-head"><div><div class="bh-stage8-eyebrow">My Booking #<?php echo esc_html($booking['booking_id']);?></div><h3><?php echo esc_html($booking['title']?:$booking['group']?:'Booked session');?></h3><?php if($booking['group']):?><div><?php echo esc_html($booking['group']);?></div><?php endif;?></div><span class="bh-stage8-status"><?php echo esc_html('confirmed'===$booking['status']?'Confirmed':'Reserved');?></span></div><div class="bh-stage8-meta"><div><strong>Date & time</strong><?php echo esc_html(function_exists('bubbahub_myhub_booking_date_label')?bubbahub_myhub_booking_date_label($booking['date'],$booking['start']):wp_date('D j M Y, g:i A',$booking['stamp']));?></div><div><strong>Venue</strong><?php echo esc_html($booking['venue']?:'Venue to be confirmed');?></div></div><div class="bh-stage9-extra"><div><strong>Places</strong><?php echo esc_html($booking['places']?:1);?></div><div><strong>Total</strong><?php echo bubbahub_stage9_money($booking['total']);?></div><div><strong>Payment</strong><?php echo esc_html(bubbahub_stage9_payment_label($payment));?></div></div><?php if(!empty($booking['tickets'])):?><div class="bh-stage9-tickets"><strong>Tickets</strong><?php foreach($booking['tickets'] as $ticket){if(!is_array($ticket))continue;$name=sanitize_text_field($ticket['name']??'Ticket');$qty=absint($ticket['quantity']??0);if($qty)echo '<div>'.esc_html($qty).' × '.esc_html($name).'</div>';}?></div><?php endif;?><div class="bh-stage8-actions bh-stage9-actions"><a class="bh-stage9-details" href="<?php echo esc_url($details_url);?>">View booking</a><?php if($booking['group_url']):?><a href="<?php echo esc_url($booking['group_url']);?>">View group</a><?php endif;?><?php if($can_pay):?><a href="#" class="bh-pay bh-stage9-pay" data-booking-id="<?php echo esc_attr($booking['booking_id']);?>">Pay now</a><?php endif;?><?php if($booking['checkout_url']&&!$can_pay&&'paid'!==$payment):?><a href="<?php echo esc_url($booking['checkout_url']);?>">Continue payment</a><?php endif;?></div></article><?php endforeach;endif;?></section><?php return ob_get_clean();}
+
+
+/* ===== Consolidated legacy Stage 10 ===== */
+/**
+ * Bubba Hub My Hub - Stage 10.
+ * Secure booking details view and downloadable calendar event.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_shortcode( 'bubbahub_booking_details', 'bubbahub_stage10_booking_details_shortcode' );
+add_action( 'init', 'bubbahub_stage10_calendar_download' );
+add_action( 'wp_enqueue_scripts', 'bubbahub_stage10_assets', 70 );
+
+function bubbahub_stage10_assets() {
+    if ( ! is_user_logged_in() ) return;
+    wp_register_style( 'bubbahub-myhub-stage10', false, array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.6.7' );
+    wp_enqueue_style( 'bubbahub-myhub-stage10' );
+    wp_add_inline_style( 'bubbahub-myhub-stage10', '.bh-stage10{max-width:760px;margin:0 auto}.bh-stage10-card{background:#fff;border:1px solid #e4ece8;border-radius:20px;padding:22px}.bh-stage10-top{display:flex;justify-content:space-between;gap:16px;margin-bottom:20px}.bh-stage10-eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;color:#71857f}.bh-stage10 h2{margin:5px 0 4px;font-size:25px;color:#263f39}.bh-stage10-ref{font-size:12px;color:#71857f}.bh-stage10-status{padding:7px 11px;border-radius:999px;background:#edf6f1;color:#315b4f;font-size:11px;font-weight:700}.bh-stage10-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}.bh-stage10-item{padding:13px;border:1px solid #e7eeeb;border-radius:13px;background:#fbfcfb}.bh-stage10-item strong{display:block;font-size:10px;text-transform:uppercase;color:#71857f;margin-bottom:4px}.bh-stage10-item span{font-size:13px;color:#263f39}.bh-stage10-tickets{border-top:1px solid #e7eeeb;padding-top:16px;margin-top:4px}.bh-stage10-ticket,.bh-stage10-total{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;color:#536d67}.bh-stage10-total{font-weight:700;color:#263f39}.bh-stage10-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}.bh-stage10-actions a{display:inline-block;padding:10px 14px;border-radius:11px;background:#f2f6f4;color:#315b4f;text-decoration:none;font-size:12px;font-weight:700}.bh-stage10-actions a.primary{background:#315b4f;color:#fff}.bh-stage10-note{margin-top:15px;padding:12px;border-radius:12px;background:#f7faf8;color:#647873;font-size:11px}.bh-stage10-empty{padding:24px;border:1px solid #e4ece8;border-radius:18px;background:#fff;text-align:center;color:#71857f}.bh-stage10-back{display:inline-block;margin-bottom:12px;font-size:12px;color:#315b4f;text-decoration:none}@media(max-width:600px){.bh-stage10-card{padding:17px}.bh-stage10-top{display:block}.bh-stage10-status{display:inline-block;margin-top:10px}.bh-stage10-grid{grid-template-columns:1fr}.bh-stage10-actions a{width:100%;text-align:center}}' );
+}
+
+function bubbahub_stage10_owner( $booking_id ) {
+    return is_user_logged_in() && 'bh_booking' === get_post_type( $booking_id ) && absint( get_post_meta( $booking_id, '_bh_user_id', true ) ) === get_current_user_id();
+}
+
+function bubbahub_stage10_get_booking( $booking_id ) {
+    if ( ! $booking_id || ! bubbahub_stage10_owner( $booking_id ) ) return false;
+    $session_id = absint( get_post_meta( $booking_id, '_bh_session_id', true ) );
+    if ( ! $session_id || 'bh_session' !== get_post_type( $session_id ) ) return false;
+    $date = sanitize_text_field( get_post_meta( $session_id, '_bh_date', true ) );
+    $start = sanitize_text_field( get_post_meta( $session_id, '_bh_start_time', true ) );
+    $stamp = strtotime( trim( $date . ' ' . $start ) );
+    $group_id = absint( get_post_meta( $session_id, '_bh_group_id', true ) );
+    $venue_id = absint( get_post_meta( $session_id, '_bh_venue_id', true ) );
+    $tickets = get_post_meta( $booking_id, '_bh_ticket_breakdown', true );
+    if ( ! is_array( $tickets ) ) $tickets = array();
+    return array(
+        'id'=>$booking_id,
+        'session_id'=>$session_id,
+        'title'=>get_the_title($session_id),
+        'date'=>$date,
+        'start'=>$start,
+        'stamp'=>$stamp,
+        'group_id'=>$group_id,
+        'group'=>$group_id ? get_the_title($group_id) : '',
+        'group_url'=>$group_id ? get_permalink($group_id) : '',
+        'venue'=>$venue_id ? get_the_title($venue_id) : '',
+        'status'=>sanitize_key(get_post_meta($booking_id,'_bh_status',true)),
+        'places'=>absint(get_post_meta($booking_id,'_bh_places',true)),
+        'total'=>(float)get_post_meta($booking_id,'_bh_total_price',true),
+        'payment'=>sanitize_key(get_post_meta($booking_id,'_bh_payment_status',true)),
+        'payment_method'=>sanitize_key(get_post_meta($booking_id,'_bh_payment_method',true)),
+        'invoice_id'=>absint(get_post_meta($booking_id,'_bh_invoice_id',true)),
+        'checkout'=>esc_url_raw(get_post_meta($booking_id,'_bh_stripe_checkout_url',true)),
+        'tickets'=>$tickets
+    );
+}
+
+function bubbahub_stage10_calendar_download() {
+    if ( empty($_GET['bh_booking_calendar']) || ! is_user_logged_in() ) return;
+    $booking_id = absint($_GET['bh_booking_calendar']);
+    if ( ! bubbahub_stage10_owner($booking_id) ) wp_die('Booking not found.', 'Bubba Hub', array('response'=>404));
+    $booking = bubbahub_stage10_get_booking($booking_id);
+    if ( ! $booking || ! $booking['stamp'] ) wp_die('Booking date is unavailable.', 'Bubba Hub', array('response'=>404));
+    $start = $booking['stamp'];
+    $end = $start + 3600;
+    $uid = 'bubbahub-booking-' . $booking_id . '@' . wp_parse_url(home_url(), PHP_URL_HOST);
+    $summary = $booking['title'] ?: ($booking['group'] ?: 'Bubba Hub booking');
+    $location = $booking['venue'];
+    $description = 'Bubba Hub booking #' . $booking_id . ( $booking['group'] ? ' - ' . $booking['group'] : '' );
+    $ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Bubba Hub//My Bookings//EN\r\nBEGIN:VEVENT\r\nUID:" . esc_html($uid) . "\r\nDTSTAMP:" . gmdate('Ymd\THis\Z') . "\r\nDTSTART:" . gmdate('Ymd\THis\Z',$start) . "\r\nDTEND:" . gmdate('Ymd\THis\Z',$end) . "\r\nSUMMARY:" . bubbahub_stage10_ics_escape($summary) . "\r\nLOCATION:" . bubbahub_stage10_ics_escape($location) . "\r\nDESCRIPTION:" . bubbahub_stage10_ics_escape($description) . "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+    nocache_headers();
+    header('Content-Type: text/calendar; charset=utf-8');
+    header('Content-Disposition: attachment; filename="bubbahub-booking-' . $booking_id . '.ics"');
+    echo $ics;
+    exit;
+}
+
+function bubbahub_stage10_ics_escape( $value ) {
+    return str_replace(array('\\',';',',',"\r","\n"),array('\\\\','\\;','\\,','','\\n'),sanitize_text_field($value));
+}
+
+function bubbahub_stage10_payment_label( $status ) {
+    $labels=array('paid'=>'Paid','pending'=>'Payment pending','failed'=>'Payment failed','not_required'=>'No payment required',''=>'Payment status not set');
+    return $labels[$status] ?? ucwords(str_replace('_',' ',$status));
+}
+
+function bubbahub_stage10_back_url() {
+    $page = get_page_by_path('my-bookings');
+    return $page ? get_permalink($page) : home_url('/my-bookings/');
+}
+
+function bubbahub_stage10_contact_url( $booking ) {
+    $subject = rawurlencode('Bubba Hub booking #' . $booking['id'] . ' query');
+    $body = rawurlencode('Booking #' . $booking['id'] . "\nSession: " . $booking['title'] . "\nDate: " . $booking['date'] . ' ' . $booking['start']);
+    return 'mailto:' . antispambot(get_option('admin_email')) . '?subject=' . $subject . '&body=' . $body;
+}
+
+function bubbahub_stage10_shortcode_output( $booking ) {
+    $back = bubbahub_stage10_back_url();
+    $calendar = add_query_arg('bh_booking_calendar',$booking['id'],home_url('/'));
+    $can_pay = $booking['total'] > 0 && ! in_array($booking['payment'],array('paid','not_required'),true);
+    ob_start();
+    ?>
+    <section class="bh-stage10">
+      <a class="bh-stage10-back" href="<?php echo esc_url($back); ?>">← Back to My Bookings</a>
+      <article class="bh-stage10-card">
+        <div class="bh-stage10-top">
+          <div><div class="bh-stage10-eyebrow">Booking details</div><h2><?php echo esc_html($booking['title'] ?: $booking['group'] ?: 'Booked session'); ?></h2><div class="bh-stage10-ref">Booking #<?php echo esc_html($booking['id']); ?></div></div>
+          <span class="bh-stage10-status"><?php echo esc_html($booking['status']==='confirmed'?'Confirmed':'Reserved'); ?></span>
+        </div>
+        <div class="bh-stage10-grid">
+          <div class="bh-stage10-item"><strong>Date & time</strong><span><?php echo esc_html(function_exists('bubbahub_myhub_booking_date_label') ? bubbahub_myhub_booking_date_label($booking['date'],$booking['start']) : wp_date('D j M Y, g:i A',$booking['stamp'])); ?></span></div>
+          <div class="bh-stage10-item"><strong>Venue</strong><span><?php echo esc_html($booking['venue'] ?: 'Venue to be confirmed'); ?></span></div>
+          <div class="bh-stage10-item"><strong>Group</strong><span><?php echo esc_html($booking['group'] ?: '—'); ?></span></div>
+          <div class="bh-stage10-item"><strong>Places</strong><span><?php echo esc_html($booking['places'] ?: 1); ?></span></div>
+          <div class="bh-stage10-item"><strong>Payment</strong><span><?php echo esc_html(bubbahub_stage10_payment_label($booking['payment'])); ?></span></div>
+          <div class="bh-stage10-item"><strong>Payment method</strong><span><?php echo esc_html($booking['payment_method'] ? ucwords(str_replace('_',' ',$booking['payment_method'])) : '—'); ?></span></div>
+        </div>
+        <?php if ( ! empty($booking['tickets']) ) : ?>
+          <div class="bh-stage10-tickets">
+            <h3>Tickets</h3>
+            <?php foreach ( $booking['tickets'] as $ticket ) : ?>
+              <?php if ( ! is_array($ticket) ) continue; ?>
+              <?php $name=sanitize_text_field($ticket['name']??'Ticket'); $qty=absint($ticket['quantity']??0); $price=(float)($ticket['unit_price']??$ticket['price']??0); ?>
+              <?php if ( ! $qty ) continue; ?>
+              <div class="bh-stage10-ticket"><span><?php echo esc_html($qty.' × '.$name); ?></span><span><?php echo $price > 0 ? esc_html('£'.number_format($price*$qty,2)) : ''; ?></span></div>
+            <?php endforeach; ?>
+            <div class="bh-stage10-total"><span>Total</span><span>£<?php echo esc_html(number_format($booking['total'],2)); ?></span></div>
+          </div>
+        <?php endif; ?>
+        <div class="bh-stage10-actions">
+          <?php if($booking['group_url']): ?><a class="primary" href="<?php echo esc_url($booking['group_url']); ?>">View group</a><?php endif; ?>
+          <a href="<?php echo esc_url($calendar); ?>">Add to calendar</a>
+          <?php if($can_pay && $booking['checkout']): ?><a href="<?php echo esc_url($booking['checkout']); ?>">Continue payment</a><?php endif; ?>
+          <a href="<?php echo esc_url(bubbahub_stage10_contact_url($booking)); ?>">Contact Bubba Hub</a>
+          <?php if(function_exists('bubbahub_stage11_render_actions')) echo bubbahub_stage11_render_actions($booking['id']); ?>
+        </div>
+        <div id="bubbahub-cancellation">
+          <?php if(function_exists('bubbahub_stage11_cancellation_shortcode')) echo bubbahub_stage11_cancellation_shortcode(); ?>
+        </div>
+        <div class="bh-stage10-note">Keep this booking number for reference. If your booking is reserved rather than confirmed, payment or organiser confirmation may still be required.</div>
+      </article>
+    </section>
+    <?php
+    return ob_get_clean();
+}
+
+function bubbahub_stage10_booking_details_shortcode() {
+    if ( ! is_user_logged_in() ) return '<div class="bh-stage10-empty"><strong>Please log in</strong><br>Log in to view booking details.</div>';
+    $booking_id = absint($_GET['booking_id'] ?? 0);
+    if ( ! $booking_id ) return '<div class="bh-stage10-empty"><strong>Select a booking</strong><br>Open a booking from My Bookings to see its details.</div>';
+    $booking = bubbahub_stage10_get_booking($booking_id);
+    if ( ! $booking ) return '<div class="bh-stage10-empty"><strong>Booking not found</strong><br>This booking is not available to your account.</div>';
+    return bubbahub_stage10_shortcode_output($booking);
+}
+
+
+/* ===== Consolidated legacy Stage 11 ===== */
+/**
+ * Bubba Hub My Hub - Stage 11.
+ * Adds a safe cancellation-request workflow without changing the booking engine status.
+ */
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+add_action( 'admin_post_bubbahub_stage11_cancel_request', 'bubbahub_stage11_cancel_request' );
+add_shortcode( 'bubbahub_booking_cancellation', 'bubbahub_stage11_cancellation_shortcode' );
+
+function bubbahub_stage11_owner( $booking_id ) {
+    return is_user_logged_in()
+        && 'bh_booking' === get_post_type( $booking_id )
+        && absint( get_post_meta( $booking_id, '_bh_user_id', true ) ) === get_current_user_id();
+}
+
+function bubbahub_stage11_request_key( $booking_id ) {
+    return 'bubbahub_cancel_request_' . absint( $booking_id );
+}
+
+function bubbahub_stage11_get_request( $booking_id ) {
+    $value = get_post_meta( $booking_id, bubbahub_stage11_request_key( $booking_id ), true );
+    return is_array( $value ) ? $value : array();
+}
+
+function bubbahub_stage11_cancel_request() {
+    if ( ! is_user_logged_in() ) wp_die( 'Please log in.', 'Bubba Hub', array( 'response' => 401 ) );
+
+    $booking_id = absint( $_POST['booking_id'] ?? 0 );
+    if ( ! $booking_id || ! bubbahub_stage11_owner( $booking_id ) ) {
+        wp_die( 'Booking not found.', 'Bubba Hub', array( 'response' => 404 ) );
+    }
+
+    check_admin_referer( 'bubbahub_stage11_cancel_' . $booking_id );
+
+    $status = sanitize_key( get_post_meta( $booking_id, '_bh_status', true ) );
+    if ( ! in_array( $status, array( 'confirmed', 'reserved' ), true ) ) {
+        wp_safe_redirect( add_query_arg( 'bh_cancel_error', 'status', wp_get_referer() ?: home_url( '/my-bookings/' ) ) );
+        exit;
+    }
+
+    $existing = bubbahub_stage11_get_request( $booking_id );
+    if ( ! empty( $existing['status'] ) && 'requested' === $existing['status'] ) {
+        wp_safe_redirect( add_query_arg( 'bh_cancel', 'already_requested', wp_get_referer() ?: home_url( '/my-bookings/' ) ) );
+        exit;
+    }
+
+    $reason = sanitize_textarea_field( wp_unslash( $_POST['reason'] ?? '' ) );
+    $user = wp_get_current_user();
+    $request = array(
+        'status'    => 'requested',
+        'booking_id'=> $booking_id,
+        'user_id'   => get_current_user_id(),
+        'name'      => sanitize_text_field( $user->display_name ),
+        'email'     => sanitize_email( $user->user_email ),
+        'reason'    => $reason,
+        'requested' => current_time( 'mysql' ),
+    );
+
+    update_post_meta( $booking_id, bubbahub_stage11_request_key( $booking_id ), $request );
+
+    $subject = 'Bubba Hub cancellation request #' . $booking_id;
+    $message = "A cancellation request has been submitted.\n\nBooking: #{$booking_id}\nName: {$request['name']}\nEmail: {$request['email']}\nReason: " . ( $reason ?: 'No reason supplied.' );
+    wp_mail( get_option( 'admin_email' ), $subject, $message, array( 'Reply-To: ' . $request['email'] ) );
+
+    wp_safe_redirect( add_query_arg( 'bh_cancel', 'requested', wp_get_referer() ?: home_url( '/my-bookings/' ) ) );
+    exit;
+}
+
+function bubbahub_stage11_cancellation_shortcode() {
+    if ( ! is_user_logged_in() ) return '<div class="bh-stage11-message">Please log in to manage a booking.</div>';
+
+    $booking_id = absint( $_GET['booking_id'] ?? 0 );
+    if ( ! $booking_id || ! bubbahub_stage11_owner( $booking_id ) ) {
+        return '<div class="bh-stage11-message">Booking not found.</div>';
+    }
+
+    $request = bubbahub_stage11_get_request( $booking_id );
+    ob_start();
+    ?>
+    <div class="bh-stage11-cancel">
+        <?php if ( ! empty( $request['status'] ) && 'requested' === $request['status'] ) : ?>
+            <div class="bh-stage11-message success"><strong>Cancellation requested</strong><br>Your request has been sent to Bubba Hub. Your booking has not been cancelled automatically.</div>
+        <?php else : ?>
+            <h3>Request cancellation</h3>
+            <p>If you can no longer attend, send a cancellation request to Bubba Hub. We will review it and update the booking separately.</p>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="bubbahub_stage11_cancel_request">
+                <input type="hidden" name="booking_id" value="<?php echo esc_attr( $booking_id ); ?>">
+                <?php wp_nonce_field( 'bubbahub_stage11_cancel_' . $booking_id ); ?>
+                <label for="bh-stage11-reason">Reason (optional)</label>
+                <textarea id="bh-stage11-reason" name="reason" rows="4" maxlength="1000" placeholder="Tell us anything that may help..."></textarea>
+                <button type="submit">Send cancellation request</button>
+            </form>
+        <?php endif; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+function bubbahub_stage11_render_actions( $booking_id ) {
+    if ( ! bubbahub_stage11_owner( $booking_id ) ) return '';
+    $request = bubbahub_stage11_get_request( $booking_id );
+    if ( ! empty( $request['status'] ) && 'requested' === $request['status'] ) {
+        return '<span class="bh-stage11-requested">Cancellation requested</span>';
+    }
+    $url = add_query_arg( 'booking_id', absint( $booking_id ), get_permalink() ?: home_url( '/' ) );
+    return '<a href="' . esc_url( $url ) . '#bubbahub-cancellation">Request cancellation</a>';
+}
+
+add_action( 'wp_enqueue_scripts', function() {
+    if ( ! is_user_logged_in() ) return;
+    wp_register_style( 'bubbahub-myhub-stage11', false, array(), defined( 'BUBBAHUB_MYHUB_VERSION' ) ? BUBBAHUB_MYHUB_VERSION : '1.6.7' );
+    wp_enqueue_style( 'bubbahub-myhub-stage11' );
+    wp_add_inline_style( 'bubbahub-myhub-stage11', '.bh-stage11-cancel{margin-top:18px;padding:16px;border:1px solid #e4ece8;border-radius:15px;background:#fbfcfb}.bh-stage11-cancel h3{margin:0 0 7px;color:#263f39;font-size:16px}.bh-stage11-cancel p,.bh-stage11-message{font-size:12px;line-height:1.55;color:#647873}.bh-stage11-cancel label{display:block;font-size:11px;font-weight:700;color:#536d67;margin:12px 0 5px}.bh-stage11-cancel textarea{width:100%;box-sizing:border-box;border:1px solid #dbe6e1;border-radius:10px;padding:10px;font:inherit;resize:vertical}.bh-stage11-cancel button{margin-top:10px;border:0;border-radius:10px;padding:10px 14px;background:#315b4f;color:#fff;font-weight:700;cursor:pointer}.bh-stage11-message.success{padding:13px;border-radius:12px;background:#edf6f1;color:#315b4f}.bh-stage11-requested{display:inline-block;padding:9px 12px;border-radius:10px;background:#f4f0df;color:#75652d;font-size:11px;font-weight:700}' );
+} );
+

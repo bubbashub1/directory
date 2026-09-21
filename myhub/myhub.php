@@ -3,6 +3,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.41' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
+if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings.php', 'account settings' );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 add_action( 'init', 'bubbahub_myhub_register_child_post_type' );
 add_action( 'wp_enqueue_scripts', 'bubbahub_myhub_register_assets' );
@@ -43,16 +44,6 @@ if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-calendar-sync.php' ) ) bubbahub_m
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2-assets.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-weekly-planner-v2-assets.php', 'weekly planner assets' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-v2.php', 'my hub v2' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'profile-settings.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'profile-settings.php', 'profile settings' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage2.php', 'account settings stage 2' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage3.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage3.php', 'account settings stage 3' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage4.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage4.php', 'account settings stage 4' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage5.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage5.php', 'account settings stage 5' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage6.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage6.php', 'account settings stage 6' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage7.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage7.php', 'account settings stage 7' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage8.php', 'account settings stage 8' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage9.php', 'account settings stage 9' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage10.php', 'account settings stage 10' );
-if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings-stage11.php', 'account settings stage 11' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-account-link.php', 'account link' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-ui-overrides.php', 'UI overrides' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-nap-planner.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-nap-planner.php', 'nap planner' );

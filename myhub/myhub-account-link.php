@@ -70,7 +70,8 @@ function bubbahub_account_settings_um_section_content( $output = '', $shortcode_
         unset( $_GET['bh_settings_section'] );
     }
 
-    // Render directly into Ultimate Member's native account-content region.\n    // Do not add another page/container wrapper around the UM content.\n    $content = bubbahub_account_settings_stage2_shortcode();
+    // Render directly into Ultimate Member's native account-content region.
+    // Do not add another page/container wrapper around the UM content.\n    $content = bubbahub_account_settings_stage2_shortcode();
 
     if ( $had_flag ) {
         $_GET['bh_account_settings'] = $old_flag;

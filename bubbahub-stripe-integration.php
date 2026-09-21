@@ -198,6 +198,11 @@ function bubbahub_stripe_webhook_rest( WP_REST_Request $request ) {
     $object = isset( $event['data']['object'] ) && is_array( $event['data']['object'] ) ? $event['data']['object'] : array();
     $booking_id = ! empty( $object['metadata']['booking_id'] ) ? absint( $object['metadata']['booking_id'] ) : 0;
     $type = isset( $event['type'] ) ? $event['type'] : '';
+    if ( $booking_id && 'bh_booking' !== get_post_type( $booking_id ) ) return new WP_Error( 'invalid_booking', 'The Stripe event references an invalid booking.', array( 'status' => 400 ) );
+    $stored_checkout = $booking_id ? sanitize_text_field( get_post_meta( $booking_id, '_bh_stripe_checkout_session_id', true ) ) : '';
+    if ( $booking_id && $stored_checkout && ! empty( $object['id'] ) && ! hash_equals( $stored_checkout, sanitize_text_field( $object['id'] ) ) ) return new WP_Error( 'checkout_mismatch', 'The Stripe checkout session does not match the booking.', array( 'status' => 400 ) );
+    $event_id = ! empty( $event['id'] ) ? sanitize_text_field( $event['id'] ) : '';
+    if ( $event_id && get_option( 'bubbahub_stripe_event_' . md5( $event_id ) ) ) return rest_ensure_response( array( 'received' => true ) );
     if ( $booking_id && 'checkout.session.completed' === $type && 'paid' === ( isset( $object['payment_status'] ) ? $object['payment_status'] : '' ) ) {
         update_post_meta( $booking_id, '_bh_payment_status', 'paid' );
         update_post_meta( $booking_id, '_bh_status', 'confirmed' );
@@ -206,6 +211,7 @@ function bubbahub_stripe_webhook_rest( WP_REST_Request $request ) {
         update_post_meta( $booking_id, '_bh_payment_status', 'failed' );
         update_post_meta( $booking_id, '_bh_status', 'payment_failed' );
     }
+    if ( $event_id ) add_option( 'bubbahub_stripe_event_' . md5( $event_id ), time(), '', 'no' );
     return rest_ensure_response( array( 'received' => true ) );
 }
 

@@ -30,6 +30,9 @@ function bubbahub_getpaid_settings() {
 function bubbahub_getpaid_wallet_checkout( $booking_id ) {
     $booking_id = absint( $booking_id );
     if ( ! $booking_id || ! is_user_logged_in() ) return new WP_Error( 'wallet_login_required', 'Please log in to use your Bubba Hub Wallet.' );
+    if ( 'bh_booking' !== get_post_type( $booking_id ) ) return new WP_Error( 'wallet_invalid_booking', 'Invalid booking.' );
+    if ( absint( get_post_meta( $booking_id, '_bh_user_id', true ) ) !== get_current_user_id() ) return new WP_Error( 'wallet_forbidden_booking', 'You are not authorised to pay for this booking.' );
+    if ( ! in_array( get_post_meta( $booking_id, '_bh_payment_status', true ), array( 'pending', 'failed' ), true ) ) return new WP_Error( 'wallet_payment_not_due', 'This booking is not awaiting payment.' );
     if ( ! function_exists( 'wpinv_insert_invoice' ) || ! function_exists( 'wpinv_create_item' ) || ! function_exists( 'wpinv_get_invoice' ) ) return new WP_Error( 'wallet_unavailable', 'GetPaid Wallet is not available on this site.' );
 
     $email = sanitize_email( get_post_meta( $booking_id, '_bh_customer_email', true ) );

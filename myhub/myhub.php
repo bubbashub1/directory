@@ -10,7 +10,10 @@ add_action( 'wp_enqueue_scripts', 'bubbahub_myhub_register_assets' );
 add_shortcode( 'bubbahub_my_hub', 'bubbahub_myhub_shortcode' );
 add_action( 'init', 'bubbahub_myhub_handle_child_form' );
 function bubbahub_myhub_register_child_post_type() { register_post_type( 'bh_child', array( 'labels'=>array('name'=>'Family Children','singular_name'=>'Family Child','add_new_item'=>'Add Child','edit_item'=>'Edit Child'), 'public'=>false,'show_ui'=>true,'show_in_menu'=>true,'menu_icon'=>'dashicons-groups','supports'=>array('title','author'),'capability_type'=>'post','map_meta_cap'=>true ) ); }
-function bubbahub_myhub_register_assets() { wp_register_style( 'bubbahub-myhub', BUBBAHUB_MYHUB_URL . 'myhub.css', array(), BUBBAHUB_MYHUB_VERSION ); wp_enqueue_script( 'bubbahub-myhub-carousel', BUBBAHUB_MYHUB_URL . 'myhub-carousel.js', array(), BUBBAHUB_MYHUB_VERSION, true ); }
+function bubbahub_myhub_register_assets() {
+    wp_register_style( 'bubbahub-myhub', BUBBAHUB_MYHUB_URL . 'myhub.css', array(), BUBBAHUB_MYHUB_VERSION );
+    if ( is_page( 'my-hub' ) ) wp_enqueue_script( 'bubbahub-myhub-carousel', BUBBAHUB_MYHUB_URL . 'myhub-carousel.js', array(), BUBBAHUB_MYHUB_VERSION, true );
+}
 function bubbahub_myhub_field( $post_id, $field, $default='' ) { if(function_exists('get_field')){$value=get_field($field,$post_id);if($value!==null&&$value!==false&&$value!=='')return $value;} $value=get_post_meta($post_id,$field,true);return ($value!==''&&$value!==false)?$value:$default; }
 function bubbahub_myhub_child_query() { if(!is_user_logged_in())return new WP_Query(); return new WP_Query(array('post_type'=>'bh_child','post_status'=>'publish','author'=>get_current_user_id(),'posts_per_page'=>-1,'orderby'=>'date','order'=>'ASC','no_found_rows'=>true)); }
 function bubbahub_myhub_age($dob){if(!$dob)return ''; $birth=DateTime::createFromFormat('Y-m-d',sanitize_text_field($dob));if(!$birth)return ''; $today=new DateTime('today');if($birth>$today)return ''; $age=$birth->diff($today);$parts=array();if($age->y)$parts[]=$age->y.'y';if($age->m||!$parts)$parts[]=$age->m.'m';return implode(' ',$parts);}

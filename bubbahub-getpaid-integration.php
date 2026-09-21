@@ -9,12 +9,6 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-/* Load consent enforcement before any booking/payment endpoints are used. */
-$bh_consent_file = plugin_dir_path( __FILE__ ) . 'modules/consent/bubbahub-consent.php';
-if ( file_exists( $bh_consent_file ) ) require_once $bh_consent_file;
-$bh_consent_page_file = plugin_dir_path( __FILE__ ) . 'modules/consent/bubbahub-consent-page.php';
-if ( file_exists( $bh_consent_page_file ) ) require_once $bh_consent_page_file;
-
 $stripe_file = plugin_dir_path( __FILE__ ) . 'bubbahub-stripe-integration.php';
 if ( file_exists( $stripe_file ) ) require_once $stripe_file;
 

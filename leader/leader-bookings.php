@@ -33,6 +33,8 @@ function bubbahub_leader_handle_booking_save() {
     if ( empty( $_POST['bh_leader_action'] ) || 'save_booking' !== $_POST['bh_leader_action'] || ! is_user_logged_in() ) return;
     if ( empty( $_POST['bh_leader_booking_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bh_leader_booking_nonce'] ) ), 'bh_leader_save_booking' ) ) return;
 
+    if ( ! function_exists( 'bubbahub_leader_dashboard_is_allowed' ) || ! bubbahub_leader_dashboard_is_allowed() ) wp_die( 'You are not authorised to manage leader bookings.' );
+
     $booking_id = absint( $_POST['booking_id'] ?? 0 );
     $group_id   = absint( $_POST['group_id'] ?? 0 );
     if ( ! bubbahub_leader_owned_post( $group_id, 'group' ) ) wp_die( 'You cannot create a booking for this listing.' );
@@ -40,6 +42,8 @@ function bubbahub_leader_handle_booking_save() {
 
     $first = sanitize_text_field( wp_unslash( $_POST['first_name'] ?? '' ) );
     $last  = sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) );
+    $email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+    if ( ! $first || ! $last || ! is_email( $email ) ) wp_die( 'Please provide a valid customer name and email address.' );
     $data = array( 'post_type' => 'bh_booking', 'post_status' => 'publish', 'post_title' => trim( $first . ' ' . $last ) );
 
     if ( $booking_id ) {
@@ -56,7 +60,7 @@ function bubbahub_leader_handle_booking_save() {
         '_bh_group_id' => $group_id,
         '_bh_first_name' => $first,
         '_bh_last_name' => $last,
-        '_bh_email' => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
+        '_bh_email' => $email,
         '_bh_booking_date' => sanitize_text_field( wp_unslash( $_POST['booking_date'] ?? '' ) ),
         '_bh_total_places' => max( 1, absint( $_POST['total_places'] ?? 1 ) ),
         '_bh_total_price' => number_format( max( 0, $price ), 2, '.', '' ),

@@ -13,8 +13,18 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * existing settings sections and save handlers.
  */
 add_action( 'template_redirect', 'bubbahub_account_settings_um_route', 25 );
-add_action( 'plugins_loaded', 'bubbahub_account_settings_register_um_tab', 30 );
-add_action( 'init', 'bubbahub_account_settings_register_um_tab', 1 );
+// Register the UM tab filters immediately. Ultimate Member reads these filters
+// while rendering the Account page, so waiting for init/plugins_loaded can be
+// too late when the Account shortcode is rendered through AJAX.
+add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
+foreach ( bubbahub_account_settings_um_sections() as $bubbahub_tab_key => $bubbahub_section ) {
+    add_filter(
+        'um_account_content_hook_' . $bubbahub_tab_key,
+        'bubbahub_account_settings_um_section_content',
+        20,
+        2
+    );
+}
 add_action( 'wp_footer', 'bubbahub_myhub_account_settings_button', 30 );
 add_action( 'wp_head', 'bubbahub_account_settings_dashboard_css', 30 );
 
@@ -27,29 +37,6 @@ function bubbahub_account_settings_um_url() {
     }
 
     return esc_url_raw( add_query_arg( 'um_tab', 'bubbahub_settings_preferences', home_url( '/account/' ) ) );
-}
-
-function bubbahub_account_settings_register_um_tab() {
-    static $registered = false;
-    if ( $registered || ! function_exists( 'UM' ) ) return;
-    $registered = true;
-
-    add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
-    
-    /*
-     * Every Bubba Hub Account Settings destination gets its own native
-     * Ultimate Member side-menu tab. The tab's um_tab value is therefore
-     * also the canonical URL for that destination.
-     */
-    $sections = bubbahub_account_settings_um_sections();
-    foreach ( $sections as $tab_key => $section ) {
-        add_filter(
-            'um_account_content_hook_' . $tab_key,
-            'bubbahub_account_settings_um_section_content',
-            20,
-            2
-        );
-    }
 }
 
 function bubbahub_account_settings_um_sections() {
@@ -195,7 +182,9 @@ function bubbahub_myhub_account_settings_content_route( $content ) {
 function bubbahub_myhub_account_settings_button() {
     if ( ! is_user_logged_in() ) return;
 
-    $account_url = bubbahub_account_settings_um_url();
+    // Build the base Account URL without an existing um_tab parameter;
+    // each side-menu item must have exactly one canonical tab URL.
+    $account_url = remove_query_arg( 'um_tab', bubbahub_account_settings_um_url() );
     $menu_items = array(
         array( 'key' => 'bubbahub_settings_pro', 'title' => 'Manage my Pro Account', 'icon' => '⭐' ),
         array( 'key' => 'bubbahub_settings_preferences', 'title' => 'My Bubba Hub Directory Preferences', 'icon' => '❤️' ),

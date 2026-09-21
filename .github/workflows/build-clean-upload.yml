@@ -48,3 +48,5 @@ jobs:
           name: bubbahub-directory-wordpress-ready
           path: bubbahub-directory-wordpress-ready.zip
           if-no-files-found: error
+
+# Deployment trigger for verified 3:30pm rollback state.

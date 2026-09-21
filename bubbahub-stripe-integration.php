@@ -164,13 +164,18 @@ function bubbahub_stripe_create_checkout( $booking_id ) {
 }
 
 add_action( 'rest_api_init', function() {
-    register_rest_route( 'bubbahub/v1', '/payment/checkout', array( 'methods' => 'POST', 'permission_callback' => '__return_true', 'callback' => 'bubbahub_stripe_checkout_rest' ) );
+    register_rest_route( 'bubbahub/v1', '/payment/checkout', array( 'methods' => 'POST', 'permission_callback' => function() {
+        return is_user_logged_in();
+    }, 'callback' => 'bubbahub_stripe_checkout_rest' ) );
     register_rest_route( 'bubbahub/v1', '/stripe/webhook', array( 'methods' => 'POST', 'permission_callback' => '__return_true', 'callback' => 'bubbahub_stripe_webhook_rest' ) );
 } );
 
 function bubbahub_stripe_checkout_rest( WP_REST_Request $request ) {
     $booking_id = absint( $request->get_param( 'booking_id' ) );
-    if ( ! $booking_id ) return new WP_Error( 'invalid_booking', 'Booking ID is required.', array( 'status' => 400 ) );
+    if ( ! $booking_id || 'bh_booking' !== get_post_type( $booking_id ) ) return new WP_Error( 'invalid_booking', 'Booking ID is required.', array( 'status' => 400 ) );
+    if ( absint( get_post_meta( $booking_id, '_bh_user_id', true ) ) !== get_current_user_id() ) return new WP_Error( 'forbidden_booking', 'You are not authorised to pay for this booking.', array( 'status' => 403 ) );
+    $payment_status = get_post_meta( $booking_id, '_bh_payment_status', true );
+    if ( ! in_array( $payment_status, array( 'pending', 'failed' ), true ) ) return new WP_Error( 'payment_not_due', 'This booking is not awaiting payment.', array( 'status' => 400 ) );
     $email = sanitize_email( $request->get_param( 'email' ) );
     if ( $email && is_email( $email ) ) update_post_meta( $booking_id, '_bh_customer_email', $email );
     $checkout = bubbahub_stripe_create_checkout( $booking_id );

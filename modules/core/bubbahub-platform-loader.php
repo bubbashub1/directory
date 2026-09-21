@@ -9,6 +9,8 @@ if ( ! defined( 'BUBBAHUB_PLATFORM_VERSION' ) ) define( 'BUBBAHUB_PLATFORM_VERSI
 $bubbahub_platform_files = array(
     'bubbahub-booking-engine.php',
     'bubbahub-stripe-integration.php',
+    'modules/consent/bubbahub-consent.php',
+    'modules/consent/bubbahub-consent-page.php',
     'bubbahub-getpaid-integration.php',
     'modules/core/bubbahub-schedule-foundation.php',
     'modules/core/bubbahub-schedule-engine.php',

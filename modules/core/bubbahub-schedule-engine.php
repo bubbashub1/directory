@@ -87,6 +87,7 @@ function bubbahub_schedule_engine_create_occurrence( $source_id, $date, $definit
         $value = get_post_meta( $source_id, $key, true );
         if ( '' !== $value && false !== $value ) update_post_meta( $post_id, $key, $value );
     }
+    if ( '' === get_post_meta( $post_id, '_bh_session_status', true ) ) update_post_meta( $post_id, '_bh_session_status', 'open' );
     update_post_meta( $post_id, '_bh_date', $date );
     update_post_meta( $post_id, '_bh_schedule_source', absint( $source_id ) );
     update_post_meta( $post_id, '_bh_occurrence_key', bubbahub_schedule_engine_occurrence_key( $source_id, $date, $definition['start_time'] ) );
@@ -101,6 +102,11 @@ function bubbahub_schedule_engine_generate( $source_id, $days = 90 ) {
     $definition = bubbahub_schedule_engine_definition( $source_id );
     if ( empty( $definition ) || 'none' === $definition['recurrence'] ) return 0;
     if ( empty( $definition['date'] ) || empty( $definition['start_time'] ) ) return 0;
+
+    global $wpdb;
+    $generation_lock = 'bubbahub_schedule_' . $source_id;
+    $generation_lock_acquired = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, 5 )', $generation_lock ) );
+    if ( 1 !== $generation_lock_acquired ) return 0;
 
     $origin = new DateTimeImmutable( $definition['date'] );
     $start = ! empty( $definition['start_date'] ) ? max( $definition['start_date'], $definition['date'] ) : $definition['date'];
@@ -126,6 +132,7 @@ function bubbahub_schedule_engine_generate( $source_id, $days = 90 ) {
         }
         $cursor = $cursor->modify( '+1 day' );
     }
+    $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK( %s )', $generation_lock ) );
     return $created;
 }
 

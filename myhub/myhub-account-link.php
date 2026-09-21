@@ -18,6 +18,14 @@ add_action( 'template_redirect', 'bubbahub_account_settings_um_route', 25 );
 // too late when the Account shortcode is rendered through AJAX.
 add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
 foreach ( bubbahub_account_settings_um_sections() as $bubbahub_tab_key => $bubbahub_section ) {
+    // UM's documented custom-tab action is the reliable render point for
+    // account tabs, including tabs loaded through its AJAX account UI.
+    add_action(
+        'um_account_tab__' . $bubbahub_tab_key,
+        'bubbahub_account_settings_um_render_tab',
+        20
+    );
+    // Keep the content filter too for UM versions that use the filter path.
     add_filter(
         'um_account_content_hook_' . $bubbahub_tab_key,
         'bubbahub_account_settings_um_section_content',
@@ -76,6 +84,45 @@ function bubbahub_account_settings_um_tabs( $tabs ) {
     }
 
     return $tabs;
+}
+
+function bubbahub_account_settings_um_render_tab() {
+    if ( ! is_user_logged_in() || ! function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
+        return;
+    }
+
+    $tab_key = isset( $_GET['um_tab'] )
+        ? sanitize_key( wp_unslash( $_GET['um_tab'] ) )
+        : '';
+
+    $sections = bubbahub_account_settings_um_sections();
+    if ( empty( $sections[ $tab_key ] ) ) {
+        return;
+    }
+
+    $old_flag    = array_key_exists( 'bh_account_settings', $_GET ) ? $_GET['bh_account_settings'] : null;
+    $had_flag    = array_key_exists( 'bh_account_settings', $_GET );
+    $old_section = array_key_exists( 'bh_settings_section', $_GET ) ? $_GET['bh_settings_section'] : null;
+    $had_section = array_key_exists( 'bh_settings_section', $_GET );
+
+    $_GET['bh_account_settings'] = '1';
+    $_GET['bh_settings_section'] = $sections[ $tab_key ];
+
+    echo '<div class="bh-account-settings-um-panel">';
+    echo bubbahub_account_settings_stage2_shortcode();
+    echo '</div>';
+
+    if ( $had_flag ) {
+        $_GET['bh_account_settings'] = $old_flag;
+    } else {
+        unset( $_GET['bh_account_settings'] );
+    }
+
+    if ( $had_section ) {
+        $_GET['bh_settings_section'] = $old_section;
+    } else {
+        unset( $_GET['bh_settings_section'] );
+    }
 }
 
 function bubbahub_account_settings_um_section_content( $output = '', $shortcode_args = array() ) {

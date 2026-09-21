@@ -21,47 +21,94 @@ function bubbahub_account_settings_um_url() {
     if ( function_exists( 'um_get_core_page' ) ) {
         $url = um_get_core_page( 'account' );
         if ( $url ) {
-            return esc_url_raw( add_query_arg( 'um_tab', 'bubbahub_settings', $url ) );
+            return esc_url_raw( add_query_arg( 'um_tab', 'bubbahub_settings_preferences', $url ) );
         }
     }
 
-    return esc_url_raw( add_query_arg( 'um_tab', 'bubbahub_settings', home_url( '/account/' ) ) );
+    return esc_url_raw( add_query_arg( 'um_tab', 'bubbahub_settings_preferences', home_url( '/account/' ) ) );
 }
 
 function bubbahub_account_settings_register_um_tab() {
     if ( ! function_exists( 'UM' ) ) return;
 
-    add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tab', 160 );
-    add_filter( 'um_account_content_hook_bubbahub_settings', 'bubbahub_account_settings_um_content', 20, 2 );
+    add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
+    
+    /*
+     * Every Bubba Hub Account Settings destination gets its own native
+     * Ultimate Member side-menu tab. The tab's um_tab value is therefore
+     * also the canonical URL for that destination.
+     */
+    $sections = bubbahub_account_settings_um_sections();
+    foreach ( $sections as $tab_key => $section ) {
+        add_filter(
+            'um_account_content_hook_' . $tab_key,
+            'bubbahub_account_settings_um_section_content',
+            20,
+            2
+        );
+    }
 }
 
-function bubbahub_account_settings_um_tab( $tabs ) {
-    $tabs[ 160 ]['bubbahub_settings'] = array(
-        'icon'         => 'um-faicon-cog',
-        'title'        => __( 'Account Settings', 'bubbahub' ),
-        'submit_title' => __( 'Account Settings', 'bubbahub' ),
-        'custom'       => true,
+function bubbahub_account_settings_um_sections() {
+    return array(
+        'bubbahub_settings_pro'              => 'pro',
+        'bubbahub_settings_preferences'     => 'family_needs',
+        'bubbahub_settings_calendar'         => 'calendar',
+        'bubbahub_settings_notification_test' => 'notification_test',
+        'bubbahub_settings_privacy'          => 'privacy',
+        'bubbahub_settings_notifications'   => 'notifications',
+        'bubbahub_settings_consent'         => 'consent',
+        'bubbahub_settings_payments'        => 'payments',
     );
+}
+
+function bubbahub_account_settings_um_tabs( $tabs ) {
+    $labels = array(
+        'bubbahub_settings_pro'                => array( 'icon' => 'um-faicon-star',     'title' => 'Manage my Pro Account' ),
+        'bubbahub_settings_preferences'       => array( 'icon' => 'um-faicon-heart',    'title' => 'My Bubba Hub Directory Preferences' ),
+        'bubbahub_settings_calendar'          => array( 'icon' => 'um-faicon-calendar', 'title' => 'Calendar Settings' ),
+        'bubbahub_settings_notification_test' => array( 'icon' => 'um-faicon-flask',    'title' => 'Notification Test' ),
+        'bubbahub_settings_privacy'           => array( 'icon' => 'um-faicon-lock',     'title' => 'Privacy & Security' ),
+        'bubbahub_settings_notifications'     => array( 'icon' => 'um-faicon-bell',     'title' => 'Notification preferences' ),
+        'bubbahub_settings_consent'           => array( 'icon' => 'um-faicon-shield',   'title' => 'Class Consent & Safety' ),
+        'bubbahub_settings_payments'          => array( 'icon' => 'um-faicon-credit-card', 'title' => 'My Payments, Invoices & Wallet' ),
+    );
+
+    $position = 160;
+    foreach ( $labels as $tab_key => $label ) {
+        $tabs[ $position ][ $tab_key ] = array(
+            'icon'         => $label['icon'],
+            'title'        => __( $label['title'], 'bubbahub' ),
+            'submit_title' => __( $label['title'], 'bubbahub' ),
+            'custom'       => true,
+        );
+        $position++;
+    }
 
     return $tabs;
 }
 
-function bubbahub_account_settings_um_content( $output = '', $shortcode_args = array() ) {
-    if ( ! is_user_logged_in() ) return $output;
-
-    if ( ! function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
+function bubbahub_account_settings_um_section_content( $output = '', $shortcode_args = array() ) {
+    if ( ! is_user_logged_in() || ! function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
         return $output;
     }
 
+    $sections = bubbahub_account_settings_um_sections();
+    $tab_key  = isset( $_GET['um_tab'] ) ? sanitize_key( wp_unslash( $_GET['um_tab'] ) ) : '';
+    if ( empty( $sections[ $tab_key ] ) ) return $output;
+
     /*
-     * Stage 2 was originally rendered as a My Hub replacement when the
-     * bh_account_settings query argument was present. Temporarily supplying
-     * that flag lets the existing renderer work unchanged inside the UM tab.
+     * Keep the existing Stage 2 renderer and handlers as the source of truth,
+     * but tell it exactly which section was selected in the UM side menu.
+     * This means each side-menu tab opens the matching settings content.
      */
     $had_flag = array_key_exists( 'bh_account_settings', $_GET );
     $old_flag = $had_flag ? $_GET['bh_account_settings'] : null;
+    $had_section = array_key_exists( 'bh_settings_section', $_GET );
+    $old_section = $had_section ? $_GET['bh_settings_section'] : null;
 
     $_GET['bh_account_settings'] = '1';
+    $_GET['bh_settings_section'] = $sections[ $tab_key ];
 
     $content = bubbahub_account_settings_stage2_shortcode();
 
@@ -69,6 +116,12 @@ function bubbahub_account_settings_um_content( $output = '', $shortcode_args = a
         $_GET['bh_account_settings'] = $old_flag;
     } else {
         unset( $_GET['bh_account_settings'] );
+    }
+
+    if ( $had_section ) {
+        $_GET['bh_settings_section'] = $old_section;
+    } else {
+        unset( $_GET['bh_settings_section'] );
     }
 
     return '<div class="bh-account-settings-um-panel">' . $content . '</div>';

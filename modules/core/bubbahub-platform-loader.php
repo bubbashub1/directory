@@ -38,19 +38,13 @@ foreach ( $bubbahub_platform_files as $bubbahub_platform_file ) {
 
 add_action( 'wp_enqueue_scripts', function() {
     if ( ! defined( 'BUBBAHUB_DIRECTORY_URL' ) || ! defined( 'BUBBAHUB_DIRECTORY_VERSION' ) ) return;
+
+    // Family-support CSS is a platform-wide component, but directory/Leaflet
+    // assets are registered and enqueued by bubbahub-directory.php itself.
+    // Keeping their lifecycle in one place prevents an unregistered handle
+    // from being enqueued before its real source/dependencies are registered.
     wp_register_style( 'bubbahub-family-support', BUBBAHUB_DIRECTORY_URL . 'assets/family-support.css', array(), BUBBAHUB_DIRECTORY_VERSION );
     if ( is_page() ) wp_enqueue_style( 'bubbahub-family-support' );
-    wp_enqueue_style( 'bubbahub-directory', BUBBAHUB_DIRECTORY_URL . 'assets/directory.css', array(), BUBBAHUB_DIRECTORY_VERSION );
-    $load_directory_js = false;
-    if ( is_singular() ) {
-        global $post;
-        if ( $post && has_shortcode( (string) $post->post_content, 'bubbahub_directory' ) ) $load_directory_js = true;
-    }
-    if ( $load_directory_js ) {
-        wp_enqueue_style( 'leaflet' );
-        wp_enqueue_script( 'leaflet' );
-        wp_enqueue_script( 'bubbahub-directory', BUBBAHUB_DIRECTORY_URL . 'assets/directory.js', array( 'jquery', 'leaflet' ), BUBBAHUB_DIRECTORY_VERSION, true );
-    }
 } );
 
 add_action( 'admin_notices', function() {

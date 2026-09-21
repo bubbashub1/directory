@@ -3,6 +3,17 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! defined( 'BUBBAHUB_MYHUB_VERSION' ) ) define( 'BUBBAHUB_MYHUB_VERSION', '1.6.41' );
 if ( ! defined( 'BUBBAHUB_MYHUB_PATH' ) ) define( 'BUBBAHUB_MYHUB_PATH', plugin_dir_path( __FILE__ ) );
+if ( ! function_exists( 'bubbahub_myhub_safe_require' ) ) {
+    function bubbahub_myhub_safe_require( $file, $label = '' ) {
+        if ( ! $file || ! file_exists( $file ) ) return false;
+        try { require_once $file; return true; }
+        catch ( Throwable $e ) {
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) error_log( 'BubbaHub My Hub module skipped [' . $label . ']: ' . $e->getMessage() );
+            return false;
+        }
+    }
+}
+
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'account-settings.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'account-settings.php', 'account settings' );
 if ( ! defined( 'BUBBAHUB_MYHUB_URL' ) ) define( 'BUBBAHUB_MYHUB_URL', plugin_dir_url( __FILE__ ) );
 add_action( 'init', 'bubbahub_myhub_register_child_post_type' );
@@ -29,17 +40,6 @@ add_filter( 'acf/settings/load_json', function( $paths ) { $paths[] = BUBBAHUB_M
 add_filter( 'acf/settings/save_json', function( $path ) { return BUBBAHUB_MYHUB_PATH . 'acf-json'; } );
 
 /* Optional My Hub modules are isolated so one broken module cannot stop the Directory shortcode bootstrap. */
-if ( ! function_exists( 'bubbahub_myhub_safe_require' ) ) {
-    function bubbahub_myhub_safe_require( $file, $label = '' ) {
-        if ( ! $file || ! file_exists( $file ) ) return false;
-        try { require_once $file; return true; }
-        catch ( Throwable $e ) {
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) error_log( 'BubbaHub My Hub module skipped [' . $label . ']: ' . $e->getMessage() );
-            return false;
-        }
-    }
-}
-
 bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-groups.php', 'groups' );
 bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-planner.php', 'planner' );
 if ( file_exists( BUBBAHUB_MYHUB_PATH . 'myhub-calendar-sync.php' ) ) bubbahub_myhub_safe_require( BUBBAHUB_MYHUB_PATH . 'myhub-calendar-sync.php', 'calendar sync' );

@@ -44,6 +44,9 @@ function bubbahub_leader_handle_booking_save() {
     $last  = sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) );
     $email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
     if ( ! $first || ! $last || ! is_email( $email ) ) wp_die( 'Please provide a valid customer name and email address.' );
+    $booking_status = sanitize_key( $_POST['booking_status'] ?? 'pending' );
+    if ( ! in_array( $booking_status, array( 'pending', 'confirmed', 'cancelled', 'completed' ), true ) ) $booking_status = 'pending';
+
     $data = array( 'post_type' => 'bh_booking', 'post_status' => 'publish', 'post_title' => trim( $first . ' ' . $last ) );
 
     if ( $booking_id ) {
@@ -64,8 +67,14 @@ function bubbahub_leader_handle_booking_save() {
         '_bh_booking_date' => sanitize_text_field( wp_unslash( $_POST['booking_date'] ?? '' ) ),
         '_bh_total_places' => max( 1, absint( $_POST['total_places'] ?? 1 ) ),
         '_bh_total_price' => number_format( max( 0, $price ), 2, '.', '' ),
-        '_bh_status' => sanitize_key( $_POST['booking_status'] ?? 'pending' ),
-        '_bh_payment_status' => 'pending',
+        '_bh_status' => $booking_status,
+    );
+
+    // Do not reset an existing booking's payment state when a leader edits
+    // customer details. A paid booking must remain paid after an edit.
+    if ( ! $booking_id ) {
+        $map['_bh_payment_status'] = 'pending';
+    }
     );
     foreach ( $map as $key => $value ) update_post_meta( $saved, $key, $value );
 

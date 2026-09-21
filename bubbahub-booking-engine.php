@@ -161,6 +161,19 @@ function bubbahub_booking_create( $args = array() ) {
     $session_id = absint( $args['session_id'] );
     if ( ! $session_id || get_post_type( $session_id ) !== 'bh_session' ) return new WP_Error( 'invalid_session', 'The selected booking session is invalid.' );
 
+    // Always derive the booking relationship from the session rather than trusting
+    // caller-supplied group/venue IDs. This keeps internal callers consistent and
+    // prevents a forged booking request from attaching a booking to another listing.
+    $session_group_id = absint( bubbahub_booking_meta( $session_id, '_bh_group_id', 0 ) );
+    $session_venue_id = absint( bubbahub_booking_meta( $session_id, '_bh_venue_id', 0 ) );
+    if ( ! $session_group_id || 'group' !== get_post_type( $session_group_id ) ) return new WP_Error( 'invalid_group', 'The booking session is not linked to a valid group.' );
+    if ( absint( $args['group_id'] ) && absint( $args['group_id'] ) !== $session_group_id ) return new WP_Error( 'group_mismatch', 'The selected group does not match the booking session.' );
+    if ( absint( $args['venue_id'] ) && $session_venue_id && absint( $args['venue_id'] ) !== $session_venue_id ) return new WP_Error( 'venue_mismatch', 'The selected venue does not match the booking session.' );
+    if ( 'open' !== bubbahub_booking_meta( $session_id, '_bh_session_status', 'open' ) ) return new WP_Error( 'session_closed', 'This booking session is no longer open.' );
+
+    $args['group_id'] = $session_group_id;
+    $args['venue_id'] = $session_venue_id;
+
     $stats = bubbahub_booking_session_stats( $session_id );
     $ticket_types = $stats['ticket_types'];
     $ticket_map = array();

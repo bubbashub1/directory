@@ -75,7 +75,6 @@ function bubbahub_leader_handle_booking_save() {
     if ( ! $booking_id ) {
         $map['_bh_payment_status'] = 'pending';
     }
-    );
     foreach ( $map as $key => $value ) update_post_meta( $saved, $key, $value );
 
     wp_safe_redirect( add_query_arg( 'booking_saved', '1', home_url( '/leader/#bookings' ) ) );

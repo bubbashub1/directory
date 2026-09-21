@@ -93,8 +93,21 @@ function bubbahub_account_settings_um_section_content( $output = '', $shortcode_
         return $output;
     }
 
+    /*
+     * Ultimate Member can render a custom account tab through AJAX, where the
+     * requested tab is supplied in the shortcode arguments rather than only
+     * in the browser query string. Prefer the explicit shortcode tab value,
+     * then fall back to the canonical um_tab query parameter.
+     */
     $sections = bubbahub_account_settings_um_sections();
-    $tab_key  = isset( $_GET['um_tab'] ) ? sanitize_key( wp_unslash( $_GET['um_tab'] ) ) : '';
+    $tab_key  = '';
+    if ( isset( $shortcode_args['um_tab'] ) ) {
+        $tab_key = sanitize_key( wp_unslash( $shortcode_args['um_tab'] ) );
+    } elseif ( isset( $shortcode_args['tab'] ) ) {
+        $tab_key = sanitize_key( wp_unslash( $shortcode_args['tab'] ) );
+    } elseif ( isset( $_GET['um_tab'] ) ) {
+        $tab_key = sanitize_key( wp_unslash( $_GET['um_tab'] ) );
+    }
     if ( empty( $sections[ $tab_key ] ) ) return $output;
 
     /*

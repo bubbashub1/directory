@@ -33,28 +33,12 @@ function bubbahub_account_settings_um_url() {
 }
 
 function bubbahub_account_settings_um_tabs( $tabs ) {
-    $labels = array(
-        'bubbahub_settings_pro'                => array( 'icon' => 'um-faicon-star',     'title' => 'Manage my Pro Account' ),
-        'bubbahub_settings_preferences'       => array( 'icon' => 'um-faicon-heart',    'title' => 'My Bubba Hub Directory Preferences' ),
-        'bubbahub_settings_calendar'          => array( 'icon' => 'um-faicon-calendar', 'title' => 'Calendar Settings' ),
-        'bubbahub_settings_notification_test' => array( 'icon' => 'um-faicon-flask',    'title' => 'Notification Test' ),
-        'bubbahub_settings_privacy'           => array( 'icon' => 'um-faicon-lock',     'title' => 'Privacy & Security' ),
-        'bubbahub_settings_notifications'     => array( 'icon' => 'um-faicon-bell',     'title' => 'Notification preferences' ),
-        'bubbahub_settings_consent'           => array( 'icon' => 'um-faicon-shield',   'title' => 'Class Consent & Safety' ),
-        'bubbahub_settings_payments'          => array( 'icon' => 'um-faicon-credit-card', 'title' => 'My Payments, Invoices & Wallet' ),
+    $tabs[160]['bubbahub_account_settings'] = array(
+        'icon'         => 'um-faicon-cog',
+        'title'        => __( 'Account Settings', 'bubbahub' ),
+        'submit_title' => __( 'Account Settings', 'bubbahub' ),
+        'custom'       => true,
     );
-
-    $position = 160;
-    foreach ( $labels as $tab_key => $label ) {
-        $tabs[ $position ][ $tab_key ] = array(
-            'icon'         => $label['icon'],
-            'title'        => __( $label['title'], 'bubbahub' ),
-            'submit_title' => __( $label['title'], 'bubbahub' ),
-            'custom'       => true,
-        );
-        $position++;
-    }
-
     return $tabs;
 }
 

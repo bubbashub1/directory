@@ -18,7 +18,7 @@ add_action( 'template_redirect', 'bubbahub_account_settings_um_route', 25 );
 // Register one central Bubba Hub Account Settings tab in Ultimate Member.
 // All current settings and future leader-profile settings live inside this
 // single destination. Individual settings use bh_settings_section internally.
-add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
+add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 9999 );
 add_filter( 'um_account_content_hook_bubbahub_account_settings', 'bubbahub_account_settings_um_section_content', 20, 2 );
 
 add_action( 'wp_footer', 'bubbahub_myhub_account_settings_button', 30 );
@@ -35,12 +35,36 @@ function bubbahub_account_settings_um_url() {
 }
 
 function bubbahub_account_settings_um_tabs( $tabs ) {
+    /*
+     * Ultimate Member extensions can register their own account tabs. The
+     * current site was still exposing an "Embed" tab, so remove that
+     * extension-provided entry before finalising the Bubba Hub menu.
+     * This runs late deliberately so later tab registrations cannot put it
+     * back into the account menu.
+     */
+    foreach ( $tabs as $priority => $priority_tabs ) {
+        if ( ! is_array( $priority_tabs ) ) continue;
+
+        foreach ( $priority_tabs as $tab_id => $tab ) {
+            $tab_title = is_array( $tab ) && isset( $tab['title'] ) ? wp_strip_all_tags( (string) $tab['title'] ) : '';
+
+            if ( 'embed' === strtolower( (string) $tab_id ) || 'embed' === strtolower( $tab_title ) ) {
+                unset( $tabs[ $priority ][ $tab_id ] );
+            }
+        }
+
+        if ( empty( $tabs[ $priority ] ) ) {
+            unset( $tabs[ $priority ] );
+        }
+    }
+
     $tabs[160]['bubbahub_account_settings'] = array(
         'icon'         => 'um-faicon-cog',
         'title'        => __( 'Account Settings', 'bubbahub' ),
         'submit_title' => __( 'Account Settings', 'bubbahub' ),
         'custom'       => true,
     );
+
     return $tabs;
 }
 

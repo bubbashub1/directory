@@ -1900,6 +1900,15 @@ function bubbahub_stage2_render_payments() {
 /* -------------------------------------------------------------------------
  * Main Stage 2 screen
  * ---------------------------------------------------------------------- */
+function bubbahub_stage2_account_settings_url( $section = '' ) {
+    $url = bubbahub_stage2_account_url();
+    $args = array( 'um_tab' => 'bubbahub_account_settings' );
+    if ( $section !== '' ) {
+        $args['bh_settings_section'] = sanitize_key( $section );
+    }
+    return add_query_arg( $args, $url );
+}
+
 function bubbahub_account_settings_stage2_shortcode() {
     if ( ! is_user_logged_in() ) return '<p>Please log in to manage your account settings.</p>';
     wp_enqueue_style( 'bubbahub-profile-settings' );
@@ -1934,7 +1943,7 @@ function bubbahub_account_settings_stage2_shortcode() {
     else $content = '';
 
     if ( $content ) {
-        $back = add_query_arg( 'bh_account_settings', '1', remove_query_arg( 'bh_settings_section' ) );
+        $back = bubbahub_stage2_account_settings_url();
         ob_start(); ?>
         <div id="bh-account-settings-screen" class="bh-profile-shell"><div class="bh-profile-header dark"><div><span class="bh-profile-kicker">ACCOUNT SETTINGS</span><h1>Your Account Settings</h1><p>Manage your Bubba Hub profile, membership, interests, notifications and payments.</p></div><a class="bh-profile-back light" href="<?php echo esc_url($back); ?>">‹ Back to settings</a></div><?php if($message): ?><div class="bh-profile-success">✓ <?php echo esc_html($message); ?></div><?php endif; ?><?php echo $content; ?></div><?php return ob_get_clean();
     }
@@ -1947,14 +1956,14 @@ function bubbahub_account_settings_stage2_shortcode() {
             <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg('um_tab', 'bubbahub_profile', $um_url)); ?>">
                 <span class="bh-account-settings-icon" aria-hidden="true">👤</span><span class="bh-account-settings-content"><h3>Edit my profile</h3><p>Personal details, contact information and account addresses.</p></span>
             </a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'pro'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">⭐</span><span class="bh-account-settings-content"><h3>Manage my Pro Account</h3><p><?php echo $is_pro ? 'Manage your active membership and billing.' : 'View Pro options and membership information.'; ?></p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'family_needs'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">✨</span><span class="bh-account-settings-content"><h3>My Bubba Hub Directory Preferences</h3><p>Manage your interests, family needs, preferred locations and search preferences in one place.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'calendar'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🗓️</span><span class="bh-account-settings-content"><h3>Calendar Settings</h3><p>Choose your default view, visible days, time of day, free/paid activities, nap schedule and reminder settings.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notification_test'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🧪</span><span class="bh-account-settings-content"><h3>Notification Test</h3><p>Send a test email to check your account notification delivery.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'privacy'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🔐</span><span class="bh-account-settings-content"><h3>Privacy & Security</h3><p>Open account security and submit data or deletion requests.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'notifications'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🔔</span><span class="bh-account-settings-content"><h3>Notification preferences</h3><p>Manage every optional notification type, including new groups, updates, suggestions, bookings and planner alerts.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'consent'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🛡️</span><span class="bh-account-settings-content"><h3>Class Consent & Safety</h3><p>Manage safety information, contact consent and media permissions.</p></span></a></div>
-            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(add_query_arg(array('bh_account_settings'=>1,'bh_settings_section'=>'payments'))); ?>"><span class="bh-account-settings-icon" aria-hidden="true">💳</span><span class="bh-account-settings-content"><h3>My Payments, Invoices &amp; Wallet</h3><p>Manage payment methods, invoices, wallet balance, transactions and subscriptions.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('pro')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">⭐</span><span class="bh-account-settings-content"><h3>Manage my Pro Account</h3><p><?php echo $is_pro ? 'Manage your active membership and billing.' : 'View Pro options and membership information.'; ?></p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('family_needs')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">✨</span><span class="bh-account-settings-content"><h3>My Bubba Hub Directory Preferences</h3><p>Manage your interests, family needs, preferred locations and search preferences in one place.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('calendar')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🗓️</span><span class="bh-account-settings-content"><h3>Calendar Settings</h3><p>Choose your default view, visible days, time of day, free/paid activities, nap schedule and reminder settings.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('notification_test')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🧪</span><span class="bh-account-settings-content"><h3>Notification Test</h3><p>Send a test email to check your account notification delivery.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('privacy')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🔐</span><span class="bh-account-settings-content"><h3>Privacy & Security</h3><p>Open account security and submit data or deletion requests.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('notifications')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🔔</span><span class="bh-account-settings-content"><h3>Notification preferences</h3><p>Manage every optional notification type, including new groups, updates, suggestions, bookings and planner alerts.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('consent')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">🛡️</span><span class="bh-account-settings-content"><h3>Class Consent & Safety</h3><p>Manage safety information, contact consent and media permissions.</p></span></a></div>
+            <div class="bh-account-settings-menu-container"><a class="bh-account-settings-item" href="<?php echo esc_url(bubbahub_stage2_account_settings_url('payments')); ?>"><span class="bh-account-settings-icon" aria-hidden="true">💳</span><span class="bh-account-settings-content"><h3>My Payments, Invoices &amp; Wallet</h3><p>Manage payment methods, invoices, wallet balance, transactions and subscriptions.</p></span></a></div>
         </div>
     </div>
     <?php return ob_get_clean();

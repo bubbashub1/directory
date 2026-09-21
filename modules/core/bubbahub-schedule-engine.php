@@ -75,7 +75,14 @@ function bubbahub_schedule_engine_create_occurrence( $source_id, $date, $definit
     ), true );
     if ( is_wp_error( $post_id ) ) return 0;
 
-    $copy_keys = array( '_bh_group_id', '_bh_venue_id', '_bh_start_time', '_bh_end_time', '_bh_capacity', '_bh_price', '_bh_ticket_types', '_bh_booking_url' );
+    // Carry booking configuration to generated occurrences. Without these fields,
+    // recurring sessions can exist but appear unavailable to the public booking flow.
+    $copy_keys = array(
+        '_bh_group_id', '_bh_venue_id', '_bh_start_time', '_bh_end_time', '_bh_capacity',
+        '_bh_price', '_bh_ticket_types', '_bh_booking_url', '_bh_session_status',
+        '_bh_booking_action', '_bh_booking_method', '_bh_reserve_enabled', '_bh_ninja_form_id',
+        '_bh_external_url', '_bh_external_label', '_bh_datetime_sort'
+    );
     foreach ( $copy_keys as $key ) {
         $value = get_post_meta( $source_id, $key, true );
         if ( '' !== $value && false !== $value ) update_post_meta( $post_id, $key, $value );

@@ -13,7 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * existing settings sections and save handlers.
  */
 add_action( 'template_redirect', 'bubbahub_account_settings_um_route', 25 );
-add_action( 'init', 'bubbahub_account_settings_register_um_tab', 40 );
+add_action( 'plugins_loaded', 'bubbahub_account_settings_register_um_tab', 30 );
+add_action( 'init', 'bubbahub_account_settings_register_um_tab', 1 );
 add_action( 'wp_footer', 'bubbahub_myhub_account_settings_button', 30 );
 add_action( 'wp_head', 'bubbahub_account_settings_dashboard_css', 30 );
 
@@ -29,7 +30,9 @@ function bubbahub_account_settings_um_url() {
 }
 
 function bubbahub_account_settings_register_um_tab() {
-    if ( ! function_exists( 'UM' ) ) return;
+    static $registered = false;
+    if ( $registered || ! function_exists( 'UM' ) ) return;
+    $registered = true;
 
     add_filter( 'um_account_page_default_tabs_hook', 'bubbahub_account_settings_um_tabs', 160 );
     
@@ -192,24 +195,62 @@ function bubbahub_myhub_account_settings_content_route( $content ) {
 function bubbahub_myhub_account_settings_button() {
     if ( ! is_user_logged_in() ) return;
 
-    $url = bubbahub_account_settings_um_url();
+    $account_url = bubbahub_account_settings_um_url();
+    $menu_items = array(
+        array( 'key' => 'bubbahub_settings_pro', 'title' => 'Manage my Pro Account', 'icon' => '⭐' ),
+        array( 'key' => 'bubbahub_settings_preferences', 'title' => 'My Bubba Hub Directory Preferences', 'icon' => '❤️' ),
+        array( 'key' => 'bubbahub_settings_calendar', 'title' => 'Calendar Settings', 'icon' => '🗓️' ),
+        array( 'key' => 'bubbahub_settings_notification_test', 'title' => 'Notification Test', 'icon' => '🧪' ),
+        array( 'key' => 'bubbahub_settings_privacy', 'title' => 'Privacy & Security', 'icon' => '🔐' ),
+        array( 'key' => 'bubbahub_settings_notifications', 'title' => 'Notification preferences', 'icon' => '🔔' ),
+        array( 'key' => 'bubbahub_settings_consent', 'title' => 'Class Consent & Safety', 'icon' => '🛡️' ),
+        array( 'key' => 'bubbahub_settings_payments', 'title' => 'My Payments, Invoices & Wallet', 'icon' => '💳' ),
+    );
     ?>
     <script>
     document.addEventListener('DOMContentLoaded',function(){
-      var hub=document.querySelector('.bh-myhub-v3 .bh-myhub-hero');
-      if(!hub || hub.querySelector('.bh-myhub-account-settings')) return;
+      var accountUrl=<?php echo wp_json_encode( esc_url( $account_url ) ); ?>;
+      var items=<?php echo wp_json_encode( $menu_items ); ?>;
 
-      var a=document.createElement('a');
-      a.className='bh-myhub-account-settings bh-myhub-button';
-      a.href=<?php echo wp_json_encode( esc_url( $url ) ); ?>;
-      a.textContent='⚙ Account Settings';
+      function addBubbaSettingsMenu(){
+        var side=document.querySelector('.um-account-side');
+        if(!side) return false;
 
-      var box=hub.querySelector('.bh-myhub-next');
-      if(box) box.appendChild(a); else hub.appendChild(a);
+        var list=side.querySelector('.um-account-side-menu');
+        if(!list){
+          list=side.querySelector('ul');
+        }
+        if(!list) return false;
+
+        items.forEach(function(item){
+          var selector='[data-bh-account-tab="'+item.key+'"]';
+          if(list.querySelector(selector)) return;
+
+          var li=document.createElement('li');
+          li.className='um-account-link';
+          li.setAttribute('data-bh-account-tab',item.key);
+
+          var a=document.createElement('a');
+          a.href=accountUrl+(accountUrl.indexOf('?')===-1?'?':'&')+'um_tab='+encodeURIComponent(item.key);
+          a.innerHTML='<span class="um-account-icon">'+item.icon+'</span><span class="um-account-title">'+item.title+'</span>';
+          li.appendChild(a);
+          list.appendChild(li);
+        });
+        return true;
+      }
+
+      if(!addBubbaSettingsMenu()){
+        var observer=new MutationObserver(function(){
+          if(addBubbaSettingsMenu()) observer.disconnect();
+        });
+        observer.observe(document.body,{childList:true,subtree:true});
+        setTimeout(function(){observer.disconnect();},10000);
+      }
     });
     </script>
     <?php
 }
+
 
 /*
  * The UM account page controls its own outer layout. This scoped rule gives

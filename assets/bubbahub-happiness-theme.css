@@ -1,397 +1,57 @@
-/*
- * Bubba Hub — Happiness Coach inspired visual system
- * Inspired by the calm editorial structure of WPEverest's Happiness Coach.
- * Bubba Hub uses its own palette, copy and interface styling.
+/* Bubba Hub — WordPress theme-native integration
+ * Keeps Bubba Hub layout/components but inherits the active WordPress theme's
+ * typography, colours, controls and spacing wherever the theme exposes them.
  */
 :root{
-  --bhh-ink:#3f3b36;
-  --bhh-ink-soft:#625d55;
-  --bhh-paper:#fbf8f2;
-  --bhh-surface:#fffdf9;
-  --bhh-cream:#f4ede1;
-  --bhh-sage:#dfe9df;
-  --bhh-sage-deep:#567064;
-  --bhh-peach:#efc6b5;
-  --bhh-coral:#d98270;
-  --bhh-gold:#d9ad63;
-  --bhh-line:#e6ded2;
-  --bhh-white:#fff;
-  --bhh-radius:18px;
-  --bhh-radius-lg:28px;
-  --bhh-shadow:0 12px 35px rgba(63,59,54,.08);
-  --bhh-shadow-soft:0 5px 18px rgba(63,59,54,.06);
-  --bhh-content:1240px;
+  --bhh-ink:var(--wp--preset--color--contrast,var(--wp--preset--color--foreground,currentColor));
+  --bhh-ink-soft:var(--wp--preset--color--contrast,var(--wp--preset--color--foreground,currentColor));
+  --bhh-paper:var(--wp--preset--color--base,#fff);
+  --bhh-surface:var(--wp--preset--color--base,#fff);
+  --bhh-cream:var(--wp--preset--color--tertiary,var(--wp--preset--color--base,#fff));
+  --bhh-sage:var(--wp--preset--color--secondary,var(--wp--preset--color--tertiary,#f4f4f4));
+  --bhh-sage-deep:var(--wp--preset--color--primary,var(--wp--preset--color--contrast,currentColor));
+  --bhh-peach:var(--wp--preset--color--tertiary,var(--wp--preset--color--base,#fff));
+  --bhh-coral:var(--wp--preset--color--primary,var(--wp--preset--color--contrast,currentColor));
+  --bhh-gold:var(--wp--preset--color--secondary,var(--wp--preset--color--contrast,currentColor));
+  --bhh-line:var(--wp--preset--color--contrast,var(--wp--preset--color--base,#ddd));
+  --bhh-white:var(--wp--preset--color--base,#fff);
+  --bhh-radius:var(--wp--custom--radius--medium,12px);
+  --bhh-radius-lg:var(--wp--custom--radius--large,20px);
+  --bhh-shadow:none;
+  --bhh-shadow-soft:none;
 }
 
-/* Typography — editorial heading + clean, friendly body */
-body,
-button,
-input,
-select,
-textarea{
-  font-family:"Work Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  color:var(--bhh-ink);
+/* Never replace the active theme's font stack. */
+.bh-directory,.bh-myhub,.bh-leader-dashboard,.bh-management-page,
+.bh-profile-shell,.bh-my-bookings-page,.bh-weekly-planner-v2,
+.bh-support-card,.bh-panel,.bh-card,
+.bh-happiness-hero,.bh-happiness-panel{
+  font-family:inherit;
+  color:inherit;
 }
-h1,h2,h3,h4,h5,h6,
-.wp-block-heading,
-.wp-site-blocks h1,
-.wp-site-blocks h2,
-.wp-site-blocks h3,
-.wp-site-blocks h4{
-  font-family:"Playfair Display",Georgia,serif;
-  color:var(--bhh-ink);
-  letter-spacing:-.018em;
-  font-weight:600;
-}
-body{
-  background:var(--bhh-paper);
-  line-height:1.65;
-}
-.wp-site-blocks{
-  background:var(--bhh-paper);
-}
-a{
-  color:var(--bhh-sage-deep);
-  text-underline-offset:3px;
-}
-a:hover{
-  color:var(--bhh-coral);
-}
+.bh-directory h1,.bh-directory h2,.bh-directory h3,.bh-directory h4,
+.bh-myhub h1,.bh-myhub h2,.bh-myhub h3,.bh-myhub h4,
+.bh-leader-dashboard h1,.bh-leader-dashboard h2,.bh-leader-dashboard h3,
+.bh-management-page h1,.bh-management-page h2,.bh-management-page h3,
+.bh-card h2,.bh-builder-title h2{font-family:inherit;color:inherit;letter-spacing:normal;font-weight:inherit;}
 
-/* Header / navigation */
-.wp-site-blocks > header,
-header.wp-block-template-part{
-  background:rgba(255,253,249,.96);
-  border-bottom:1px solid var(--bhh-line);
-}
-header .wp-block-navigation a{
-  color:var(--bhh-ink);
-  font-weight:500;
-  text-decoration:none;
-}
-header .wp-block-navigation a:hover{
-  color:var(--bhh-coral);
-}
-header .wp-block-site-title a{
-  color:var(--bhh-ink);
-  font-family:"Playfair Display",Georgia,serif;
-  font-weight:600;
-  text-decoration:none;
-}
+/* Use WordPress global design tokens with safe fallbacks. */
+.bh-directory,.bh-myhub{--bh-text:var(--wp--preset--color--contrast,currentColor);--bh-muted:color-mix(in srgb,var(--bh-text) 65%,transparent);--bh-border:color-mix(in srgb,var(--bh-text) 16%,transparent);--bh-accent:var(--wp--preset--color--primary,var(--bh-text));}
+.bh-directory .bh-search-form,.bh-myhub-hero,.bh-myhub-child-card,.bh-myhub-pref-card,.bh-profile-shell .bh-profile-card,.bh-my-booking,.bh-support-card,.bh-panel{background:var(--wp--preset--color--base,#fff);color:var(--bh-text);}
+.bh-directory a,.bh-myhub a,.bh-profile-shell a{color:var(--wp--preset--color--primary,var(--bh-text));}
+.bh-directory button,.bh-myhub-button,.bh-profile-shell button,.bh-profile-shell input[type="submit"],.bh-my-booking-action a{font-family:inherit;}
+.bh-directory .bh-search-form button,.bh-myhub-button,.bh-leader-primary,.bh-leader-button{background:var(--wp--preset--color--primary,var(--bh-text))!important;color:var(--wp--preset--color--base,#fff)!important;border-color:var(--wp--preset--color--primary,var(--bh-text))!important;}
+.bh-directory .bh-search-form input,.bh-directory .bh-search-form select,.bh-profile-shell input,.bh-profile-shell select,.bh-profile-shell textarea,.bh-leader-form input,.bh-leader-form textarea,.bh-leader-form select{font-family:inherit;color:inherit;background:var(--wp--preset--color--base,#fff);border-color:var(--bh-border);}
+.bh-directory .bh-search-form input:focus,.bh-directory .bh-search-form select:focus,.bh-profile-shell input:focus,.bh-profile-shell select:focus,.bh-profile-shell textarea:focus{border-color:var(--wp--preset--color--primary,var(--bh-text));box-shadow:0 0 0 2px color-mix(in srgb,var(--wp--preset--color--primary,var(--bh-text)) 18%,transparent);outline:0;}
+.bh-directory .bh-card,.bh-directory-results .bh-card,.bh-myhub-child-card,.bh-myhub-pref-card,.bh-profile-shell .bh-profile-card,.bh-my-booking,.bh-support-card,.bh-leader-panel,.bh-management-page-card{border-color:var(--bh-border);box-shadow:none;}
+.bh-directory .bh-card-image,.bh-directory .bh-builder-map,.bh-directory .bh-builder-search-note{background:var(--wp--preset--color--secondary,var(--wp--preset--color--base,#f5f5f5));}
+.bh-directory .bh-badge.is-active,.bh-directory .bh-directory-toolbar-actions .bh-directory-view-link.is-active{background:var(--wp--preset--color--primary,var(--bh-text));color:var(--wp--preset--color--base,#fff);}
+.bh-directory .bh-view-toggle,.bh-directory .bh-reset-inline,.bh-directory .bh-directory-view-link{font-family:inherit;color:inherit;background:var(--wp--preset--color--base,#fff);border-color:var(--bh-border);}
+.bh-directory .bh-inline-error{background:var(--wp--preset--color--tertiary,var(--wp--preset--color--base,#fff));border-color:var(--bh-border);}
+.bh-directory .bh-loading,.bh-builder-description,.bh-builder-location,.bh-builder-contact,.bh-builder-social,.bh-builder-schedule span,.bh-card-details dt{color:var(--bh-muted);}
 
-/* Shared content rhythm */
-.wp-block-group,
-.wp-block-columns{
-  --wp--preset--spacing--block-gap:1.25rem;
-}
-.wp-block-button__link,
-button,
-input[type="submit"],
-input[type="button"],
-input[type="reset"]{
-  border-radius:999px;
-  border:1px solid transparent;
-  min-height:46px;
-  padding:.72rem 1.25rem;
-  font:600 14px/1.2 "Work Sans",sans-serif;
-  letter-spacing:.01em;
-  transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease;
-}
-.wp-block-button__link:hover,
-button:hover,
-input[type="submit"]:hover,
-input[type="button"]:hover{
-  transform:translateY(-1px);
-  box-shadow:var(--bhh-shadow-soft);
-}
-.wp-block-button.is-style-outline .wp-block-button__link{
-  color:var(--bhh-sage-deep);
-  border-color:var(--bhh-sage-deep);
-  background:transparent;
-}
-.wp-block-button.is-style-outline .wp-block-button__link:hover{
-  background:var(--bhh-sage);
-}
-.wp-block-button:not(.is-style-outline) .wp-block-button__link,
-button:not(.bh-secondary-button),
-input[type="submit"]{
-  background:var(--bhh-sage-deep);
-  color:#fff;
-}
+/* Theme-native global controls: do not impose a second button/input design system. */
+.bh-directory button,.bh-myhub button,.bh-profile-shell button,.bh-leader-dashboard button,.bh-management-page button,
+.bh-directory input,.bh-directory select,.bh-directory textarea,.bh-myhub input,.bh-myhub select,.bh-myhub textarea{font:inherit;}
 
-/* Inputs */
-input:not([type="checkbox"]):not([type="radio"]),
-select,
-textarea{
-  border:1px solid var(--bhh-line);
-  border-radius:14px;
-  background:var(--bhh-surface);
-  color:var(--bhh-ink);
-  min-height:48px;
-  padding:.72rem .9rem;
-  box-shadow:none;
-}
-input:focus,
-select:focus,
-textarea:focus{
-  outline:0;
-  border-color:var(--bhh-sage-deep);
-  box-shadow:0 0 0 3px rgba(86,112,100,.12);
-}
-
-/* Hero / editorial sections */
-.bh-happiness-hero,
-.wp-block-cover{
-  border-radius:0;
-}
-.bh-happiness-panel,
-.wp-block-group.has-background{
-  border-radius:var(--bhh-radius-lg);
-}
-.wp-block-separator{
-  border-color:var(--bhh-line);
-}
-
-/* Directory — keep functionality, change visual language */
-.bh-directory{
-  --bh-gap:22px;
-  --bh-radius:22px;
-  --bh-border:var(--bhh-line);
-  --bh-text:var(--bhh-ink);
-  --bh-muted:var(--bhh-ink-soft);
-  --bh-accent:var(--bhh-sage-deep);
-  color:var(--bhh-ink);
-  font-family:"Work Sans",sans-serif;
-}
-.bh-directory .bh-search-form{
-  padding:24px;
-  margin-bottom:26px;
-  border:1px solid var(--bhh-line);
-  border-radius:var(--bhh-radius-lg);
-  background:var(--bhh-surface);
-  box-shadow:var(--bhh-shadow-soft);
-}
-.bh-directory .bh-search-form label{
-  font-family:"Work Sans",sans-serif;
-  color:var(--bhh-ink-soft);
-  letter-spacing:.01em;
-}
-.bh-directory .bh-search-form input,
-.bh-directory .bh-search-form select{
-  border-radius:14px;
-  border-color:var(--bhh-line);
-  background:#fff;
-}
-.bh-directory .bh-search-form button{
-  border-radius:999px;
-  background:var(--bhh-sage-deep);
-  color:#fff;
-}
-.bh-directory-results .bh-card{
-  border:1px solid var(--bhh-line);
-  border-radius:var(--bhh-radius-lg);
-  background:var(--bhh-surface);
-  box-shadow:var(--bhh-shadow-soft);
-}
-.bh-directory-results .bh-card:hover{
-  transform:translateY(-3px);
-  box-shadow:var(--bhh-shadow);
-}
-.bh-card-image{
-  background:var(--bhh-cream);
-}
-.bh-card-body{
-  padding:20px;
-}
-.bh-card h2,
-.bh-builder-title h2{
-  font-family:"Playfair Display",Georgia,serif;
-  font-weight:600;
-  letter-spacing:-.018em;
-}
-.bh-card h2 a{
-  color:var(--bhh-ink);
-}
-.bh-card h2 a:hover{
-  color:var(--bhh-coral);
-  text-decoration:none;
-}
-.bh-builder-description,
-.bh-builder-location,
-.bh-builder-contact,
-.bh-builder-social,
-.bh-builder-schedule span{
-  color:var(--bhh-ink-soft);
-}
-.bh-builder-price span,
-.bh-builder-meta span{
-  background:var(--bhh-cream);
-  color:var(--bhh-ink);
-  border:1px solid var(--bhh-line);
-}
-.bh-badge{
-  background:rgba(255,253,249,.96);
-  color:var(--bhh-ink);
-  box-shadow:0 4px 15px rgba(63,59,54,.10);
-}
-.bh-badge.is-active{
-  background:var(--bhh-sage-deep);
-  color:#fff;
-}
-.bh-view-toggle,
-.bh-reset-inline{
-  background:var(--bhh-cream);
-  color:var(--bhh-ink);
-  border:1px solid var(--bhh-line);
-}
-.bh-directory-map,
-.bh-builder-map,
-.bh-builder-search-note{
-  border-color:var(--bhh-line);
-  background:var(--bhh-surface);
-  border-radius:16px;
-}
-.bh-directory-results .bh-empty{
-  border-color:var(--bhh-line);
-  background:var(--bhh-surface);
-  border-radius:var(--bhh-radius-lg);
-}
-
-/* My Hub — softer, calmer cards */
-.bh-myhub{
-  --bh-ink:var(--bhh-ink);
-  --bh-muted:var(--bhh-ink-soft);
-  --bh-line:var(--bhh-line);
-  font-family:"Work Sans",sans-serif;
-  color:var(--bhh-ink);
-}
-.bh-myhub h1,
-.bh-myhub h2,
-.bh-myhub h3,
-.bh-myhub h4{
-  font-family:"Playfair Display",Georgia,serif;
-  color:var(--bhh-ink);
-}
-.bh-myhub-hero,
-.bh-myhub-section,
-.bh-myhub-form-section,
-.bh-myhub-suggested-section,
-.bh-myhub-child-card,
-.bh-myhub-pref-card{
-  border-color:var(--bhh-line)!important;
-}
-.bh-myhub-hero{
-  background:var(--bhh-sage)!important;
-  border-radius:var(--bhh-radius-lg)!important;
-  box-shadow:var(--bhh-shadow-soft);
-}
-.bh-myhub-child-card,
-.bh-myhub-pref-card{
-  background:var(--bhh-surface)!important;
-  border-radius:20px!important;
-  box-shadow:var(--bhh-shadow-soft);
-}
-.bh-myhub-button{
-  border-radius:999px!important;
-  background:var(--bhh-sage-deep)!important;
-  color:#fff!important;
-}
-.bh-myhub-text-link{
-  color:var(--bhh-sage-deep)!important;
-}
-.bh-myhub-school-tracker{
-  border-radius:18px!important;
-}
-
-/* Leader portal — same brand language, without changing layout/function */
-.bh-leader-dashboard,
-.bh-management-page{
-  font-family:"Work Sans",sans-serif;
-  color:var(--bhh-ink);
-}
-.bh-leader-dashboard h1,
-.bh-leader-dashboard h2,
-.bh-leader-dashboard h3,
-.bh-management-page h1,
-.bh-management-page h2,
-.bh-management-page h3{
-  font-family:"Playfair Display",Georgia,serif;
-  color:var(--bhh-ink);
-}
-.bh-leader-sidebar,
-.bh-leader-header,
-.bh-leader-stat,
-.bh-leader-panel,
-.bh-group-row,
-.bh-management-page-header,
-.bh-management-page-card{
-  border-color:var(--bhh-line)!important;
-  background:var(--bhh-surface)!important;
-  box-shadow:var(--bhh-shadow-soft)!important;
-}
-.bh-leader-sidebar,
-.bh-leader-header,
-.bh-leader-panel,
-.bh-management-page-card{
-  border-radius:22px!important;
-}
-.bh-leader-primary,
-.bh-leader-button{
-  background:var(--bhh-sage-deep)!important;
-  color:#fff!important;
-  border-radius:999px!important;
-}
-.bh-secondary-button{
-  color:var(--bhh-sage-deep)!important;
-  border-color:var(--bhh-sage-deep)!important;
-  border-radius:999px!important;
-  background:transparent!important;
-}
-.bh-leader-nav a.is-active{
-  background:var(--bhh-sage)!important;
-  color:var(--bhh-ink)!important;
-  border-radius:12px;
-}
-.bh-leader-form input,
-.bh-leader-form textarea,
-.bh-leader-form select,
-.bh-acf-fields .acf-input input,
-.bh-acf-fields .acf-input textarea,
-.bh-acf-fields .acf-input select{
-  background:#fff!important;
-  border-color:var(--bhh-line)!important;
-  color:var(--bhh-ink)!important;
-  border-radius:14px!important;
-}
-
-/* Support / message cards */
-.bh-leader-message-card,
-.bh-support-card,
-.bh-panel,
-.bh-card{
-  border-color:var(--bhh-line);
-}
-.bh-support-card,
-.bh-leader-message-card{
-  border-radius:20px;
-  background:var(--bhh-surface);
-  box-shadow:var(--bhh-shadow-soft);
-}
-
-/* Mobile: retain the clean, spacious feel */
-@media(max-width:700px){
-  .bh-directory .bh-search-form{
-    padding:18px;
-    border-radius:20px;
-  }
-  .bh-card-body{
-    padding:18px;
-  }
-  .wp-block-buttons{
-    gap:10px;
-  }
-  .wp-block-button,
-  .wp-block-button__link{
-    max-width:100%;
-  }
-}
+@media(max-width:700px){.bh-directory .bh-search-form{padding:16px;}.bh-card-body{padding:16px;}}

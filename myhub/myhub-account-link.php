@@ -70,8 +70,7 @@ function bubbahub_account_settings_um_section_content( $output = '', $shortcode_
         unset( $_GET['bh_settings_section'] );
     }
 
-    // Render directly into Ultimate Member's native account-content region.
-    // Do not add another page/container wrapper around the UM content.\n    $content = bubbahub_account_settings_stage2_shortcode();
+    $content = '<div class="bh-account-settings-um-panel">' . bubbahub_account_settings_stage2_shortcode() . '</div>';
 
     if ( $had_flag ) {
         $_GET['bh_account_settings'] = $old_flag;
@@ -142,28 +141,38 @@ function bubbahub_myhub_account_settings_button() {
 }
 
 /*
- * Keep Account Settings inside Ultimate Member's native content column.
- * The settings renderer owns its internal cards; this integration must not
- * create a second outer panel that makes the tab look like an embedded page.
+ * The UM account page controls its own outer layout. This scoped rule gives
+ * the Bubba Hub settings panel the requested 50px breathing room without
+ * altering other Ultimate Member tabs or the rest of the site.
  */
 function bubbahub_account_settings_dashboard_css() {
     if ( ! is_user_logged_in() ) return;
     ?>
     <style id="bubbahub-account-settings-dashboard-css">
-      .um-account .um-account-content .bh-profile-shell {
+      .um-account .bh-account-settings-um-panel {
         box-sizing: border-box;
-        width: 100%;
-        max-width: none;
-        margin: 0;
+        padding: 50px;
       }
 
-      .um-account .um-account-content .bh-profile-shell > .bh-profile-header,
-      .um-account .um-account-content .bh-profile-shell > .bh-profile-success,
-      .um-account .um-account-content .bh-profile-shell > .bh-settings-list,
-      .um-account .um-account-content .bh-profile-shell > .bh-profile-card,
-      .um-account .um-account-content .bh-profile-shell > .bh-payment-settings {
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+      }
+
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen > .bh-profile-header,
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen > .bh-profile-success,
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen > .bh-settings-list,
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen > .bh-profile-card,
+      .um-account .bh-account-settings-um-panel #bh-account-settings-screen > .bh-payment-settings {
         box-sizing: border-box;
         width: 100%;
+      }
+
+      @media (max-width: 700px) {
+        .um-account .bh-account-settings-um-panel {
+          padding: 24px;
+        }
       }
     </style>
     <?php

@@ -1,6 +1,6 @@
 /* WordPress theme tokens */
-.bh-directory{--bh-theme-primary:var(--wp--preset--color--primary,var(--wp--preset--color--contrast,currentColor));--bh-theme-base:var(--wp--preset--color--base,#fff);--bh-theme-soft:var(--wp--preset--color--secondary,var(--wp--preset--color--base,#f5f5f5));--bh-theme-border:color-mix(in srgb,var(--wp--preset--color--contrast,currentColor) 16%,transparent);font-family:inherit;color:inherit;}
-.bh-directory{--bh-gap:20px;--bh-radius:16px;--bh-border:var(--wp--preset--color--contrast,#e8e9ed);--bh-text:var(--wp--preset--color--contrast,currentColor);--bh-muted:color-mix(in srgb,var(--bh-text) 65%,transparent);--bh-accent:var(--wp--preset--color--primary,var(--bh-text));color:var(--bh-text);font-family:inherit;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden}.bh-directory *{box-sizing:border-box;min-width:0;max-width:100%}
+.bh-directory{--bh-theme-primary:var(--global-palette1,var(--e-global-color-primary,var(--ast-global-color-0,var(--wp--preset--color--primary,var(--global-palette3,var(--ast-global-color-3,var(--wp--preset--color--contrast,currentColor)))))));--bh-theme-base:var(--global-palette9,var(--wp--preset--color--base,#fff));--bh-theme-soft:var(--global-palette2,var(--wp--preset--color--secondary,var(--global-palette9,#f5f5f5)));--bh-theme-border:color-mix(in srgb,var(--global-palette3,var(--ast-global-color-3,var(--wp--preset--color--contrast,currentColor))) 16%,transparent);font-family:inherit;color:inherit;}
+.bh-directory{--bh-gap:20px;--bh-radius:16px;--bh-border:var(--wp--preset--color--contrast,#e8e9ed);--bh-text:var(--global-palette3,var(--ast-global-color-3,var(--wp--preset--color--contrast,currentColor)));--bh-muted:color-mix(in srgb,var(--bh-text) 65%,transparent);--bh-accent:var(--wp--preset--color--primary,var(--bh-text));color:var(--bh-text);font-family:inherit;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden}.bh-directory *{box-sizing:border-box;min-width:0;max-width:100%}
 .bh-search-form{margin:0 0 22px}.bh-search-form label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}.bh-search-form input,.bh-search-form select{width:100%;min-height:48px;padding:12px 14px;border:1px solid var(--bh-border);border-radius:12px;background:#fff;font:inherit}.bh-search-form button{min-height:48px;padding:0 18px;border:0;border-radius:12px;background:var(--bh-accent);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 .bh-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.bh-result-count{font-weight:700}.bh-view-toggle{border:0;border-radius:10px;padding:10px 16px;background:#f3f4f5;color:var(--bh-text);font:inherit;font-weight:700;cursor:pointer}
 .bh-directory-content{width:100%;min-width:0}.bh-directory-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--bh-gap);width:100%;min-width:0;align-items:stretch}.bh-directory-results .bh-card{display:flex;flex-direction:column;width:100%;min-width:0;overflow:hidden;border:1px solid var(--bh-border);border-radius:var(--bh-radius);background:#fff;box-shadow:0 3px 14px rgba(25,35,45,.06);transition:box-shadow .18s ease,transform .18s ease}.bh-directory-results .bh-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(25,35,45,.1)}
@@ -202,7 +202,7 @@
   border-right:0;
   border-radius:0;
   background:#fff;
-  color:var(--wp--preset--color--contrast,currentColor);
+  color:var(--global-palette3,var(--ast-global-color-3,var(--wp--preset--color--contrast,currentColor)));
   box-shadow:none;
 }
 .bh-directory .bh-directory-toolbar-actions .bh-directory-view-link:first-of-type{
@@ -219,7 +219,7 @@
 }
 .bh-directory .bh-directory-toolbar-actions .bh-directory-view-link:hover{
   background:var(--bh-theme-soft);
-  color:var(--wp--preset--color--contrast,currentColor);
+  color:var(--global-palette3,var(--ast-global-color-3,var(--wp--preset--color--contrast,currentColor)));
 }
 .bh-directory .bh-directory-toolbar-actions .bh-directory-view-link.is-active:hover{
   background:var(--bh-theme-primary);

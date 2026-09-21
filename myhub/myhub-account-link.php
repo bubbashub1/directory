@@ -194,9 +194,7 @@ function bubbahub_account_settings_dashboard_css() {
 
 $bh_booking_lifecycle = dirname( __FILE__ ) . '/myhub-booking-lifecycle.php';
 if ( file_exists( $bh_booking_lifecycle ) ) require_once $bh_booking_lifecycle;function bubbahub_account_settings_um_sections() {
-    return array(
-        'bubbahub_account_settings' => 'home',
-    );
+    return array( 'bubbahub_account_settings' => 'home' );
 }
 
 function bubbahub_account_settings_um_tabs( $tabs ) {

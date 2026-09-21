@@ -106,9 +106,8 @@ add_action( 'wp_ajax_nopriv_bubbahub_directory_filter', 'bubbahub_directory_ajax
 add_shortcode( 'bubbahub_directory', 'bubbahub_directory_shortcode' );
 
 function bubbahub_directory_assets() {
-    // Bubba Hub visual system: Happiness Coach inspired typography and calm family palette.
-    wp_enqueue_style( 'bubbahub-happiness-fonts', 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap', array(), null );
-    wp_enqueue_style( 'bubbahub-happiness-theme', BUBBAHUB_DIRECTORY_URL . 'assets/bubbahub-happiness-theme.css', array( 'bubbahub-happiness-fonts' ), BUBBAHUB_DIRECTORY_VERSION );
+    // Use the active WordPress theme's typography and design tokens; Bubba Hub only supplies component/layout CSS.
+    wp_enqueue_style( 'bubbahub-happiness-theme', BUBBAHUB_DIRECTORY_URL . 'assets/bubbahub-happiness-theme.css', array(), BUBBAHUB_DIRECTORY_VERSION );
     wp_register_style( 'bubbahub-directory', BUBBAHUB_DIRECTORY_URL . 'assets/directory.css', array( 'bubbahub-happiness-theme' ), BUBBAHUB_DIRECTORY_VERSION );
     wp_register_style( 'leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', array(), '1.9.4' );
     wp_register_script( 'leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', array(), '1.9.4', true );

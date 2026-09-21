@@ -23,6 +23,7 @@ final class BubbaHub_Booking_Consent {
         add_action( 'save_post_group', [ $this, 'save_group_meta' ], 10, 2 );
         add_action( 'add_meta_boxes_bh_booking', [ $this, 'booking_meta_box' ] );
         add_action( 'save_post_bh_booking', [ $this, 'save_booking_consent' ], 20, 2 );
+        add_action( 'bubbahub_booking_created', [ $this, 'capture_created_booking_consent' ], 10, 2 );
         add_action( 'wp_ajax_bubbahub_booking_reserve', [ $this, 'validate_ajax_reservation' ], 1 );
         add_action( 'wp_ajax_nopriv_bubbahub_booking_reserve', [ $this, 'validate_ajax_reservation' ], 1 );
         add_action( 'template_redirect', [ $this, 'validate_frontend_reservation' ], 1 );
@@ -182,6 +183,25 @@ final class BubbaHub_Booking_Consent {
         $group_id = absint( get_post_meta( $booking_id, '_bh_group_id', true ) );
         if ( $this->group_required( $group_id ) && ! $this->has_valid_consent( $booking_id ) ) return $this->reject( 'Consent must be accepted before payment can be started.', 409 );
         return $result;
+    }
+
+    /**
+     * Capture consent after the booking engine has finished writing booking meta.
+     * This complements save_post_bh_booking, which can fire before group metadata exists.
+     */
+    public function capture_created_booking_consent( $booking_id, $args = array() ) {
+        $booking_id = absint( $booking_id );
+        if ( ! $booking_id || 'bh_booking' !== get_post_type( $booking_id ) ) return;
+        if ( get_post_meta( $booking_id, '_bh_consent_status', true ) ) return;
+        $group_id = absint( get_post_meta( $booking_id, '_bh_group_id', true ) );
+        if ( ! $group_id && is_array( $args ) ) $group_id = absint( $args['group_id'] ?? 0 );
+        if ( ! $group_id ) return;
+        if ( ! $this->group_required( $group_id ) ) {
+            update_post_meta( $booking_id, '_bh_consent_status', 'not_required' );
+            return;
+        }
+        if ( $this->request_acknowledged() ) $this->record_consent( $booking_id, $group_id, 'customer_checkout' );
+        else update_post_meta( $booking_id, '_bh_consent_status', 'missing' );
     }
 
     public function save_booking_consent( $post_id, $post ) {

@@ -209,95 +209,44 @@ function bubbahub_account_settings_um_tabs( $tabs ) {
     return $tabs;
 }
 
-function bubbahub_account_settings_um_render_tab() {
-    if ( ! is_user_logged_in() || ! function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
-        return;
-    }
-
-    $tab_key = isset( $_GET['um_tab'] )
-        ? sanitize_key( wp_unslash( $_GET['um_tab'] ) )
-        : '';
-
-    $sections = bubbahub_account_settings_um_sections();
-    if ( empty( $sections[ $tab_key ] ) ) {
-        return;
-    }
-
-    $old_flag    = array_key_exists( 'bh_account_settings', $_GET ) ? $_GET['bh_account_settings'] : null;
-    $had_flag    = array_key_exists( 'bh_account_settings', $_GET );
-    $old_section = array_key_exists( 'bh_settings_section', $_GET ) ? $_GET['bh_settings_section'] : null;
-    $had_section = array_key_exists( 'bh_settings_section', $_GET );
-
-    $_GET['bh_account_settings'] = '1';
-    $_GET['bh_settings_section'] = $sections[ $tab_key ];
-
-    echo '<div class="bh-account-settings-um-panel">';
-    echo bubbahub_account_settings_stage2_shortcode();
-    echo '</div>';
-
-    if ( $had_flag ) {
-        $_GET['bh_account_settings'] = $old_flag;
-    } else {
-        unset( $_GET['bh_account_settings'] );
-    }
-
-    if ( $had_section ) {
-        $_GET['bh_settings_section'] = $old_section;
-    } else {
-        unset( $_GET['bh_settings_section'] );
-    }
-}
-
 function bubbahub_account_settings_um_section_content( $output = '', $shortcode_args = array() ) {
     if ( ! is_user_logged_in() || ! function_exists( 'bubbahub_account_settings_stage2_shortcode' ) ) {
         return $output;
     }
 
-    /*
-     * Ultimate Member can render a custom account tab through AJAX, where the
-     * requested tab is supplied in the shortcode arguments rather than only
-     * in the browser query string. Prefer the explicit shortcode tab value,
-     * then fall back to the canonical um_tab query parameter.
-     */
-    $sections = bubbahub_account_settings_um_sections();
-    $tab_key  = '';
-    if ( isset( $shortcode_args['um_tab'] ) ) {
-        $tab_key = sanitize_key( wp_unslash( $shortcode_args['um_tab'] ) );
-    } elseif ( isset( $shortcode_args['tab'] ) ) {
-        $tab_key = sanitize_key( wp_unslash( $shortcode_args['tab'] ) );
-    } elseif ( isset( $_GET['um_tab'] ) ) {
-        $tab_key = sanitize_key( wp_unslash( $_GET['um_tab'] ) );
+    $section = '';
+    if ( isset( $shortcode_args['bh_settings_section'] ) ) {
+        $section = sanitize_key( wp_unslash( $shortcode_args['bh_settings_section'] ) );
+    } elseif ( isset( $_GET['bh_settings_section'] ) ) {
+        $section = sanitize_key( wp_unslash( $_GET['bh_settings_section'] ) );
     }
-    if ( empty( $sections[ $tab_key ] ) ) return $output;
 
-    /*
-     * Keep the existing Stage 2 renderer and handlers as the source of truth,
-     * but tell it exactly which section was selected in the UM side menu.
-     * This means each side-menu tab opens the matching settings content.
-     */
     $had_flag = array_key_exists( 'bh_account_settings', $_GET );
     $old_flag = $had_flag ? $_GET['bh_account_settings'] : null;
     $had_section = array_key_exists( 'bh_settings_section', $_GET );
     $old_section = $had_section ? $_GET['bh_settings_section'] : null;
 
     $_GET['bh_account_settings'] = '1';
-    $_GET['bh_settings_section'] = $sections[ $tab_key ];
+    if ( $section !== '' ) {
+        $_GET['bh_settings_section'] = $section;
+    } else {
+        unset( $_GET['bh_settings_section'] );
+    }
 
-    $content = bubbahub_account_settings_stage2_shortcode();
+    $content = '<div class="bh-account-settings-um-panel">' . bubbahub_account_settings_stage2_shortcode() . '</div>';
 
     if ( $had_flag ) {
         $_GET['bh_account_settings'] = $old_flag;
     } else {
         unset( $_GET['bh_account_settings'] );
     }
-
     if ( $had_section ) {
         $_GET['bh_settings_section'] = $old_section;
     } else {
         unset( $_GET['bh_settings_section'] );
     }
 
-    return '<div class="bh-account-settings-um-panel">' . $content . '</div>';
+    return $content;
 }
 
 function bubbahub_account_settings_um_route() {
